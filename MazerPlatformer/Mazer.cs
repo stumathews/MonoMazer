@@ -1,4 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using GameLibFramework.Src.FSM;
+using GamLib.EventDriven;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -7,12 +10,16 @@ namespace MazerPlatformer
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
-    public class Game1 : Game
+    public class Mazer : Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        private CommandManager commandManager;
+        private bool fleeing = false;
+        private bool chasing = false;
+        private FSM fsm = null;
 
-        public Game1()
+        public Mazer()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
@@ -26,8 +33,54 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            commandManager = new CommandManager();
 
+            commandManager.AddCommand(Keys.F, time =>
+            {
+                fleeing = true;
+                chasing = false;
+            });
+            commandManager.AddCommand(Keys.C, time =>
+            {
+                chasing = true;
+                fleeing = false;
+            });
+            commandManager.AddCommand(Keys.I, time =>
+            {
+                chasing = false;
+                fleeing = false;
+            });
+
+            fsm = new FSM(this);
+            
+            var idleState = new IdleState();
+            var chaseState = new ChaseState();
+            var fleeState = new FleeState();
+            var states = new State[] { idleState, chaseState, fleeState };
+
+            var idleStateTransition = new Transition(idleState, () => !chasing && !fleeing);
+            var fleeingStateTransition = new Transition(fleeState, () => fleeing);
+            var chaseStateTransition = new Transition(chaseState, () => chasing);
+            var transitions = new [] { idleStateTransition, fleeingStateTransition, chaseStateTransition};
+
+            foreach (var state in states)
+            {
+                foreach (var transition in transitions)
+                {
+                    if (state.Name != transition.NextState.Name)
+                    {
+                        state.AddTransition(transition);
+                    }
+                }
+            }
+            
+
+            fsm.AddState(idleState);
+            fsm.AddState(chaseState);
+            fsm.AddState(fleeState);
+            
+            fsm.Initialise(idleState.Name);
+            
             base.Initialize();
         }
 
@@ -63,6 +116,8 @@ namespace MazerPlatformer
                 Exit();
 
             // TODO: Add your update logic here
+            commandManager.Update(gameTime);
+            fsm.Update(gameTime);
 
             base.Update(gameTime);
         }
