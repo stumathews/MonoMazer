@@ -10,15 +10,14 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
-    public class Square
+    public class Square : GameObject    
     {
         public enum Side { Bottom, Right, Top, Left }
 
         private const float WallThickness = 1;
         private readonly bool[] _walls = { true, true, true, true };
 
-        private int X { get; }
-        private int Y { get; }
+        public Vector2 InitialPosition { get; }
         private int W { get; }
         private int H { get; }
 
@@ -27,20 +26,17 @@ namespace MazerPlatformer
         private GraphicsDevice GraphicsDevice { get; }
         private SpriteBatch SpriteBatch { get; }
 
-
-        public Square(int x, int y, int w, int h, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        public Square(Vector2 initialPosition, int w, int h, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(initialPosition, Guid.NewGuid().ToString())
         {
-            X = x;
-            Y = y;
+            InitialPosition = initialPosition;
             W = w;
             H = h;
             GraphicsDevice = graphicsDevice;
             SpriteBatch = spriteBatch;
-            _rectPoints = new RectDetails(X,Y,W,H);
-            
+            _rectPoints = new RectDetails((int)InitialPosition.X, (int)InitialPosition.Y, W, H);
         }
 
-        public void Draw()
+        public override void Draw(SpriteBatch spriteBatch)
         {
             DrawWall(Side.Top);
             DrawWall(Side.Right);
@@ -134,5 +130,16 @@ namespace MazerPlatformer
                     throw new ArgumentOutOfRangeException("Wall", side, null);
             }
         }
+
+        public override void Initialize()
+        {
+        }
+
+
+        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        {
+        }
+
+        
     }
 }

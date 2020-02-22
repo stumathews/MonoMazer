@@ -20,6 +20,8 @@
    
    3. This notice may not be removed or altered from any source
    distribution.
+   
+   See: https://bitbucket.org/C3/2d-xna-primitives/src/default/licence.txt
 
  */
 using System;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
@@ -15,7 +17,7 @@ namespace MazerPlatformer
         private readonly Random _randomGenerator = new Random();
     
         // The theoretical model of our playing board
-        readonly List<Square> _mazeGrid = new List<Square>();
+        
 
         public Level(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, bool removeRandomSides = false)
         {
@@ -24,8 +26,9 @@ namespace MazerPlatformer
             SpriteBatch = spriteBatch;
         }
 
-        public void Make(int rows, int cols)
+        public List<Square> Make(int rows, int cols)
         {
+            var mazeGrid = new List<Square>();
             var cellWidth = GraphicsDevice.Viewport.Width / cols;
             var cellHeight = GraphicsDevice.Viewport.Height / rows;
 
@@ -33,13 +36,14 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < cols; col++)
                 {
-                    var square = new Square(x: col * cellWidth, y: row * cellHeight, w: cellWidth, h: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
-                    _mazeGrid.Add(square);
+                    var initialPosition = new Vector2(x: col * cellWidth, y: row * cellHeight);
+                    var square = new Square(initialPosition, w: cellWidth, h: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
+                    mazeGrid.Add(square);
                 }
             }
            
 
-            var totalRooms = _mazeGrid.Count;
+            var totalRooms = mazeGrid.Count;
            
             if (_removeRandomSides)
             {
@@ -68,25 +72,25 @@ namespace MazerPlatformer
                     bool canRemoveRight = thisColumn + 1 <= cols;
 
                     var removableSides = new List<Square.Side>();
-                    var currentRoom = _mazeGrid[i];
-                    var nextRoom = _mazeGrid[nextIndex];
-
-                    if (canRemoveAbove && currentRoom.HasSide(Square.Side.Top) && _mazeGrid[roomAboveIndex].HasSide(Square.Side.Bottom))
+                    var currentRoom = mazeGrid[i];
+                    var nextRoom = mazeGrid[nextIndex];
+                    
+                    if (canRemoveAbove && currentRoom.HasSide(Square.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Square.Side.Bottom))
                     {
                         removableSides.Add(Square.Side.Top);
                     }
 
-                    if (canRemoveBelow && currentRoom.HasSide(Square.Side.Bottom) && _mazeGrid[roomBelowIndex].HasSide(Square.Side.Top))
+                    if (canRemoveBelow && currentRoom.HasSide(Square.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Square.Side.Top))
                     {
                         removableSides.Add(Square.Side.Bottom);
                     }
 
-                    if (canRemoveLeft && currentRoom.HasSide(Square.Side.Left) && _mazeGrid[roomLeftIndex].HasSide(Square.Side.Right))
+                    if (canRemoveLeft && currentRoom.HasSide(Square.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Square.Side.Right))
                     {
                         removableSides.Add(Square.Side.Left);
                     }
 
-                    if (canRemoveRight && currentRoom.HasSide(Square.Side.Right) && _mazeGrid[roomRightIndex].HasSide(Square.Side.Left))
+                    if (canRemoveRight && currentRoom.HasSide(Square.Side.Right) && mazeGrid[roomRightIndex].HasSide(Square.Side.Left))
                     {
                         removableSides.Add(Square.Side.Right);
                     }
@@ -112,21 +116,14 @@ namespace MazerPlatformer
                             continue;
                         case Square.Side.Left:
                             currentRoom.RemoveSide(Square.Side.Left);
-                            var prev = _mazeGrid[prevIndex];
+                            var prev = mazeGrid[prevIndex];
                             prev.RemoveSide(Square.Side.Right);
                             continue;
                     }
                 }
             }
-        }
 
-        // Draw each Square
-        public void Draw()
-        {
-            foreach (var square in _mazeGrid)
-            {
-                square.Draw();
-            }
+            return mazeGrid;
         }
     }
 }

@@ -41,10 +41,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="GameObject.cs" />
     <Compile Include="GameWorld.cs" />
-    <Compile Include="IdleState.cs" />
+    <Compile Include="PauseState.cs" />
     <Compile Include="Level.cs" />
     <Compile Include="Mazer.cs" />
+    <Compile Include="PerFrame.cs" />
+    <Compile Include="Player.cs" />
     <Compile Include="PlayingGameState.cs" />
     <Compile Include="Primatives2D.cs" />
     <Compile Include="Program.cs" />

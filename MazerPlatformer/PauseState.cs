@@ -3,11 +3,11 @@ using Microsoft.Xna.Framework;
 
 namespace MazerPlatformer
 {
-    public class IdleState : State
+    public class PauseState : State
     {
         private readonly GameWorld _gameWorld;
         
-        public IdleState(ref GameWorld gameWorld)
+        public PauseState(ref GameWorld gameWorld)
         {
             _gameWorld = gameWorld;
             Name = "Idle";

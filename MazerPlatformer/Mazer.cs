@@ -12,17 +12,22 @@ namespace MazerPlatformer
 
     public class Mazer : Game
     {
+        public enum GameStates
+        {
+            Paused, Playing
+        }
+
         GraphicsDeviceManager graphics;
         SpriteBatch _spriteBatch;
 
-        private CommandManager _commandManager;
-        private bool _playing;
-        
-        private GameWorld _gameWorld;
+        private CommandManager _gameCommands; // Top level game commands such as start, quit etc
+        private GameWorld _gameWorld; // GameWorld, contains the player and level details
+        private FSM _gameStateMachine; // Top level game commands such as Pause, Playing etc
 
-        private FSM _topLevelGameFsm;
-        private IdleState _idleState;
-        private PlayingGameState _playingState;
+        private PauseState _pauseState; // the game is not being played
+        private PlayingGameState _playingState; // The game is being played
+
+        private GameStates _currentGameState = GameStates.Paused;
         
         public Mazer()
         {
@@ -38,18 +43,15 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            _commandManager = new CommandManager();
+            _gameCommands = new CommandManager();
             
-            _commandManager.AddCommand(Keys.S, time => _playing = true);
-            _commandManager.AddCommand(Keys.Q, time => _playing = false);
-
-            _topLevelGameFsm = new FSM(this);
+            _gameCommands.AddCommand(Keys.S, time => _currentGameState = GameStates.Playing);
+            _gameCommands.AddCommand(Keys.Q, time => _currentGameState = GameStates.Paused);
+            
+            _gameStateMachine = new FSM(this);
 
             base.Initialize();
         }
-
-        
-        
 
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
@@ -58,18 +60,20 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch);
-            _idleState = new IdleState(ref _gameWorld);
+
+            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // our game has a 10x10 set of rooms
+
+            _pauseState = new PauseState(ref _gameWorld);
             _playingState = new PlayingGameState(ref _gameWorld);
 
-            var idleTransition = new Transition(_idleState, () => !_playing);
-            var playingTransition = new Transition(_playingState, () => _playing);
+            var idleTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
+            var playingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
 
-            var states = new State[] { _idleState,  _playingState };
+            var states = new State[] { _pauseState,  _playingState };
             var transitions = new [] { idleTransition, playingTransition};
 
-            _topLevelGameFsm.AddState(_idleState);
-            _topLevelGameFsm.AddState(_playingState);
+            _gameStateMachine.AddState(_pauseState);
+            _gameStateMachine.AddState(_playingState);
 
             // Allow each state to go into any other state, except itself.
             foreach (var state in states)
@@ -84,7 +88,7 @@ namespace MazerPlatformer
             }
 
             // Ready the state machine in idle state
-            _topLevelGameFsm.Initialise(_idleState.Name);
+            _gameStateMachine.Initialise(_pauseState.Name);
         }
 
         /// <summary>
@@ -106,12 +110,9 @@ namespace MazerPlatformer
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
             
-            // Get input
-            _commandManager.Update(gameTime);
-
-            // Update current state eg. Draw() when in playing state
-            _topLevelGameFsm.Update(gameTime);
-
+            _gameCommands.Update(gameTime);
+            _gameStateMachine.Update(gameTime);
+            
             base.Update(gameTime);
         }
 
@@ -124,7 +125,7 @@ namespace MazerPlatformer
             GraphicsDevice.Clear(Color.CornflowerBlue);
             _spriteBatch.Begin();
 
-            _gameWorld.Level.Draw();
+            _gameWorld.Draw(_spriteBatch);
 
             _spriteBatch.End();
 
