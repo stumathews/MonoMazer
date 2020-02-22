@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using GameLibFramework.Src.FSM;
 using GamLib.EventDriven;
 using Microsoft.Xna.Framework;
@@ -7,18 +9,21 @@ using Microsoft.Xna.Framework.Input;
 
 namespace MazerPlatformer
 {
-    /// <summary>
-    /// This is the main type for your game.
-    /// </summary>
+
     public class Mazer : Game
     {
         GraphicsDeviceManager graphics;
-        SpriteBatch spriteBatch;
-        private CommandManager commandManager;
-        private bool fleeing = false;
-        private bool chasing = false;
-        private FSM fsm = null;
+        SpriteBatch _spriteBatch;
 
+        private CommandManager _commandManager;
+        private bool _playing;
+        
+        private GameWorld _gameWorld;
+
+        private FSM _topLevelGameFsm;
+        private IdleState _idleState;
+        private PlayingGameState _playingState;
+        
         public Mazer()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -33,56 +38,18 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            commandManager = new CommandManager();
-
-            commandManager.AddCommand(Keys.F, time =>
-            {
-                fleeing = true;
-                chasing = false;
-            });
-            commandManager.AddCommand(Keys.C, time =>
-            {
-                chasing = true;
-                fleeing = false;
-            });
-            commandManager.AddCommand(Keys.I, time =>
-            {
-                chasing = false;
-                fleeing = false;
-            });
-
-            fsm = new FSM(this);
+            _commandManager = new CommandManager();
             
-            var idleState = new IdleState();
-            var chaseState = new ChaseState();
-            var fleeState = new FleeState();
-            var states = new State[] { idleState, chaseState, fleeState };
+            _commandManager.AddCommand(Keys.S, time => _playing = true);
+            _commandManager.AddCommand(Keys.Q, time => _playing = false);
 
-            var idleStateTransition = new Transition(idleState, () => !chasing && !fleeing);
-            var fleeingStateTransition = new Transition(fleeState, () => fleeing);
-            var chaseStateTransition = new Transition(chaseState, () => chasing);
-            var transitions = new [] { idleStateTransition, fleeingStateTransition, chaseStateTransition};
+            _topLevelGameFsm = new FSM(this);
 
-            foreach (var state in states)
-            {
-                foreach (var transition in transitions)
-                {
-                    if (state.Name != transition.NextState.Name)
-                    {
-                        state.AddTransition(transition);
-                    }
-                }
-            }
-            
-
-            fsm.AddState(idleState);
-            fsm.AddState(chaseState);
-            fsm.AddState(fleeState);
-            
-            fsm.Initialise(idleState.Name);
-            
             base.Initialize();
         }
+
+        
+        
 
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
@@ -90,10 +57,34 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
-            spriteBatch = new SpriteBatch(GraphicsDevice);
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch);
+            _idleState = new IdleState(ref _gameWorld);
+            _playingState = new PlayingGameState(ref _gameWorld);
 
-            // TODO: use this.Content to load your game content here
+            var idleTransition = new Transition(_idleState, () => !_playing);
+            var playingTransition = new Transition(_playingState, () => _playing);
+
+            var states = new State[] { _idleState,  _playingState };
+            var transitions = new [] { idleTransition, playingTransition};
+
+            _topLevelGameFsm.AddState(_idleState);
+            _topLevelGameFsm.AddState(_playingState);
+
+            // Allow each state to go into any other state, except itself.
+            foreach (var state in states)
+            {
+                foreach (var transition in transitions)
+                {
+                    if (state.Name != transition.NextState.Name) // except itself
+                    {
+                        state.AddTransition(transition);
+                    }
+                }
+            }
+
+            // Ready the state machine in idle state
+            _topLevelGameFsm.Initialise(_idleState.Name);
         }
 
         /// <summary>
@@ -114,10 +105,12 @@ namespace MazerPlatformer
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+            
+            // Get input
+            _commandManager.Update(gameTime);
 
-            // TODO: Add your update logic here
-            commandManager.Update(gameTime);
-            fsm.Update(gameTime);
+            // Update current state eg. Draw() when in playing state
+            _topLevelGameFsm.Update(gameTime);
 
             base.Update(gameTime);
         }
@@ -129,8 +122,11 @@ namespace MazerPlatformer
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
+            _spriteBatch.Begin();
 
-            // TODO: Add your drawing code here
+            _gameWorld.Level.Draw();
+
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
