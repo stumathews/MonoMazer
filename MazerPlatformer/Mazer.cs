@@ -20,13 +20,22 @@ namespace MazerPlatformer
         GraphicsDeviceManager graphics;
         SpriteBatch _spriteBatch;
 
-        private CommandManager _gameCommands; // Top level game commands such as start, quit etc
-        private GameWorld _gameWorld; // GameWorld, contains the player and level details
-        private FSM _gameStateMachine; // Top level game commands such as Pause, Playing etc
+        // Top level game commands such as start, quit etc
+        private CommandManager _gameCommands;
 
-        private PauseState _pauseState; // the game is not being played
-        private PlayingGameState _playingState; // The game is being played
+        // GameWorld, contains the player and level details
+        private GameWorld _gameWorld;
 
+        // Top level game commands such as Pause, Playing etc
+        private FSM _gameStateMachine;
+
+        // the game is not being played
+        private PauseState _pauseState;
+
+        // The game is being played
+        private PlayingGameState _playingState;
+
+        // Current Game state
         private GameStates _currentGameState = GameStates.Paused;
         
         public Mazer()
@@ -49,14 +58,13 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
+            /* Controls input */
             _gameCommands = new CommandManager();
             
             /* Top level game states */
             _gameCommands.AddCommand(Keys.S, time => _currentGameState = GameStates.Playing);
             _gameCommands.AddCommand(Keys.Q, time => _currentGameState = GameStates.Paused);
             
-            _gameStateMachine = new FSM(this);
-
              /* Diganostics */
             _gameCommands.AddCommand(Keys.O, time => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
             _gameCommands.AddCommand(Keys.K, time => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
@@ -75,6 +83,7 @@ namespace MazerPlatformer
                 Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
             });
 
+            _gameStateMachine = new FSM(this);
 
             base.Initialize();
         }
@@ -86,10 +95,7 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-
             _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // Create our game world
-
-            /* Define the playing states, note each state has access to the game world */
             _pauseState = new PauseState(ref _gameWorld);
             _playingState = new PlayingGameState(ref _gameWorld);
 

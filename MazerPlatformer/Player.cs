@@ -25,7 +25,6 @@ namespace MazerPlatformer
         
         public override void Initialize()
         {
-            // The player has some states it will use, initialise them:
             StateMachine.AddState(_normalState);
             StateMachine.AddState(_collisionState);
             StateMachine.Initialise(_normalState.Name);
@@ -45,11 +44,11 @@ namespace MazerPlatformer
 
     public class CollisionState : State
     {
-      
+    
     }
 
     public class NormalState : State
     {
-
+        
     }
 }
