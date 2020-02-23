@@ -45,11 +45,23 @@ namespace MazerPlatformer
         {
             _gameCommands = new CommandManager();
             
-            _gameCommands.AddCommand(Keys.S, time => _currentGameState = GameStates.Playing);
+            _gameCommands.AddCommand(Keys.X, time => _currentGameState = GameStates.Playing);
             _gameCommands.AddCommand(Keys.Q, time => _currentGameState = GameStates.Paused);
             
             _gameStateMachine = new FSM(this);
 
+            _gameCommands.AddCommand(Keys.O, time => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
+            _gameCommands.AddCommand(Keys.S, time => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
+            _gameCommands.AddCommand(Keys.D, time => Diganostics.DrawLines = !Diganostics.DrawLines);
+            _gameCommands.AddCommand(Keys.C, time => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
+            _gameCommands.AddCommand(Keys.M, time => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
+            
+            _gameCommands.AddCommand(Keys.T, time => Diganostics.DrawTop = !Diganostics.DrawTop);
+            _gameCommands.AddCommand(Keys.B, time => Diganostics.DrawBottom = !Diganostics.DrawBottom);
+            _gameCommands.AddCommand(Keys.R, time => Diganostics.DrawRight = !Diganostics.DrawRight);
+            _gameCommands.AddCommand(Keys.L, time => Diganostics.DrawLeft = !Diganostics.DrawLeft);
+            
+            
             base.Initialize();
         }
 
@@ -123,11 +135,11 @@ namespace MazerPlatformer
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
+            
             _spriteBatch.Begin();
-
             _gameWorld.Draw(_spriteBatch);
-
             _spriteBatch.End();
+            
 
             base.Draw(gameTime);
         }

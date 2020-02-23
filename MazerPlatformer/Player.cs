@@ -15,13 +15,13 @@ namespace MazerPlatformer
         private const int MoveStep = 10 / 5;
         private readonly NormalState _normalState = new NormalState();
         private readonly CollisionState _collisionState = new CollisionState();
+        public const string PlayerId = "Player";
 
-
-        public Player(Vector2 initialPosition, string name) : base(initialPosition, name)
+        public Player(Vector2 initialPosition, string name, Vector2 centreOffset) : base(initialPosition, PlayerId, centreOffset, GameObjectType.Player)
         {
 
         }
-
+        
         public override void Initialize()
         {
             StateMachine.AddState(_normalState);
@@ -29,13 +29,10 @@ namespace MazerPlatformer
             StateMachine.Initialise(_normalState.Name);
         }
 
-        public override void Draw(SpriteBatch spriteBatch) => spriteBatch.DrawCircle(Position.X, Position.Y, 10, 16, Color.Black);
-
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        public override void Draw(SpriteBatch spriteBatch)
         {
-            StateMachine.Update(gameTime);
+            spriteBatch.DrawCircle(Position.X, Position.Y, 10, 16, Color.Black);
         }
-        
 
         public void MoveUp() => Position.Y -= MoveStep;
 

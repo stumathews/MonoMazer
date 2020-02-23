@@ -11,7 +11,7 @@ namespace MazerPlatformer
         private SpriteBatch SpriteBatch { get; }
         private int Rows { get; }
         private int Cols { get; }
-        public readonly List<GameObject> GameObjects = new List<GameObject>();
+        private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Dict allows quick lookup by Id
         public readonly Player Player;
         private readonly Random _random = new Random();
 
@@ -24,7 +24,7 @@ namespace MazerPlatformer
             Rows = rows;
             Cols = cols;
 
-            var level = new Level(graphicsDevice, spriteBatch, removeRandomSides: true);
+            var level = new Level(graphicsDevice, spriteBatch, removeRandomSides: Diganostics.RandomSides);
             
             var rooms = level.Make(Rows, Cols);
 
@@ -37,27 +37,34 @@ namespace MazerPlatformer
                 x: playerRoom.InitialPosition.X + (float)(0.5 * cellWidth), 
                 y: playerRoom.InitialPosition.Y+ (float)(0.5 * cellHeight));
 
-            Player = new Player(playerPositionWithinRoom, "Player");
-            
-            GameObjects.AddRange(rooms);
-            GameObjects.Add(Player);
+            Player = new Player(playerPositionWithinRoom, Player.PlayerId, new Vector2((float)(0.5 * cellWidth), (float)(0.5 * cellHeight)));
+
+            foreach (var room in rooms)
+            {
+                _gameObjects.Add(room.Id, room);
+            }
+            _gameObjects.Add(Player.PlayerId, Player);
             
         }
 
         
         public override void Draw(SpriteBatch spriteBatch)
         {
-            foreach (var gameObject in GameObjects)
+            foreach (var gameObject in _gameObjects)
             {
-                gameObject.Draw(spriteBatch);
+                
+                var obj = gameObject.Value; 
+                obj.Draw(spriteBatch);
+                
             }
         }
 
         public override void Update(GameTime gameTime, GameWorld gameWorld)
         {
-            foreach (var gameObject in GameObjects)
+            foreach (var gameItem in _gameObjects)
             {
-                gameObject.Update(gameTime, gameWorld);
+                var obj = gameItem.Value;
+                obj.Update(gameTime, gameWorld);
             }
         }
     }

@@ -10,136 +10,168 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
-    public class Square : GameObject    
-    {
-        public enum Side { Bottom, Right, Top, Left }
+	public class Square : GameObject    
+	{
+		public enum Side { Bottom, Right, Top, Left }
 
-        private const float WallThickness = 1;
-        private readonly bool[] _walls = { true, true, true, true };
+		private class SideCharacterisitic
+		{
+			public Rectangle BoundingBox;
+			public Color Color;
 
-        public Vector2 InitialPosition { get; }
-        private int W { get; }
-        private int H { get; }
+			public SideCharacterisitic(Color color, Rectangle boundingBox)
+			{
+				this.Color = color;
+				BoundingBox = boundingBox;
+			}
+		}
 
-        private readonly RectDetails _rectPoints;
+		private const float WallThickness = 3.0f;
+		private readonly bool[] _hasSide = { true, true, true, true };
+		private readonly Dictionary<Side, SideCharacterisitic> _sideRects = new Dictionary<Side, SideCharacterisitic>();
 
-        private GraphicsDevice GraphicsDevice { get; }
-        private SpriteBatch SpriteBatch { get; }
+		public Vector2 InitialPosition { get; }
+		private int W { get; }
+		private int H { get; }
 
-        public Square(Vector2 initialPosition, int w, int h, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(initialPosition, Guid.NewGuid().ToString())
-        {
-            InitialPosition = initialPosition;
-            W = w;
-            H = h;
-            GraphicsDevice = graphicsDevice;
-            SpriteBatch = spriteBatch;
-            _rectPoints = new RectDetails((int)InitialPosition.X, (int)InitialPosition.Y, W, H);
-        }
+		private readonly RectDetails _rectPoints;
 
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            DrawWall(Side.Top);
-            DrawWall(Side.Right);
-            DrawWall(Side.Bottom);
-            DrawWall(Side.Left);
-        }
+		private GraphicsDevice GraphicsDevice { get; }
+		private SpriteBatch SpriteBatch { get; }
 
-        private void DrawWall(Side side)
-        {
-            if (!HasSide(side)) return;
+		public Square(Vector2 position, int w, int h, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(position, id: Guid.NewGuid().ToString(), centreOffset: new Vector2(x: w/2, y: h/2), type: GameObjectType.Square, customCollisionBehavior: true)
+		{
+			InitialPosition = position;
+			W = w;
+			H = h;
+			GraphicsDevice = graphicsDevice;
+			SpriteBatch = spriteBatch;
+			_rectPoints = new RectDetails((int)InitialPosition.X, (int)InitialPosition.Y, W, H);
 
-            /* A sqaure is made up of points A,B,C,D:
+			_sideRects.Add(Side.Top, new SideCharacterisitic(Color.Black,_rectPoints.Reatangle));
+			_sideRects.Add(Side.Right, new SideCharacterisitic(Color.Black,_rectPoints.Reatangle));
+			_sideRects.Add(Side.Bottom, new SideCharacterisitic(Color.Black,_rectPoints.Reatangle));
+			_sideRects.Add(Side.Left, new SideCharacterisitic(Color.Black, _rectPoints.Reatangle));
+		}
 
-              A------B
-              |      |
-              |      |
-              |      |
-              D------C
-             
-             */
+		public override void Draw(SpriteBatch spriteBatch)
+		{
 
-            var ax = _rectPoints.GetAx();
-            var ay = _rectPoints.GetAy();
+			DrawWall(Side.Top);
+			DrawWall(Side.Right);
+			DrawWall(Side.Bottom);
+			DrawWall(Side.Left);
+			DrawGameObjectBoundingBox(spriteBatch);
+			DrawCentrePoint(spriteBatch);
+			DrawMaxPoint(spriteBatch);
+		}
 
-            var bx = _rectPoints.GetBx();
-            var by = _rectPoints.GetBy();
+		private void DrawWall(Side side)
+		{
+			/* A sqaure is made up of points A,B,C,D:
 
-            var cx = _rectPoints.GetCx();
-            var cy = _rectPoints.GetCy();
-
-            var dx = _rectPoints.GetDx();
-            var dy = _rectPoints.GetDy();
-
-            
-            
-            switch (side)
-            {
-                case Side.Top:
-                    SpriteBatch.DrawLine(ax, ay, bx, by, Color.Black, WallThickness);
-                    break;
-                case Side.Right:
-                    SpriteBatch.DrawLine(bx, by, cx, cy, Color.Black, WallThickness);
-                    break;
-                case Side.Bottom:
-                    SpriteBatch.DrawLine(cx, cy, dx, dy, Color.Black, WallThickness);
-                    break;
-                case Side.Left:
-                    SpriteBatch.DrawLine(dx, dy, ax, ay, Color.Black, WallThickness);
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(side), side, null);
-            }
-        }
-
-        public bool HasSide(Side side)
-        {
-            switch (side)
-            {
-                case Side.Top: 
-                    return _walls[0];
-                case Side.Right:
-                    return _walls[1];
-                case Side.Bottom:
-                    return _walls[2];
-                case Side.Left:
-                    return _walls[3];
-                default:
-                    return false;
-            }
-
-        }
-
-        public void RemoveSide(Side side)
-        {
-            switch (side)
-            {
-                case Side.Top:
-                    _walls[0] = false;
-                    break;
-                case Side.Right:
-                    _walls[1] = false;
-                    break;
-                case Side.Bottom:
-                    _walls[2] = false;
-                    break;
-                case Side.Left:
-                    _walls[3] = false;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Wall", side, null);
-            }
-        }
-
-        public override void Initialize()
-        {
-        }
+			  A------B
+			  |      |
+			  |      |
+			  |      |
+			  D------C
+			 
+			 */
 
 
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
-        {
-        }
 
-        
-    }
+
+			switch (side)
+			{
+				case Side.Top:
+					if (Diganostics.DrawTop)
+					{
+						if (Diganostics.DrawLines && HasSide(side))
+							SpriteBatch.DrawLine(_rectPoints.GetAx(), _rectPoints.GetAy(), _rectPoints.GetBx(), _rectPoints.GetBy(), _sideRects[side].Color, WallThickness);
+						if (Diganostics.DrawSquareSideBounds)
+							SpriteBatch.DrawRectangle(_rectPoints.Reatangle, Color.White, 2.5f);
+					}
+
+			break;
+				case Side.Right:
+					if (Diganostics.DrawRight)
+					{
+						if (Diganostics.DrawLines && HasSide(side))
+							SpriteBatch.DrawLine(_rectPoints.GetBx(), _rectPoints.GetBy(), _rectPoints.GetCx(), _rectPoints.GetCy(), _sideRects[side].Color, WallThickness);
+						if (Diganostics.DrawSquareSideBounds)
+							SpriteBatch.DrawRectangle(_rectPoints.Reatangle, Color.White, 2.5f);
+						
+					}
+
+					break;
+				case Side.Bottom:
+					if (Diganostics.DrawBottom)
+					{
+						if (Diganostics.DrawLines && HasSide(side))
+							SpriteBatch.DrawLine(_rectPoints.GetCx(), _rectPoints.GetCy(), _rectPoints.GetDx(), _rectPoints.GetDy(), _sideRects[side].Color, WallThickness);
+						if (Diganostics.DrawSquareSideBounds)
+							SpriteBatch.DrawRectangle(_rectPoints.Reatangle, Color.White,2.5f);
+					}
+
+					break;
+				case Side.Left:
+					if (Diganostics.DrawLeft)
+					{
+						if (Diganostics.DrawLines && HasSide(side))
+							SpriteBatch.DrawLine(_rectPoints.GetDx(), _rectPoints.GetDy(), _rectPoints.GetAx(), _rectPoints.GetAy(), _sideRects[side].Color, WallThickness);
+						if (Diganostics.DrawSquareSideBounds)
+							SpriteBatch.DrawRectangle(_rectPoints.Reatangle, Color.White, 2.5f);
+					}
+
+					break;
+
+				default:
+					throw new ArgumentOutOfRangeException(nameof(side), side, null);
+			}
+
+			//_sideRects[side].BoundingBox = _rectPoints.Reatangle;
+
+
+
+		}
+
+		public bool HasSide(Side side)
+		{
+			switch (side)
+			{
+				case Side.Top: 
+					return _hasSide[0];
+				case Side.Right:
+					return _hasSide[1];
+				case Side.Bottom:
+					return _hasSide[2];
+				case Side.Left:
+					return _hasSide[3];
+				default:
+					return false;
+			}
+
+		}
+
+		public void RemoveSide(Side side)
+		{
+			switch (side)
+			{
+				case Side.Top:
+					_hasSide[0] = false;
+					break;
+				case Side.Right:
+					_hasSide[1] = false;
+					break;
+				case Side.Bottom:
+					_hasSide[2] = false;
+					break;
+				case Side.Left:
+					_hasSide[3] = false;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("Wall", side, null);
+			}
+		}
+	}
 }

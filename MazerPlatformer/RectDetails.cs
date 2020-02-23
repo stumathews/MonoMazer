@@ -1,10 +1,13 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Runtime.Remoting.Messaging;
+using Microsoft.Xna.Framework;
 
 namespace Assets
 {
     public class RectDetails
     {
         private Rectangle _rect;
+
+        public Rectangle Reatangle => _rect;
         
         public RectDetails(int X, int Y, int w, int h)
         {
@@ -21,5 +24,10 @@ namespace Assets
         public  int GetCy(){ return GetBy()+_rect.Height;}
         public int GetDx(){ return GetAx();}
         public int GetDy(){ return GetAy()+_rect.Height;}
+
+        public Point A() => new Point(GetAx(), GetAy());
+        public Point B() => new Point(GetBx(), GetBy());
+        public Point C() => new Point(GetCx(), GetCy());
+        public Point D() => new Point(GetDx(), GetDy());
     }
 }
