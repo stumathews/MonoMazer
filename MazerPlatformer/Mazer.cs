@@ -12,7 +12,7 @@ namespace MazerPlatformer
 
     public class Mazer : Game
     {
-        public enum GameStates
+        private enum GameStates
         {
             Paused, Playing
         }
@@ -45,17 +45,18 @@ namespace MazerPlatformer
         {
             _gameCommands = new CommandManager();
             
+            /* Top level game states */
             _gameCommands.AddCommand(Keys.X, time => _currentGameState = GameStates.Playing);
             _gameCommands.AddCommand(Keys.Q, time => _currentGameState = GameStates.Paused);
             
             _gameStateMachine = new FSM(this);
 
+             /* Diganostics */
             _gameCommands.AddCommand(Keys.O, time => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
             _gameCommands.AddCommand(Keys.S, time => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
             _gameCommands.AddCommand(Keys.D, time => Diganostics.DrawLines = !Diganostics.DrawLines);
             _gameCommands.AddCommand(Keys.C, time => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
             _gameCommands.AddCommand(Keys.M, time => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
-            
             _gameCommands.AddCommand(Keys.T, time => Diganostics.DrawTop = !Diganostics.DrawTop);
             _gameCommands.AddCommand(Keys.B, time => Diganostics.DrawBottom = !Diganostics.DrawBottom);
             _gameCommands.AddCommand(Keys.R, time => Diganostics.DrawRight = !Diganostics.DrawRight);
@@ -73,8 +74,9 @@ namespace MazerPlatformer
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // our game has a 10x10 set of rooms
+            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // Create our game world
 
+            /* Define the playing states, note each state has access to the game world */
             _pauseState = new PauseState(ref _gameWorld);
             _playingState = new PlayingGameState(ref _gameWorld);
 
@@ -135,12 +137,12 @@ namespace MazerPlatformer
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            
             _spriteBatch.Begin();
-            _gameWorld.Draw(_spriteBatch);
-            _spriteBatch.End();
-            
 
+            /* Ask the gameworld to draw itself */
+            _gameWorld.Draw(_spriteBatch);
+
+            _spriteBatch.End();
             base.Draw(gameTime);
         }
     }

@@ -7,7 +7,7 @@ namespace Assets
     {
         private Rectangle _rect;
 
-        public Rectangle Reatangle => _rect;
+        public Rectangle Rectangle => _rect;
         
         public RectDetails(int X, int Y, int w, int h)
         {

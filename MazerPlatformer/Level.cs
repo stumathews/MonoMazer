@@ -26,9 +26,9 @@ namespace MazerPlatformer
             SpriteBatch = spriteBatch;
         }
 
-        public List<Square> Make(int rows, int cols)
+        public List<Room> Make(int rows, int cols)
         {
-            var mazeGrid = new List<Square>();
+            var mazeGrid = new List<Room>();
             var cellWidth = GraphicsDevice.Viewport.Width / cols;
             var cellHeight = GraphicsDevice.Viewport.Height / rows;
 
@@ -37,7 +37,7 @@ namespace MazerPlatformer
                 for (var col = 0; col < cols; col++)
                 {
                     var initialPosition = new Vector2(x: col * cellWidth, y: row * cellHeight);
-                    var square = new Square(initialPosition, w: cellWidth, h: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
+                    var square = new Room(initialPosition, width: cellWidth, height: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
                     mazeGrid.Add(square);
                 }
             }
@@ -71,28 +71,28 @@ namespace MazerPlatformer
                     bool canRemoveLeft = thisColumn - 1 >= 1;
                     bool canRemoveRight = thisColumn + 1 <= cols;
 
-                    var removableSides = new List<Square.Side>();
+                    var removableSides = new List<Room.Side>();
                     var currentRoom = mazeGrid[i];
                     var nextRoom = mazeGrid[nextIndex];
                     
-                    if (canRemoveAbove && currentRoom.HasSide(Square.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Square.Side.Bottom))
+                    if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
                     {
-                        removableSides.Add(Square.Side.Top);
+                        removableSides.Add(Room.Side.Top);
                     }
 
-                    if (canRemoveBelow && currentRoom.HasSide(Square.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Square.Side.Top))
+                    if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
                     {
-                        removableSides.Add(Square.Side.Bottom);
+                        removableSides.Add(Room.Side.Bottom);
                     }
 
-                    if (canRemoveLeft && currentRoom.HasSide(Square.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Square.Side.Right))
+                    if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
                     {
-                        removableSides.Add(Square.Side.Left);
+                        removableSides.Add(Room.Side.Left);
                     }
 
-                    if (canRemoveRight && currentRoom.HasSide(Square.Side.Right) && mazeGrid[roomRightIndex].HasSide(Square.Side.Left))
+                    if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) && mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
                     {
-                        removableSides.Add(Square.Side.Right);
+                        removableSides.Add(Room.Side.Right);
                     }
 
                     // which of the sides should we remove for this square?
@@ -102,22 +102,22 @@ namespace MazerPlatformer
 
                     switch (removableSides[randSideIndex])
                     {
-                        case Square.Side.Top:
-                            currentRoom.RemoveSide(Square.Side.Top);
-                            nextRoom.RemoveSide(Square.Side.Bottom);
+                        case Room.Side.Top:
+                            currentRoom.RemoveSide(Room.Side.Top);
+                            nextRoom.RemoveSide(Room.Side.Bottom);
                             continue;
-                        case Square.Side.Right:
-                            currentRoom.RemoveSide(Square.Side.Right);
-                            nextRoom.RemoveSide(Square.Side.Left);
+                        case Room.Side.Right:
+                            currentRoom.RemoveSide(Room.Side.Right);
+                            nextRoom.RemoveSide(Room.Side.Left);
                             continue;
-                        case Square.Side.Bottom:
-                            currentRoom.RemoveSide(Square.Side.Bottom);
-                            nextRoom.RemoveSide(Square.Side.Top);
+                        case Room.Side.Bottom:
+                            currentRoom.RemoveSide(Room.Side.Bottom);
+                            nextRoom.RemoveSide(Room.Side.Top);
                             continue;
-                        case Square.Side.Left:
-                            currentRoom.RemoveSide(Square.Side.Left);
+                        case Room.Side.Left:
+                            currentRoom.RemoveSide(Room.Side.Left);
                             var prev = mazeGrid[prevIndex];
-                            prev.RemoveSide(Square.Side.Right);
+                            prev.RemoveSide(Room.Side.Right);
                             continue;
                     }
                 }

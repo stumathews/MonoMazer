@@ -5,22 +5,26 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
+    /* Game world is contains the elements that can be updated/drawn each frame */
     public class GameWorld : PerFrame
     {
         private GraphicsDevice GraphicsDevice { get; }
-        private SpriteBatch SpriteBatch { get; }
-        private int Rows { get; }
-        private int Cols { get; }
-        private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Dict allows quick lookup by Id
-        public readonly Player Player;
-        private readonly Random _random = new Random();
+        private int Rows { get; } // Rows Of rooms
+        private int Cols { get; } // Columns of rooms
 
-        
+        /* Game objects within the gameworld */
+        private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+
+        /* Special player game object */
+        public readonly Player Player;
+
+        /* Used to remove walls randonly throughout level and place the player randomly in a room */
+        private readonly Random _random = new Random();
 
         public GameWorld(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, int rows, int cols)
         {
             GraphicsDevice = graphicsDevice;
-            SpriteBatch = spriteBatch;
+
             Rows = rows;
             Cols = cols;
 
@@ -34,10 +38,10 @@ namespace MazerPlatformer
             var playerRoom = rooms[_random.Next(0, Rows * Cols)];
 
             var playerPositionWithinRoom = new Vector2(
-                x: playerRoom.InitialPosition.X + (float)(0.5 * cellWidth), 
-                y: playerRoom.InitialPosition.Y+ (float)(0.5 * cellHeight));
+                x: playerRoom.Position.X + (float)(0.5 * cellWidth), 
+                y: playerRoom.Position.Y+ (float)(0.5 * cellHeight));
 
-            Player = new Player(playerPositionWithinRoom, Player.PlayerId, new Vector2((float)(0.5 * cellWidth), (float)(0.5 * cellHeight)));
+            Player = new Player(playerPositionWithinRoom, new Vector2((float)(0.5 * cellWidth), (float)(0.5 * cellHeight)));
 
             foreach (var room in rooms)
             {
@@ -50,12 +54,11 @@ namespace MazerPlatformer
         
         public override void Draw(SpriteBatch spriteBatch)
         {
-            foreach (var gameObject in _gameObjects)
+            /* We ask each game object within the game world to draw itself */
+            foreach (KeyValuePair<string, GameObject> pair in _gameObjects)
             {
-                
-                var obj = gameObject.Value; 
-                obj.Draw(spriteBatch);
-                
+                var gameObject = pair.Value; 
+                gameObject.Draw(spriteBatch);
             }
         }
 

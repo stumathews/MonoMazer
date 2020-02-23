@@ -11,11 +11,12 @@ namespace MazerPlatformer
         public enum GameObjectType { Square, Player }
 
         protected readonly FSM StateMachine;
-        protected Vector2 Position;
+        public Vector2 Position;
         public readonly GameObjectType Type;
         public string Id { get; set; }
         private Vector2 CentreOffset { get; }
         public Rectangle BoundingBox;
+        
         private Vector2 _centre;
         private Vector2 _maxPoint;
 
@@ -27,8 +28,8 @@ namespace MazerPlatformer
 
         public Vector2 MaxPoint
         {
-            get { return _maxPoint; }
-            set { _maxPoint = value; }
+            get => _maxPoint;
+            set => _maxPoint = value;
         }
         
         
