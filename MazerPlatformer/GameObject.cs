@@ -11,9 +11,13 @@ namespace MazerPlatformer
         public enum GameObjectType { Square, Player }
 
         protected readonly FSM StateMachine;
-        public Vector2 Position;
         public readonly GameObjectType Type;
+
+        public int X { get; protected set; }
+        public int Y { get; protected set; }
         public string Id { get; set; }
+        public int W { get; }
+        public int H { get; }
         private Vector2 CentreOffset { get; }
         public Rectangle BoundingBox;
         
@@ -32,34 +36,41 @@ namespace MazerPlatformer
             set => _maxPoint = value;
         }
         
-        
 
         public override void Update(GameTime gameTime, GameWorld gameWorld)
         {
-            CalculateBoundingBox(Position, CentreOffset);
+            CalculateBoundingBox(X, Y, W, H);
             StateMachine.Update(gameTime);
         }
 
-        protected GameObject(Vector2 position, string id, Vector2 centreOffset, GameObjectType type, bool customCollisionBehavior = false)
+        protected GameObject(int x, int y, string id, int w, int h, GameObjectType type, bool customCollisionBehavior = false)
         {
+            X = x;
+            Y = y;
             Id = id;
-            CentreOffset = centreOffset;
+            W = w;
+            H = h;
             StateMachine = new FSM(this);
-            Position = position;
             Type = type;
-            CalculateBoundingBox(position, centreOffset);
+            CalculateBoundingBox(x, y, w, h);
         }
 
-        private void CalculateBoundingBox(Vector2 position, Vector2 centreOffset)
+        private void CalculateBoundingBox(int x, int y, int w, int h)
         {
-            _centre.X = (float)position.X + centreOffset.X;
-            _centre.Y = (float)position.Y + centreOffset.Y;
+            _centre.X = x + w/2;
+            _centre.Y = y + h/2;
 
             _maxPoint = _centre;
-            _maxPoint.X = (float)_centre.X + centreOffset.X;
-            _maxPoint.Y = (float)_centre.Y + centreOffset.Y;
-            
-            BoundingBox = new Rectangle(new Point( (int)position.X, (int)position.Y), new Point((int)_maxPoint.X, (int)_maxPoint.Y));
+            _maxPoint.X = w;
+            _maxPoint.Y = h;
+
+            BoundingBox = new Rectangle(x: X, y: Y, width: (int)_maxPoint.X, height: (int)_maxPoint.Y);
+            if (Id == Player.PlayerId)
+            {
+                Console.WriteLine($"Player position is ({x},{y})");
+                Console.WriteLine($"Players maxpoint is {_maxPoint}");
+                Console.WriteLine($"Players bounds is {BoundingBox}");
+            }
         }
         
         protected void DrawCentrePoint(SpriteBatch spriteBatch)
@@ -71,7 +82,7 @@ namespace MazerPlatformer
         protected void DrawMaxPoint(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawMaxPoint) return;
-            spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.White, 3f);
+            spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Blue, 3f);
         }
 
         protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch)

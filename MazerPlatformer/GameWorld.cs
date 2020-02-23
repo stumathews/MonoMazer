@@ -38,10 +38,10 @@ namespace MazerPlatformer
             var playerRoom = rooms[_random.Next(0, Rows * Cols)];
 
             var playerPositionWithinRoom = new Vector2(
-                x: playerRoom.Position.X + (float)(0.5 * cellWidth), 
-                y: playerRoom.Position.Y+ (float)(0.5 * cellHeight));
+                x: playerRoom.X + (float)(0.5 * cellWidth), 
+                y: playerRoom.Y+ (float)(0.5 * cellHeight));
 
-            Player = new Player(playerPositionWithinRoom, new Vector2((float)(0.5 * cellWidth), (float)(0.5 * cellHeight)));
+            Player = new Player(x: (int)playerPositionWithinRoom.X, y: (int)playerPositionWithinRoom.Y, w: 15, h: 15);
 
             foreach (var room in rooms)
             {

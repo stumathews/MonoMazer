@@ -18,7 +18,7 @@ namespace MazerPlatformer
         private readonly CollisionState _collisionState = new CollisionState();
         public const string PlayerId = "Player";
 
-        public Player(Vector2 initialPosition, Vector2 centreOffset) : base(initialPosition, PlayerId, centreOffset, GameObjectType.Player)
+        public Player(int x, int y, int w, int h) : base(x, y, PlayerId, w, h, GameObjectType.Player)
         {
 
         }
@@ -34,14 +34,15 @@ namespace MazerPlatformer
         public override void Draw(SpriteBatch spriteBatch)
         {
             // The player currently is just a circle 
-            spriteBatch.DrawCircle(Position.X, Position.Y, 10, 16, Color.Black);
+            spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: W, height:H), Color.Black);
             DrawObjectDiganostics(spriteBatch);
         }
 
-        public void MoveUp() => Position.Y -= MoveStep;
-        public void MoveDown() => Position.Y += MoveStep;
-        public void MoveRight() => Position.X += MoveStep;
-        public void MoveLeft() => Position.X -= MoveStep;
+        public void MoveUp() => Y -= MoveStep;
+
+        public void MoveDown() => Y += MoveStep;
+        public void MoveRight() => X += MoveStep;
+        public void MoveLeft() => X -= MoveStep;
     }
 
     public class CollisionState : State

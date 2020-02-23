@@ -44,15 +44,16 @@ namespace MazerPlatformer
 		private GraphicsDevice GraphicsDevice { get; }
 		private SpriteBatch SpriteBatch { get; }
 
-		public Room(Vector2 position, int width, int height, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) : base(position, id: Guid.NewGuid().ToString(), centreOffset: new Vector2(x: width/2, y: height/2), type: GameObjectType.Square, customCollisionBehavior: true)
+		public Room(int x, int y, int width, int height, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) 
+			         : base(x:x, y: y, id: Guid.NewGuid().ToString(), w: width, h: height, type: GameObjectType.Square, customCollisionBehavior: true)
 		{
-			Position = position;
 			Width = width;
 			Height = height;
 
 			GraphicsDevice = graphicsDevice;
 			SpriteBatch = spriteBatch;
-			_rectDetails = new RectDetails((int)Position.X, (int)Position.Y, Width, Height);
+
+			_rectDetails = new RectDetails(X, Y, Width, Height);
 
 			
 

@@ -36,8 +36,7 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < cols; col++)
                 {
-                    var initialPosition = new Vector2(x: col * cellWidth, y: row * cellHeight);
-                    var square = new Room(initialPosition, width: cellWidth, height: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
+                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
                     mazeGrid.Add(square);
                 }
             }
