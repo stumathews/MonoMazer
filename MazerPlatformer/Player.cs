@@ -35,6 +35,7 @@ namespace MazerPlatformer
         {
             // The player currently is just a circle 
             spriteBatch.DrawCircle(Position.X, Position.Y, 10, 16, Color.Black);
+            DrawObjectDiganostics(spriteBatch);
         }
 
         public void MoveUp() => Position.Y -= MoveStep;

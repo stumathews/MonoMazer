@@ -89,10 +89,8 @@ namespace MazerPlatformer
 			DrawSide(Side.Bottom);
 			DrawSide(Side.Left);
 
-            /* Diagnostics are drawn over the objects: see 'Diagnostics' class for details */
-			DrawGameObjectBoundingBox(spriteBatch);
-			DrawCentrePoint(spriteBatch);
-			DrawMaxPoint(spriteBatch);
+			/* Diagnostics are drawn over the objects: see 'Diagnostics' class for details */
+			DrawObjectDiganostics(spriteBatch);
 		}
 
 		private void DrawSide(Side side)
@@ -178,7 +176,6 @@ namespace MazerPlatformer
 				default:
 					return false;
 			}
-
 		}
 
 		public void RemoveSide(Side side)

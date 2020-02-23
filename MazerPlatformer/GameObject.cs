@@ -79,5 +79,13 @@ namespace MazerPlatformer
             if (!Diganostics.DrawGameObjectBounds) return;
             spriteBatch.DrawRectangle(BoundingBox, Color.Lime, 1.5f);
         }
+
+        protected void DrawObjectDiganostics(SpriteBatch spriteBatch)
+        {
+            DrawCentrePoint(spriteBatch);
+            DrawMaxPoint(spriteBatch);
+            DrawGameObjectBoundingBox(spriteBatch);
+        }
+
     }
 }
