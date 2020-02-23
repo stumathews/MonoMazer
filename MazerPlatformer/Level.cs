@@ -9,34 +9,22 @@ namespace MazerPlatformer
 {
     public class Level
     {
-        private readonly bool _removeRandomSides;
-        private GraphicsDevice GraphicsDevice { get; }
-        private SpriteBatch SpriteBatch { get; }
-
         // our random number genreator to randonly remove walls, place fuel and the player
-        private readonly Random _randomGenerator = new Random();
-    
-        // The theoretical model of our playing board
-        
+        private static readonly Random _randomGenerator = new Random();
 
-        public Level(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, bool removeRandomSides = false)
-        {
-            _removeRandomSides = removeRandomSides;
-            GraphicsDevice = graphicsDevice;
-            SpriteBatch = spriteBatch;
-        }
+        private Level() { }
 
-        public List<Room> Make(int rows, int cols)
+        public static List<Room> Make(int rows, int cols, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, bool removeRandomSides = false)
         {
             var mazeGrid = new List<Room>();
-            var cellWidth = GraphicsDevice.Viewport.Width / cols;
-            var cellHeight = GraphicsDevice.Viewport.Height / rows;
+            var cellWidth = graphicsDevice.Viewport.Width / cols;
+            var cellHeight = graphicsDevice.Viewport.Height / rows;
 
             for (var row = 0; row < rows; row++)
             {
                 for (var col = 0; col < cols; col++)
                 {
-                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, graphicsDevice: GraphicsDevice, spriteBatch: SpriteBatch);
+                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: spriteBatch);
                     mazeGrid.Add(square);
                 }
             }
@@ -44,7 +32,7 @@ namespace MazerPlatformer
 
             var totalRooms = mazeGrid.Count;
            
-            if (_removeRandomSides)
+            if (removeRandomSides)
             {
                 // determine which sides can be removed and then randonly remove a number of them (using only the square objects - no drawing yet)
                 for (int i = 0; i < totalRooms; i++)

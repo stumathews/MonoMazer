@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.GameObject;
 
 namespace MazerPlatformer
 {
@@ -28,14 +29,12 @@ namespace MazerPlatformer
             Rows = rows;
             Cols = cols;
 
-            var level = new Level(graphicsDevice, spriteBatch, removeRandomSides: Diganostics.RandomSides);
-            
-            var rooms = level.Make(Rows, Cols);
+            List<Room> rooms = Level.Make(Rows, Cols, graphicsDevice, spriteBatch, removeRandomSides: Diganostics.RandomSides);
 
             var cellWidth = GraphicsDevice.Viewport.Width / cols;
             var cellHeight = GraphicsDevice.Viewport.Height / rows;
 
-            var playerRoom = rooms[_random.Next(0, Rows * Cols)];
+            Room playerRoom = rooms[_random.Next(0, Rows * Cols)]; // place player in a random room
 
             var playerPositionWithinRoom = new Vector2(
                 x: playerRoom.X + (float)(0.5 * cellWidth), 
@@ -47,7 +46,21 @@ namespace MazerPlatformer
             {
                 _gameObjects.Add(room.Id, room);
             }
-            _gameObjects.Add(Player.PlayerId, Player);            
+            
+            _gameObjects.Add(Player.PlayerId, Player);   
+            
+            // The game world will listen events raised by game objects
+            foreach(var gameObject in _gameObjects)
+            {
+                // Listen for collision events
+                gameObject.Value.OnCollision += OnObjectCollision;
+                // Listen for scoring, special moves, power-ups etc
+            }
+        }
+
+        void OnObjectCollision(GameObject obj1, GameObject obj2)
+        {
+            Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
         }
         
         public override void Draw(SpriteBatch spriteBatch)
@@ -68,11 +81,10 @@ namespace MazerPlatformer
                 var obj = gameItem.Value;
                 obj.Update(gameTime, gameWorld);
 
+                // check if any objects collide with the player
                 var objectIsPlayer = obj.Id == player.Id;
-                if (obj.CollidesWith(player) && !objectIsPlayer)
-                {
-                    Console.WriteLine("Object collided with player");
-                }
+                if (!objectIsPlayer)
+                    obj.TestCollidesWith(player);
             }
         }
     }
