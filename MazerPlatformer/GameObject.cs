@@ -65,12 +65,7 @@ namespace MazerPlatformer
             _maxPoint.Y = h;
 
             BoundingBox = new Rectangle(x: X, y: Y, width: (int)_maxPoint.X, height: (int)_maxPoint.Y);
-            if (Id == Player.PlayerId)
-            {
-                Console.WriteLine($"Player position is ({x},{y})");
-                Console.WriteLine($"Players maxpoint is {_maxPoint}");
-                Console.WriteLine($"Players bounds is {BoundingBox}");
-            }
+            
         }
         
         protected void DrawCentrePoint(SpriteBatch spriteBatch)
@@ -89,6 +84,11 @@ namespace MazerPlatformer
         {
             if (!Diganostics.DrawGameObjectBounds) return;
             spriteBatch.DrawRectangle(BoundingBox, Color.Lime, 1.5f);
+        }
+
+        public virtual bool CollidesWith(GameObject otherObject)
+        {
+            return otherObject.BoundingBox.Intersects(BoundingBox);
         }
 
         protected void DrawObjectDiganostics(SpriteBatch spriteBatch)

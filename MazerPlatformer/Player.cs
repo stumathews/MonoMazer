@@ -13,7 +13,7 @@ namespace MazerPlatformer
     /* Our Player is a Game Object */
     public class Player : GameObject
     {
-        private const int MoveStep = 10 / 5;
+        private const int MoveStep = 10;
         private readonly NormalState _normalState = new NormalState();
         private readonly CollisionState _collisionState = new CollisionState();
         public const string PlayerId = "Player";
@@ -33,13 +33,11 @@ namespace MazerPlatformer
 
         public override void Draw(SpriteBatch spriteBatch)
         {
-            // The player currently is just a circle 
             spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: W, height:H), Color.Black);
             DrawObjectDiganostics(spriteBatch);
         }
 
         public void MoveUp() => Y -= MoveStep;
-
         public void MoveDown() => Y += MoveStep;
         public void MoveRight() => X += MoveStep;
         public void MoveLeft() => X -= MoveStep;

@@ -47,10 +47,8 @@ namespace MazerPlatformer
             {
                 _gameObjects.Add(room.Id, room);
             }
-            _gameObjects.Add(Player.PlayerId, Player);
-            
+            _gameObjects.Add(Player.PlayerId, Player);            
         }
-
         
         public override void Draw(SpriteBatch spriteBatch)
         {
@@ -64,10 +62,17 @@ namespace MazerPlatformer
 
         public override void Update(GameTime gameTime, GameWorld gameWorld)
         {
+            var player = _gameObjects[Player.PlayerId];
             foreach (var gameItem in _gameObjects)
             {
                 var obj = gameItem.Value;
                 obj.Update(gameTime, gameWorld);
+
+                var objectIsPlayer = obj.Id == player.Id;
+                if (obj.CollidesWith(player) && !objectIsPlayer)
+                {
+                    Console.WriteLine("Object collided with player");
+                }
             }
         }
     }

@@ -18,7 +18,7 @@ namespace MazerPlatformer
         /* A room has sides which can be destroyed or collided with - they also have individual behaviors, including collision detection */
 		private class SideCharacterisitic
 		{
-		    public readonly Color Color;
+		    public Color Color;
 			public Rectangle Bounds;
 
 			public SideCharacterisitic(Color color, Rectangle bounds)
@@ -30,7 +30,7 @@ namespace MazerPlatformer
 
 		private const float WallThickness = 3.0f;
 		private readonly bool[] _hasSide = { /*Top*/ true, /*Right*/ true , /*Bottom*/ true, /*Left*/ true }; // Keeps track of which sides have been removed
-		private readonly Dictionary<Side, SideCharacterisitic> _sideRects = new Dictionary<Side, SideCharacterisitic>();
+		private readonly Dictionary<Side, SideCharacterisitic> _wallDetails = new Dictionary<Side, SideCharacterisitic>();
 
 		private int Width { get; }
 		private int Height { get; }
@@ -44,6 +44,16 @@ namespace MazerPlatformer
 		private GraphicsDevice GraphicsDevice { get; }
 		private SpriteBatch SpriteBatch { get; }
 
+		/// <summary>
+		/// Conceptual model of a room, which is based on a sqaure with potentially removable walls
+		/// </summary>
+		/// <param name="x">Top left X</param>
+		/// <param name="y">Top Left Y</param>
+		/// <param name="width">Width of the room</param>
+		/// <param name="height">Height of the room</param>
+		/// <param name="graphicsDevice"></param>
+		/// <param name="spriteBatch"></param>
+		/// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
 		public Room(int x, int y, int width, int height, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch) 
 			         : base(x:x, y: y, id: Guid.NewGuid().ToString(), w: width, h: height, type: GameObjectType.Square, customCollisionBehavior: true)
 		{
@@ -55,32 +65,17 @@ namespace MazerPlatformer
 
 			_rectDetails = new RectDetails(X, Y, Width, Height);
 
-			
+			/* Walls have collision bounds that dont change */
+			topSideBounds = new Rectangle(x: _rectDetails.GetAx(), y: _rectDetails.GetAy(), width: _rectDetails.GetBx() - _rectDetails.GetAx(), height: 1);
+			bottomSideBounds = new Rectangle(x: _rectDetails.GetDx(), y: _rectDetails.GetDy(), width: _rectDetails.GetCx() - _rectDetails.GetDx(), height: 1);
+			rightSideBounds = new Rectangle(x: _rectDetails.GetBx(), y:_rectDetails.GetBy(),  width:1, height: _rectDetails.GetCy() - _rectDetails.GetBy());
+			leftSideBounds = new Rectangle(x:_rectDetails.GetAx(), y:_rectDetails.GetAy(), width: 1, height: _rectDetails.GetDy() - _rectDetails.GetAy());
 
-			topSideBounds = new Rectangle(x: _rectDetails.GetAx(), 
-											    y: _rectDetails.GetAy(),
-												width: _rectDetails.GetBx() - _rectDetails.GetAx(),
-												height: 1);
-
-			bottomSideBounds = new Rectangle(x: _rectDetails.GetDx(),
-												  y: _rectDetails.GetDy(),
-												  width: _rectDetails.GetCx() - _rectDetails.GetDx(),
-												  height: 1);
-
-			rightSideBounds = new Rectangle(x: _rectDetails.GetBx(), 
-												  y:_rectDetails.GetBy(), 
-												  width:1, 
-												  height: _rectDetails.GetCy() - _rectDetails.GetBy());
-
-			leftSideBounds = new Rectangle(x:_rectDetails.GetAx(), 
-											     y:_rectDetails.GetAy(), 
-												 width: 1, 
-												 height: _rectDetails.GetDy() - _rectDetails.GetAy());
-
-			_sideRects.Add(Side.Top, new SideCharacterisitic(Color.Black, topSideBounds));
-			_sideRects.Add(Side.Right, new SideCharacterisitic(Color.Black, rightSideBounds));
-			_sideRects.Add(Side.Bottom, new SideCharacterisitic(Color.Black, bottomSideBounds));
-			_sideRects.Add(Side.Left, new SideCharacterisitic(Color.Black, leftSideBounds));
+			/* Walls each have specific colours, bounds, nd potentioally other configurable vharacteristics in the game */
+			_wallDetails.Add(Side.Top, new SideCharacterisitic(Color.Black, topSideBounds));
+			_wallDetails.Add(Side.Right, new SideCharacterisitic(Color.Black, rightSideBounds));
+			_wallDetails.Add(Side.Bottom, new SideCharacterisitic(Color.Black, bottomSideBounds));
+			_wallDetails.Add(Side.Left, new SideCharacterisitic(Color.Black, leftSideBounds));
 		}
 
 		public override void Draw(SpriteBatch spriteBatch)
@@ -96,15 +91,18 @@ namespace MazerPlatformer
 
 		private void DrawSide(Side side)
 		{
-			/* A Room is made up of points A,B,C,D:
-
-			  A------B
-			  |      |
-			  |      |
-			  |      |
-			  D------C
-			 
-			 */
+			/* 
+			  A Room is made up of points A,B,C,D:
+				  A------B
+				  |      |
+				  |      |
+				  |      |
+				  D------C
+				 AB = Top
+				 BC = Right
+				 CD = Bottom
+				 AD = Left  
+			*/
 
 			/* Draws each side as a separate Line*/			
 			switch (side)
@@ -113,10 +111,10 @@ namespace MazerPlatformer
 					if (Diganostics.DrawTop)
 					{
 						if (Diganostics.DrawLines && HasSide(side))
-							SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(), _rectDetails.GetBy(), _sideRects[side].Color, WallThickness);
+							SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(), _rectDetails.GetBy(), _wallDetails[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
+							SpriteBatch.DrawRectangle(_wallDetails[side].Bounds, Color.White, 2.5f);
 					}
 
 			break;
@@ -124,10 +122,10 @@ namespace MazerPlatformer
 					if (Diganostics.DrawRight)
 					{
 						if (Diganostics.DrawLines && HasSide(side))
-							SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(), _rectDetails.GetCy(), _sideRects[side].Color, WallThickness);
+							SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(), _rectDetails.GetCy(), _wallDetails[side].Color, WallThickness);
 
 						if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
+							SpriteBatch.DrawRectangle(_wallDetails[side].Bounds, Color.White, 2.5f);
 					}
 
 					break;
@@ -135,10 +133,10 @@ namespace MazerPlatformer
 					if (Diganostics.DrawBottom)
 					{
 						if (Diganostics.DrawLines && HasSide(side))
-							SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(), _rectDetails.GetDy(), _sideRects[side].Color, WallThickness);
+							SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(), _rectDetails.GetDy(), _wallDetails[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White,2.5f);
+							SpriteBatch.DrawRectangle(_wallDetails[side].Bounds, Color.White,2.5f);
 					}
 
 					break;
@@ -146,10 +144,10 @@ namespace MazerPlatformer
 					if (Diganostics.DrawLeft)
 					{
 						if (Diganostics.DrawLines && HasSide(side))
-							SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(), _rectDetails.GetAy(), _sideRects[side].Color, WallThickness);
+							SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(), _rectDetails.GetAy(), _wallDetails[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
+							SpriteBatch.DrawRectangle(_wallDetails[side].Bounds, Color.White, 2.5f);
 					}
 
 					break;
@@ -177,6 +175,22 @@ namespace MazerPlatformer
 				default:
 					return false;
 			}
+		}
+		public override bool CollidesWith(GameObject otherObject)
+		{
+			bool collision = false;
+			foreach(var item in _wallDetails)
+			{
+				Side side = item.Key;
+				SideCharacterisitic detail = item.Value;
+				if(detail.Bounds.Intersects(otherObject.BoundingBox))
+				{
+					Console.WriteLine($"{side} collided with object {otherObject.Id}");
+					detail.Color = Color.White;
+					collision = true;
+				}
+			}
+			return collision;
 		}
 
 		public void RemoveSide(Side side)
