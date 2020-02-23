@@ -15,13 +15,15 @@ namespace MazerPlatformer
 	{
 		public enum Side { Bottom, Right, Top, Left }
 
-        /* A room has sides which can be destroyed or collided with - they also have individual behaviors */
+        /* A room has sides which can be destroyed or collided with - they also have individual behaviors, including collision detection */
 		private class SideCharacterisitic
 		{
 		    public readonly Color Color;
+			public Rectangle Bounds;
 
-			public SideCharacterisitic(Color color)
+			public SideCharacterisitic(Color color, Rectangle bounds)
 			{
+				Bounds = bounds;
 				Color = color;
 			}
 		}
@@ -34,6 +36,10 @@ namespace MazerPlatformer
 		private int Height { get; }
 
 		private readonly RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
+		Rectangle topSideBounds;
+		Rectangle bottomSideBounds;
+		Rectangle leftSideBounds;
+		Rectangle rightSideBounds;
 
 		private GraphicsDevice GraphicsDevice { get; }
 		private SpriteBatch SpriteBatch { get; }
@@ -48,20 +54,40 @@ namespace MazerPlatformer
 			SpriteBatch = spriteBatch;
 			_rectDetails = new RectDetails((int)Position.X, (int)Position.Y, Width, Height);
 
-			_sideRects.Add(Side.Top, new SideCharacterisitic(Color.Black));
-			_sideRects.Add(Side.Right, new SideCharacterisitic(Color.Black));
-			_sideRects.Add(Side.Bottom, new SideCharacterisitic(Color.Black));
-			_sideRects.Add(Side.Left, new SideCharacterisitic(Color.Black));
+			
+
+			topSideBounds = new Rectangle(x: _rectDetails.GetAx(), 
+											    y: _rectDetails.GetAy(),
+												width: _rectDetails.GetBx() - _rectDetails.GetAx(),
+												height: 1);
+
+			bottomSideBounds = new Rectangle(x: _rectDetails.GetDx(),
+												  y: _rectDetails.GetDy(),
+												  width: _rectDetails.GetCx() - _rectDetails.GetDx(),
+												  height: 1);
+
+			rightSideBounds = new Rectangle(x: _rectDetails.GetBx(), 
+												  y:_rectDetails.GetBy(), 
+												  width:1, 
+												  height: _rectDetails.GetCy() - _rectDetails.GetBy());
+
+			leftSideBounds = new Rectangle(x:_rectDetails.GetAx(), 
+											     y:_rectDetails.GetAy(), 
+												 width: 1, 
+												 height: _rectDetails.GetDy() - _rectDetails.GetAy());
+
+			_sideRects.Add(Side.Top, new SideCharacterisitic(Color.Black, topSideBounds));
+			_sideRects.Add(Side.Right, new SideCharacterisitic(Color.Black, rightSideBounds));
+			_sideRects.Add(Side.Bottom, new SideCharacterisitic(Color.Black, bottomSideBounds));
+			_sideRects.Add(Side.Left, new SideCharacterisitic(Color.Black, leftSideBounds));
 		}
 
 		public override void Draw(SpriteBatch spriteBatch)
 		{
-
 			DrawSide(Side.Top);
 			DrawSide(Side.Right);
 			DrawSide(Side.Bottom);
 			DrawSide(Side.Left);
-
 
             /* Diagnostics are drawn over the objects: see 'Diagnostics' class for details */
 			DrawGameObjectBoundingBox(spriteBatch);
@@ -81,8 +107,7 @@ namespace MazerPlatformer
 			 
 			 */
 
-            /* Draws each side as a separate Line*/
-
+			/* Draws each side as a separate Line*/			
 			switch (side)
 			{
 				case Side.Top:
@@ -92,7 +117,7 @@ namespace MazerPlatformer
 							SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(), _rectDetails.GetBy(), _sideRects[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
+							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
 					}
 
 			break;
@@ -101,10 +126,9 @@ namespace MazerPlatformer
 					{
 						if (Diganostics.DrawLines && HasSide(side))
 							SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(), _rectDetails.GetCy(), _sideRects[side].Color, WallThickness);
-						
-					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
-						
+
+						if (Diganostics.DrawSquareSideBounds)
+							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
 					}
 
 					break;
@@ -115,7 +139,7 @@ namespace MazerPlatformer
 							SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(), _rectDetails.GetDy(), _sideRects[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White,2.5f);
+							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White,2.5f);
 					}
 
 					break;
@@ -126,7 +150,7 @@ namespace MazerPlatformer
 							SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(), _rectDetails.GetAy(), _sideRects[side].Color, WallThickness);
 						
 					    if (Diganostics.DrawSquareSideBounds)
-							SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
+							SpriteBatch.DrawRectangle(_sideRects[side].Bounds, Color.White, 2.5f);
 					}
 
 					break;
@@ -135,10 +159,8 @@ namespace MazerPlatformer
 					throw new ArgumentOutOfRangeException(nameof(side), side, null);
 			}
 
-			//_sideRects[side].BoundingBox = _rectPoints.Reatangle;
-
-
-
+			if (Diganostics.DrawSquareBounds)
+				SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);	
 		}
 
 		public bool HasSide(Side side)

@@ -21,6 +21,7 @@ namespace MazerPlatformer
         public static bool DrawLines = true;
         public static bool DrawGameObjectBounds;
         public static bool DrawSquareSideBounds;
+        public static bool DrawSquareBounds = false;
         public static bool DrawCentrePoint;
         public static bool DrawMaxPoint;
         public static bool DrawLeft = true;
