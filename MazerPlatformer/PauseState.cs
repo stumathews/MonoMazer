@@ -7,7 +7,7 @@ namespace MazerPlatformer
     {
         private readonly GameWorld _gameWorld;
         
-        public PauseState(ref GameWorld gameWorld)
+        public PauseState(ref GameWorld gameWorld) : base("Pause")
         {
             _gameWorld = gameWorld;
             Name = "Idle";

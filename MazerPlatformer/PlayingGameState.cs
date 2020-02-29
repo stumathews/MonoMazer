@@ -14,18 +14,17 @@ namespace MazerPlatformer
         private readonly CommandManager _playingCommands = new CommandManager();
         
 
-        public PlayingGameState(ref GameWorld gameWorld)
+        public PlayingGameState(ref GameWorld gameWorld) : base("PlayingGame")
         {
             _gameWorld = gameWorld;
-            Name = "PlayingGame";
         }
 
         public override void Enter(object owner)
         {
-            _playingCommands.AddCommand(Keys.Up, time => _gameWorld.Player.MoveUp());
-            _playingCommands.AddCommand(Keys.Down, time => _gameWorld.Player.MoveDown());
-            _playingCommands.AddCommand(Keys.Left, time => _gameWorld.Player.MoveLeft());
-            _playingCommands.AddCommand(Keys.Right, time => _gameWorld.Player.MoveRight());
+            _playingCommands.AddCommand(Keys.Up, time => _gameWorld.Player.MoveUp(time));
+            _playingCommands.AddCommand(Keys.Down, time => _gameWorld.Player.MoveDown(time));
+            _playingCommands.AddCommand(Keys.Left, time => _gameWorld.Player.MoveLeft(time));
+            _playingCommands.AddCommand(Keys.Right, time => _gameWorld.Player.MoveRight(time));
 
             base.Enter(owner);
         }

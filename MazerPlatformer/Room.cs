@@ -170,7 +170,7 @@ namespace MazerPlatformer
 		}
 
 		// Rooms only consider collions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
-		public override bool TestCollidesWith(GameObject otherObject)
+		public override bool IsCollidingWith(GameObject otherObject)
 		{
 			bool collision = false;
 			foreach(var item in _wallProperties)
@@ -178,12 +178,13 @@ namespace MazerPlatformer
 				Side side = item.Key;
 				SideCharacterisitic thisWallProperty = item.Value;
 
-				if(thisWallProperty.Bounds.Intersects(otherObject.BoundingBox))
+				if(thisWallProperty.Bounds.Intersects(otherObject.BoundingBox) && HasSide(side))
 				{
 					Console.WriteLine($"{side} collided with object {otherObject.Id}");
 					thisWallProperty.Color = Color.White;
 					collision = true;
-					CollisionOccured(otherObject);
+					CollisionOccuredWith(otherObject);
+					//RemoveSide(side);
 				}
 			}
 			return collision;

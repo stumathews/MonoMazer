@@ -9,7 +9,7 @@ namespace MazerPlatformer
     public abstract class GameObject : PerFrame
     {
         public enum GameObjectType { Room, Player }
-
+        public bool IsColliding;
         protected readonly FSM StateMachine; // Every game object has possible states
         public readonly GameObjectType Type;
 
@@ -61,17 +61,17 @@ namespace MazerPlatformer
         }
 
         // Every object can check if its colliding with another object's bounding box
-        public virtual bool TestCollidesWith(GameObject otherObject)
+        public virtual bool IsCollidingWith(GameObject otherObject)
         {
-            var collidedWith = otherObject.BoundingBox.Intersects(BoundingBox);
-            if (collidedWith)
-                CollisionOccured(otherObject);
-            return collidedWith;
+            IsColliding = otherObject.BoundingBox.Intersects(BoundingBox);
+            otherObject.IsColliding = IsColliding;
+            return IsColliding;
         }
 
-        public void CollisionOccured(GameObject otherObject)
+        public virtual void CollisionOccuredWith(GameObject otherObject)
         {
-            OnCollision?.Invoke(this, otherObject);
+            var handler = OnCollision; // Microsoft recommends assinging to temp object to avoid race condition
+            handler?.Invoke(this, otherObject);
         }
 
         private Vector2 Centre
@@ -90,7 +90,7 @@ namespace MazerPlatformer
 
         public delegate void CollisionArgs(GameObject object1, GameObject object2);
 
-        public event CollisionArgs OnCollision = delegate { };
+        public event CollisionArgs OnCollision;
 
         #endregion
 

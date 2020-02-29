@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using GameLibFramework.Src.Animation;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 
@@ -22,7 +24,7 @@ namespace MazerPlatformer
         /* Used to remove walls randonly throughout level and place the player randomly in a room */
         private readonly Random _random = new Random();
 
-        public GameWorld(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, int rows, int cols)
+        public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, int rows, int cols)
         {
             GraphicsDevice = graphicsDevice;
 
@@ -40,7 +42,18 @@ namespace MazerPlatformer
                 x: playerRoom.X + (float)(0.5 * cellWidth), 
                 y: playerRoom.Y+ (float)(0.5 * cellHeight));
 
-            Player = new Player(x: (int)playerPositionWithinRoom.X, y: (int)playerPositionWithinRoom.Y, w: 15, h: 15);
+            AnimationStrip playerAnimtion = new AnimationStrip(texture: contentManager.Load<Texture2D>(@"Sprites\pirate-f-001-light"),
+                frameWidth: 48, 
+                frameHeight: 64, 
+                frameCount:3, 
+                color: Color.White,
+                scale: 1.0f, 
+                looping:true, frameTime: 150, rows: 4);
+
+            Player = new Player(x: (int)playerPositionWithinRoom.X, 
+                                y: (int)playerPositionWithinRoom.Y, w: 44, h: 32,
+                                animationStrip: playerAnimtion);
+            Player.Initialize();            
 
             foreach (var room in rooms)
             {
@@ -53,7 +66,7 @@ namespace MazerPlatformer
             foreach(var gameObject in _gameObjects)
             {
                 // Listen for collision events
-                gameObject.Value.OnCollision += OnObjectCollision;
+                gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision);
                 // Listen for scoring, special moves, power-ups etc
             }
         }
@@ -62,7 +75,7 @@ namespace MazerPlatformer
         {
             Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
         }
-        
+
         public override void Draw(SpriteBatch spriteBatch)
         {
             /* We ask each game object within the game world to draw itself */
@@ -79,13 +92,18 @@ namespace MazerPlatformer
             foreach (var gameItem in _gameObjects)
             {
                 var obj = gameItem.Value;
+
+                // Update object logic
                 obj.Update(gameTime, gameWorld);
 
                 // check if any objects collide with the player
                 var objectIsPlayer = obj.Id == player.Id;
-                if (!objectIsPlayer)
-                    obj.TestCollidesWith(player);
+                if (!objectIsPlayer && obj.IsCollidingWith(player))
+                {
+                    player.CollisionOccuredWith(obj);
+                    obj.CollisionOccuredWith(player);
+                }
             }
-        }
+        }       
     }
 }

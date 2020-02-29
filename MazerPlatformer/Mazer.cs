@@ -95,7 +95,8 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _gameWorld = new GameWorld(GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // Create our game world
+
+            _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // Create our game world
             _pauseState = new PauseState(ref _gameWorld);
             _playingState = new PlayingGameState(ref _gameWorld);
 
