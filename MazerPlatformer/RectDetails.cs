@@ -1,4 +1,5 @@
-﻿using System.Runtime.Remoting.Messaging;
+﻿using System;
+using System.Runtime.Remoting.Messaging;
 using Microsoft.Xna.Framework;
 
 namespace Assets
@@ -25,9 +26,16 @@ namespace Assets
         public int GetDx(){ return GetAx();}
         public int GetDy(){ return GetAy()+_rect.Height;}
 
+        public int GetAB() { return GetBx() - GetAx(); }
+        public int GetCD() => GetCx() - GetDx();
+        public int GetBC() => GetCy() - GetBy();
+        public int GetAD() => GetDy() - GetAy();
+
         public Point A() => new Point(GetAx(), GetAy());
         public Point B() => new Point(GetBx(), GetBy());
         public Point C() => new Point(GetCx(), GetCy());
         public Point D() => new Point(GetDx(), GetDy());
+
+        
     }
 }

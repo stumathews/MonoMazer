@@ -8,7 +8,7 @@ namespace MazerPlatformer
 {
     public abstract class GameObject : PerFrame
     {
-        public enum GameObjectType { Room, Player }
+        public enum GameObjectType { Room, Player, NPC }
         public bool IsColliding;
         protected readonly FSM StateMachine; // Every game object has possible states
         public readonly GameObjectType Type;
@@ -19,11 +19,21 @@ namespace MazerPlatformer
         public string Id { get; set; }
         public int W { get; }
         public int H { get; }
+        public bool Active { get; set; }
 
-        public Rectangle BoundingBox; // every game object gets automatic bounding box support        
+        //public Rectangle BoundingBox; // every game object gets automatic bounding box support 
+        public BoundingBox BoundingBox; // every game object gets automatic bounding box support 
+        public BoundingSphere BoundingSphere;
         
         private Vector2 _centre;
         private Vector2 _maxPoint;
+
+        public Vector2 GetCentre()
+        {
+            _centre.X = X + W / 2;
+            _centre.Y = Y + H / 2;
+            return _centre;
+        }
 
         // Create a basic game Object
         protected GameObject(int x, int y, string id, int w, int h, GameObjectType type)
@@ -35,35 +45,41 @@ namespace MazerPlatformer
             H = h;
             StateMachine = new FSM(this);
             Type = type;
-            CalculateBoundingBox(x, y, w, h);
+            CalculateBoundingBox();
+            Active = true;
         }
 
-        private void CalculateBoundingBox(int x, int y, int w, int h)
+        private void CalculateBoundingBox()
         {
             // Keep track of our centre
-            _centre.X = x + w/2;
-            _centre.Y = y + h/2;
+            _centre.X = X + H/2;
+            _centre.Y = Y + H/2;
+            _centre = GetCentre();
 
             // Keep track of the max point of the bounding box
             _maxPoint = _centre;
-            _maxPoint.X = w;
-            _maxPoint.Y = h;
+            _maxPoint.X = W;
+            _maxPoint.Y = H;
 
-            // Everyobject gets a bounding box that is used for collision detection
-            BoundingBox = new Rectangle(x: X, y: Y, width: (int)_maxPoint.X, height: (int)_maxPoint.Y);            
+            // Every object gets a bounding box - this might be not needed (see boundingSphere)
+            BoundingBox = new BoundingBox(new Vector3( X, Y,0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
+
+            // Every object gets a bounding sphere that is used for collision detection
+            BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
         }
 
         // Called every frame
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        public virtual void Update(GameTime gameTime, GameWorld gameWorld)
         {
-            CalculateBoundingBox(X, Y, W, H);
+            if (!Active) return;
+            CalculateBoundingBox();
             StateMachine.Update(gameTime);
         }
 
         // Every object can check if its colliding with another object's bounding box
         public virtual bool IsCollidingWith(GameObject otherObject)
         {
-            IsColliding = otherObject.BoundingBox.Intersects(BoundingBox);
+            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere) && Active;
             otherObject.IsColliding = IsColliding;
             return IsColliding;
         }
@@ -111,7 +127,13 @@ namespace MazerPlatformer
         protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawGameObjectBounds) return;
-            spriteBatch.DrawRectangle(BoundingBox, Color.Lime, 1.5f);
+            spriteBatch.DrawRectangle(BoundingBox.ToRectangle(), Color.Lime, 1.5f);
+        }
+
+        protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
+        {
+            if (!Diganostics.DrawGameObjectBounds) return;
+            spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua);
         }
 
         protected void DrawObjectDiganostics(SpriteBatch spriteBatch)
@@ -119,6 +141,15 @@ namespace MazerPlatformer
             DrawCentrePoint(spriteBatch);
             DrawMaxPoint(spriteBatch);
             DrawGameObjectBoundingBox(spriteBatch);
+            DrawGameObjectBoundingSphere(spriteBatch);
+        }
+
+        public virtual void Draw(SpriteBatch spriteBatch)
+        {
+        }
+
+        public virtual void Initialize()
+        {
         }
 
         #endregion

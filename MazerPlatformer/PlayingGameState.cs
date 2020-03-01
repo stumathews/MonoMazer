@@ -1,5 +1,5 @@
 ﻿using GameLibFramework.Src.FSM;
-using GamLib.EventDriven;
+using GameLib.EventDriven;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -21,10 +21,10 @@ namespace MazerPlatformer
 
         public override void Enter(object owner)
         {
-            _playingCommands.AddCommand(Keys.Up, time => _gameWorld.Player.MoveUp(time));
-            _playingCommands.AddCommand(Keys.Down, time => _gameWorld.Player.MoveDown(time));
-            _playingCommands.AddCommand(Keys.Left, time => _gameWorld.Player.MoveLeft(time));
-            _playingCommands.AddCommand(Keys.Right, time => _gameWorld.Player.MoveRight(time));
+            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.Player.MoveUp(time));
+            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveDown(time));
+            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveLeft(time));
+            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveRight(time));
 
             base.Enter(owner);
         }

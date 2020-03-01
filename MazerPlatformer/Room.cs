@@ -24,10 +24,10 @@ namespace MazerPlatformer
 		private readonly RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
 		
 		/* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidsWith() override */
-		Rectangle topSideBounds;
-		Rectangle bottomSideBounds;
-		Rectangle leftSideBounds;
-		Rectangle rightSideBounds;
+		Rectangle topBounds;
+		Rectangle bottomBounds;
+		Rectangle leftBounds;
+		Rectangle rightBounds;
 		private SpriteBatch SpriteBatch { get; }
 
 		/// <summary>
@@ -49,24 +49,30 @@ namespace MazerPlatformer
 			_rectDetails = new RectDetails(X, Y, W, H);
 
 			/* Walls have collision bounds that dont change - collect them */
-			topSideBounds = new Rectangle(
-				x: _rectDetails.GetAx(), 
-				y: _rectDetails.GetAy(), width: _rectDetails.GetBx() - _rectDetails.GetAx(), height: 1);
-			bottomSideBounds = new Rectangle(
-				x: _rectDetails.GetDx(), 
-				y: _rectDetails.GetDy(), width: _rectDetails.GetCx() - _rectDetails.GetDx(), height: 1);
-			rightSideBounds = new Rectangle(
-				x: _rectDetails.GetBx(), 
-				y:_rectDetails.GetBy(),  width:1, height: _rectDetails.GetCy() - _rectDetails.GetBy());
-			leftSideBounds = new Rectangle(
-				x:_rectDetails.GetAx(), 
-				y:_rectDetails.GetAy(), width: 1, height: _rectDetails.GetDy() - _rectDetails.GetAy());
+
+			/* 
+			  A Room is made up of points A,B,C,D:
+				  A------B
+				  |      |
+				  |      |
+				  |      |
+				  D------C
+				 AB = Top
+				 BC = Right
+				 CD = Bottom
+				 AD = Left  
+			*/
+
+			topBounds = new Rectangle(x: _rectDetails.GetAx(), y: _rectDetails.GetAy(), width: _rectDetails.GetAB(), height: 1);
+			bottomBounds = new Rectangle(x: _rectDetails.GetDx(), y: _rectDetails.GetDy(), width: _rectDetails.GetCD(), height: 1);
+			rightBounds = new Rectangle(x: _rectDetails.GetBx(), y:_rectDetails.GetBy(),  height: _rectDetails.GetBC(), width: 1 );
+			leftBounds = new Rectangle(x:_rectDetails.GetAx(), y:_rectDetails.GetAy(), height: _rectDetails.GetAD(), width: 1);
 
 			/* Walls each have specific colours, bounds, nd potentioally other configurable vharacteristics in the game */
-			_wallProperties.Add(Side.Top, new SideCharacterisitic(Color.Black, topSideBounds));
-			_wallProperties.Add(Side.Right, new SideCharacterisitic(Color.Black, rightSideBounds));
-			_wallProperties.Add(Side.Bottom, new SideCharacterisitic(Color.Black, bottomSideBounds));
-			_wallProperties.Add(Side.Left, new SideCharacterisitic(Color.Black, leftSideBounds));
+			_wallProperties.Add(Side.Top, new SideCharacterisitic(Color.Black, topBounds));
+			_wallProperties.Add(Side.Right, new SideCharacterisitic(Color.Black, rightBounds));
+			_wallProperties.Add(Side.Bottom, new SideCharacterisitic(Color.Black, bottomBounds));
+			_wallProperties.Add(Side.Left, new SideCharacterisitic(Color.Black, leftBounds));
 		}
 
 		public override void Draw(SpriteBatch spriteBatch)
@@ -177,8 +183,9 @@ namespace MazerPlatformer
 			{
 				Side side = item.Key;
 				SideCharacterisitic thisWallProperty = item.Value;
-
-				if(thisWallProperty.Bounds.Intersects(otherObject.BoundingBox) && HasSide(side))
+				
+				//if (otherObject.BoundingBox.Intersects(thisWallProperty.Bounds) && HasSide(side))
+				if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side))
 				{
 					Console.WriteLine($"{side} collided with object {otherObject.Id}");
 					thisWallProperty.Color = Color.White;

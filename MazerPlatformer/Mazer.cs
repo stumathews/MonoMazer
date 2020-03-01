@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using GameLibFramework.Src.FSM;
-using GamLib.EventDriven;
+using GameLib.EventDriven;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -37,17 +37,26 @@ namespace MazerPlatformer
 
         // Current Game state
         private GameStates _currentGameState = GameStates.Paused;
+
+        private int currentLevel = 1;
+        private bool unloading = false;
         
         public Mazer()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            //graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-            //graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
 
-            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
-            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
+            //graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
+            //graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
             graphics.ApplyChanges();
+
+            _gameCommands = new CommandManager();
+            _gameStateMachine = new FSM(this);
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch); // Create our game world
+            _pauseState = new PauseState(ref _gameWorld);
         }
 
         /// <summary>
@@ -58,24 +67,20 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            /* Controls input */
-            _gameCommands = new CommandManager();
-            
-            /* Top level game states */
-            _gameCommands.AddCommand(Keys.S, time => _currentGameState = GameStates.Playing);
-            _gameCommands.AddCommand(Keys.Q, time => _currentGameState = GameStates.Paused);
-            
-             /* Diganostics */
-            _gameCommands.AddCommand(Keys.O, time => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
-            _gameCommands.AddCommand(Keys.K, time => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
-            _gameCommands.AddCommand(Keys.D, time => Diganostics.DrawLines = !Diganostics.DrawLines);
-            _gameCommands.AddCommand(Keys.C, time => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
-            _gameCommands.AddCommand(Keys.M, time => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
-            _gameCommands.AddCommand(Keys.T, time => Diganostics.DrawTop = !Diganostics.DrawTop);
-            _gameCommands.AddCommand(Keys.B, time => Diganostics.DrawBottom = !Diganostics.DrawBottom);
-            _gameCommands.AddCommand(Keys.R, time => Diganostics.DrawRight = !Diganostics.DrawRight);
-            _gameCommands.AddCommand(Keys.L, time => Diganostics.DrawLeft = !Diganostics.DrawLeft);
-            _gameCommands.AddCommand(Keys.A, time => 
+            base.Initialize();
+
+            _gameCommands.AddKeyUpCommand(Keys.S, (time) => _currentGameState = GameStates.Playing);
+            _gameCommands.AddKeyUpCommand(Keys.P, (time) => _currentGameState = GameStates.Paused);
+            _gameCommands.AddKeyUpCommand(Keys.O, (time) => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
+            _gameCommands.AddKeyUpCommand(Keys.K, (time) => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
+            _gameCommands.AddKeyUpCommand(Keys.D, (time) => Diganostics.DrawLines = !Diganostics.DrawLines);
+            _gameCommands.AddKeyUpCommand(Keys.C, (time) => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
+            _gameCommands.AddKeyUpCommand(Keys.M, (time) => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
+            _gameCommands.AddKeyUpCommand(Keys.T, (time) => Diganostics.DrawTop = !Diganostics.DrawTop);
+            _gameCommands.AddKeyUpCommand(Keys.B, (time) => Diganostics.DrawBottom = !Diganostics.DrawBottom);
+            _gameCommands.AddKeyUpCommand(Keys.R, (time) => Diganostics.DrawRight = !Diganostics.DrawRight);
+            _gameCommands.AddKeyUpCommand(Keys.L, (time) => Diganostics.DrawLeft = !Diganostics.DrawLeft);
+            _gameCommands.AddKeyUpCommand(Keys.A, (time) =>
             {
                 Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
                 Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
@@ -83,28 +88,26 @@ namespace MazerPlatformer
                 Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
             });
 
-            _gameStateMachine = new FSM(this);
+            _gameCommands.AddKeyUpCommand(Keys.U, (time) =>
+            {
+                _gameWorld.UnloadContent();
 
-            base.Initialize();
+                _gameWorld.LoadContent(rows: 10, cols: 10, ++currentLevel);
+                _gameWorld.Initialize();
+            });
+
+            InitializeGameStateMachine();
+
+            _gameWorld.Initialize();
         }
 
-        /// <summary>
-        /// LoadContent will be called once per game and is the place to load
-        /// all of your content.
-        /// </summary>
-        protected override void LoadContent()
+        private void InitializeGameStateMachine()
         {
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch, rows: 10, cols: 10); // Create our game world
-            _pauseState = new PauseState(ref _gameWorld);
-            _playingState = new PlayingGameState(ref _gameWorld);
-
             var idleTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
             var playingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
 
-            var states = new State[] { _pauseState,  _playingState };
-            var transitions = new [] { idleTransition, playingTransition};
+            var states = new State[] { _pauseState, _playingState };
+            var transitions = new[] { idleTransition, playingTransition };
 
             _gameStateMachine.AddState(_pauseState);
             _gameStateMachine.AddState(_playingState);
@@ -126,12 +129,24 @@ namespace MazerPlatformer
         }
 
         /// <summary>
+        /// LoadContent will be called once per game and is the place to load
+        /// all of your content.
+        /// </summary>
+        protected override void LoadContent()
+        {
+            _playingState = new PlayingGameState(ref _gameWorld);
+
+            _gameWorld.LoadContent(rows: 10, cols: 10, currentLevel);
+        }
+
+        /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
         /// game-specific content.
         /// </summary>
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
+            _gameWorld.UnloadContent();
         }
 
         /// <summary>

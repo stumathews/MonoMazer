@@ -14,6 +14,13 @@ namespace MazerPlatformer
             var rect =  new Rectangle(new Point((int)box.Min.X, (int)box.Min.Y), new Point((int)box.Max.X, (int)box.Max.Y) );
             return rect;
         }
+
+        public static BoundingBox ToBoundingBox(this Rectangle rect)
+        {
+            return new BoundingBox(new Vector3(rect.X, rect.Y, 0), new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0));
+        }
+
+        public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
     }
 
     public static class Diganostics
@@ -29,5 +36,6 @@ namespace MazerPlatformer
         public static bool DrawTop = true;
         public static bool DrawBottom = true;
         public static bool RandomSides = true;
+        public static bool DrawPlayerRectangle = false;
     }
 }

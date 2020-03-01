@@ -47,6 +47,7 @@
     <Compile Include="Level.cs" />
     <Compile Include="Mazer.cs" />
     <Compile Include="PerFrame.cs" />
+    <Compile Include="NPC.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="PlayingGameState.cs" />
     <Compile Include="Primatives2D.cs" />

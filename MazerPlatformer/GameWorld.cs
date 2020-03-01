@@ -5,105 +5,149 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
+using System.Linq;
 
 namespace MazerPlatformer
 {
-    /* Game world is contains the elements that can be updated/drawn each frame */
+    /// <summary>
+    /// Game world is contains the elements that can be updated/drawn each frame
+    /// </summary>
     public class GameWorld : PerFrame
     {
+        public ContentManager ContentManager { get; }
         private GraphicsDevice GraphicsDevice { get; }
-        private int Rows { get; } // Rows Of rooms
-        private int Cols { get; } // Columns of rooms
+        public SpriteBatch SpriteBatch { get; }
 
-        /* Game objects within the gameworld */
+        public int Rows { get; internal set; } // Rows Of rooms
+        public int Cols { get; internal set; } // Columns of rooms
+        
         private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
-
-        /* Special player game object */
-        public readonly Player Player;
-
-        /* Used to remove walls randonly throughout level and place the player randomly in a room */
         private readonly Random _random = new Random();
 
-        public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, int rows, int cols)
-        {
-            GraphicsDevice = graphicsDevice;
+        public int CellWidth { get; private set; }
+        public int CellHeight { get; private set; }
 
+        private Level level;
+        private bool _unloading = false;
+
+        public Player Player;
+
+        public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        {
+            ContentManager = contentManager;
+            GraphicsDevice = graphicsDevice;
+            SpriteBatch = spriteBatch;
+        }
+
+        /// <summary>
+        /// Generate rooms rows x cols rooms in the level
+        /// Add Npcs
+        /// Add rooms
+        /// Add player 
+        /// </summary>
+        public void LoadContent(int rows, int cols, int levelNumber)
+        {
             Rows = rows;
             Cols = cols;
 
-            List<Room> rooms = Level.Make(Rows, Cols, graphicsDevice, spriteBatch, removeRandomSides: Diganostics.RandomSides);
+            CellWidth = GraphicsDevice.Viewport.Width / Cols;
+            CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
-            var cellWidth = GraphicsDevice.Viewport.Width / cols;
-            var cellHeight = GraphicsDevice.Viewport.Height / rows;
+            level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
+            level.Load();
+            var rooms = level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
-            Room playerRoom = rooms[_random.Next(0, Rows * Cols)]; // place player in a random room
+            Player = level.MakePlayer(playerRoom: rooms[_random.Next(0, Rows * Cols)]);
+                _gameObjects.Add(Player.PlayerId, Player);
 
-            var playerPositionWithinRoom = new Vector2(
-                x: playerRoom.X + (float)(0.5 * cellWidth), 
-                y: playerRoom.Y+ (float)(0.5 * cellHeight));
-
-            AnimationStrip playerAnimtion = new AnimationStrip(texture: contentManager.Load<Texture2D>(@"Sprites\pirate-f-001-light"),
-                frameWidth: 48, 
-                frameHeight: 64, 
-                frameCount:3, 
-                color: Color.White,
-                scale: 1.0f, 
-                looping:true, frameTime: 150, rows: 4);
-
-            Player = new Player(x: (int)playerPositionWithinRoom.X, 
-                                y: (int)playerPositionWithinRoom.Y, w: 44, h: 32,
-                                animationStrip: playerAnimtion);
-            Player.Initialize();            
+            foreach (var npc in level.MakeNPCs(rooms))
+                _gameObjects.Add(npc.Id, npc);
 
             foreach (var room in rooms)
+                _gameObjects.Add(room.Id, room);            
+        }
+
+        public void UnloadContent()
+        {
+            _unloading = true;
+            level.Save();
+            _gameObjects.Clear();
+            Player = null;
+            _unloading = false;
+        }
+
+        /// <summary>
+        /// The game world will listen events raised by game objects
+        /// Initialize every game object
+        /// Listen for collision events
+        /// Listen for scoring, special moves, power-ups etc
+        /// </summary>
+        public void Initialize()
+        {
+            foreach (var gameObject in _gameObjects)
             {
-                _gameObjects.Add(room.Id, room);
-            }
-            
-            _gameObjects.Add(Player.PlayerId, Player);   
-            
-            // The game world will listen events raised by game objects
-            foreach(var gameObject in _gameObjects)
-            {
-                // Listen for collision events
+                gameObject.Value.Initialize();
                 gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision);
-                // Listen for scoring, special moves, power-ups etc
             }
         }
 
-        void OnObjectCollision(GameObject obj1, GameObject obj2)
+        /// <summary>
+        /// We ask each game object within the game world to draw itself
+        /// </summary>
+        /// <param name="spriteBatch"></param>
+        public void Draw(SpriteBatch spriteBatch)
         {
-            Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
-        }
-
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            /* We ask each game object within the game world to draw itself */
-            foreach (KeyValuePair<string, GameObject> pair in _gameObjects)
+            if (_unloading) return;
+            foreach (var gameObject in _gameObjects.Values.Where(obj => obj.Active))
             {
-                var gameObject = pair.Value; 
-                gameObject.Draw(spriteBatch);
+                if (gameObject.Active)
+                    gameObject.Draw(spriteBatch);
             }
         }
 
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        /// <summary>
+        /// Remove game objects that are no longer active
+        /// Update object logic
+        /// Update and check for collisions on any active objects.
+        /// Check only if any objects collide with the player
+        /// Inform game object subscribers that they had a collision by raising event
+        /// </summary>
+        /// <param name="gameTime"></param>
+        /// <param name="gameWorld"></param>
+        public void Update(GameTime gameTime, GameWorld gameWorld)
         {
-            var player = _gameObjects[Player.PlayerId];
-            foreach (var gameItem in _gameObjects)
+            if (_unloading) return;
+
+            var inactiveIds = _gameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
+
+            foreach (var id in inactiveIds)
+                _gameObjects.Remove(id);
+
+            foreach (var gameObject in _gameObjects.Values.Where(obj => obj.Active))
             {
-                var obj = gameItem.Value;
+                gameObject.Update(gameTime, gameWorld);
 
-                // Update object logic
-                obj.Update(gameTime, gameWorld);
-
-                // check if any objects collide with the player
-                var objectIsPlayer = obj.Id == player.Id;
-                if (!objectIsPlayer && obj.IsCollidingWith(player))
+                if (gameObject.IsCollidingWith(Player) && !gameObject.IsPlayer())
                 {
-                    player.CollisionOccuredWith(obj);
-                    obj.CollisionOccuredWith(player);
+                    Player.CollisionOccuredWith(gameObject);
+                    gameObject.CollisionOccuredWith(Player);
                 }
             }
-        }       
+        }
+
+        /// <summary>
+        /// Detactivate objects that collided (will be removed before next update)
+        /// </summary>
+        /// <param name="obj1"></param>
+        /// <param name="obj2"></param>
+        /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
+        void OnObjectCollision(GameObject obj1, GameObject obj2)
+        {
+            if (_unloading) return;
+            Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
+
+            if (obj1.Id == Player.Id)
+                obj2.Active = obj2.Type != GameObjectType.NPC; // keep Non-NPCs(walls etc.) active, even on collision
+        }
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using C3.XNA;
 using GameLibFramework.Src.Animation;
 using GameLibFramework.Src.FSM;
-using GamLib.EventDriven;
+using GameLib.EventDriven;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -16,11 +16,11 @@ namespace MazerPlatformer
     public class Player : GameObject
     {
         public enum PlayerStates {Idle, Moving, Colliding};
-        private const int MoveStep = 5;
+        private const int MoveStep = 3;
         private MovingState _movingState;
         private CollisionState _collisionState;
         private IdleState _idleState;
-        internal readonly Animation _animation = new Animation();
+        internal readonly Animation Animation = new Animation(Animation.Direction.Down);
         public const string PlayerId = "Player";
         public CommandManager _playerCommands = new CommandManager();
         public PlayerStates _currentState { get; set; } 
@@ -40,7 +40,7 @@ namespace MazerPlatformer
                 case Animation.Direction.Right:
                 case Animation.Direction.Down:
                 case Animation.Direction.Left:
-                    _animation.CurrentDirection = direction;
+                    Animation.CurrentDirection = direction;
                     _currentState = PlayerStates.Moving;
                     break;
             }
@@ -48,27 +48,23 @@ namespace MazerPlatformer
 
         public override void Initialize()
         {
+            // Get notified when I collide with another object (collision handled in base class)
             OnCollision += Player_OnCollision;
+
             _movingState = new MovingState(PlayerStates.Moving.ToString(), this);
             _collisionState = new CollisionState(PlayerStates.Colliding.ToString(), this);
             _idleState = new IdleState(PlayerStates.Idle.ToString(), this);
 
-            _playerCommands.AddCommand(Microsoft.Xna.Framework.Input.Keys.Up, (gameTime) => SetPlayerState(Animation.Direction.Up));
-            _playerCommands.AddCommand(Microsoft.Xna.Framework.Input.Keys.Down, (gameTime) => SetPlayerState(Animation.Direction.Down));
-            _playerCommands.AddCommand(Microsoft.Xna.Framework.Input.Keys.Left, (gameTime) => SetPlayerState(Animation.Direction.Left));
-            _playerCommands.AddCommand(Microsoft.Xna.Framework.Input.Keys.Right, (gameTime) => SetPlayerState(Animation.Direction.Right));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Up, (gameTime) => SetPlayerState(Animation.Direction.Up));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Down, (gameTime) => SetPlayerState(Animation.Direction.Down));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Left, (gameTime) => SetPlayerState(Animation.Direction.Left));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Right, (gameTime) => SetPlayerState(Animation.Direction.Right));
             _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => _currentState = PlayerStates.Idle;
             
-            _animation.Initialize(AnimationStrip.Texture, 
-                new Vector2(X, Y), 
-                AnimationStrip.FrameWidth, 
-                AnimationStrip.FrameHeight, 
-                AnimationStrip.FrameCount,
-                AnimationStrip.Color,
-                AnimationStrip.Scale, 
-                AnimationStrip.Looping,
-                frameTimeMs: AnimationStrip.FrameTime,
-                AnimationStrip.Rows);
+
+            Animation.Initialize(AnimationStrip.Texture, GetCentre(), AnimationStrip.FrameWidth, AnimationStrip.FrameHeight, 
+                                 AnimationStrip.FrameCount, AnimationStrip.Color, AnimationStrip.Scale, AnimationStrip.Looping,
+                                 AnimationStrip.FrameTime);
 
             var idleTransition = new Transition(_idleState, () => _currentState == PlayerStates.Idle);
             var movingTransition = new Transition(_movingState, () => _currentState == PlayerStates.Moving);
@@ -86,35 +82,65 @@ namespace MazerPlatformer
             StateMachine.Initialise(_idleState.Name);
         }
 
+        /// <summary>
+        /// Update player
+        /// Get player commands
+        /// Update animation
+        /// </summary>
+        /// <param name="gameTime"></param>
+        /// <param name="gameWorld"></param>
+        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        {
+            base.Update(gameTime, gameWorld);
+            _playerCommands.Update(gameTime);
+            Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
+        }
+
+        /// <summary>
+        /// Draw the player via the animation
+        /// Optionally draw diagnostics
+        /// </summary>
+        /// <param name="spriteBatch"></param>
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            Animation.Draw(spriteBatch);
+
+            if (Diganostics.DrawPlayerRectangle)
+                spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: W, height: H), Color.Gray);
+
+            DrawObjectDiganostics(spriteBatch);
+        }
+
+        /// <summary>
+        /// I collided with something, set my current state to colliding
+        /// </summary>
+        /// <param name="object1"></param>
+        /// <param name="object2"></param>
         private void Player_OnCollision(GameObject object1, GameObject object2)
         {
             _currentState = PlayerStates.Colliding;
         }
 
-        public override void CollisionOccuredWith(GameObject otherObject)
-        {
-            base.CollisionOccuredWith(otherObject);
-        }
-
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
-        {
-            base.Update(gameTime, gameWorld);
-            _playerCommands.Update(gameTime);
-            _animation.Update(gameTime, X, Y);
-        }
-
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            _animation.Draw(spriteBatch);
-            spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: W, height:H), Color.Gray);
-            DrawObjectDiganostics(spriteBatch);
-        }
+        
+        
 
         public void MoveUp(GameTime dt) => Y -= ScaleMoveByGameTime(dt);
         public void MoveDown(GameTime dt) => Y += ScaleMoveByGameTime(dt);
         public void MoveRight(GameTime dt) => X += ScaleMoveByGameTime(dt);
         public void MoveLeft(GameTime dt) => X -= ScaleMoveByGameTime(dt);
         private int ScaleMoveByGameTime(GameTime dt) => MoveStep;
+
+        /// <summary>
+        /// Triggered when a collision occured with another object
+        /// Initiated from the base class, GameObject
+        /// </summary>
+        /// <param name="otherObject"></param>
+        public override void CollisionOccuredWith(GameObject otherObject)
+        {
+            // Inform subscribers (including myself)
+            base.CollisionOccuredWith(otherObject);
+        }
+
     }
 
     public class PlayerState: State
@@ -155,7 +181,7 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
-            Player._animation.Idle = false;
+            Player.Animation.Idle = false;
         }
     }
 
@@ -167,7 +193,7 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
-            Player._animation.Idle = true;
+            Player.Animation.Idle = true;
         }
     }
 }
