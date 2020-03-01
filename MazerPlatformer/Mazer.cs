@@ -67,7 +67,7 @@ namespace MazerPlatformer
             _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch); // Create our game world
             _pauseState = new PauseState(this);
 
-            
+            this.IsFixedTimeStep = false;
             
         }
 
@@ -272,6 +272,10 @@ namespace MazerPlatformer
 
             _spriteBatch.DrawString(_font, $"Level: {npcCllisionsDetected} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
+                Color.White);
+
+            _spriteBatch.DrawString(_font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
 
             _spriteBatch.End();
