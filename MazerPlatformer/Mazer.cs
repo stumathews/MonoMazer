@@ -39,8 +39,10 @@ namespace MazerPlatformer
         private GameStates _currentGameState = GameStates.Paused;
 
         private int currentLevel = 1;
-        private bool unloading = false;
-        
+        private int collisionsDetected;
+        private int npcCllisionsDetected;
+        private SpriteFont _font;
+
         public Mazer()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -99,6 +101,15 @@ namespace MazerPlatformer
             InitializeGameStateMachine();
 
             _gameWorld.Initialize();
+
+            _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+        }
+
+        private void _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
+        {
+            if (object1.Type == GameObject.GameObjectType.NPC)
+                npcCllisionsDetected++;
+            collisionsDetected++;
         }
 
         private void InitializeGameStateMachine()
@@ -135,6 +146,7 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _playingState = new PlayingGameState(ref _gameWorld);
+            _font = Content.Load<SpriteFont>("Sprites/gameFont");
 
             _gameWorld.LoadContent(rows: 10, cols: 10, currentLevel);
         }
@@ -176,6 +188,19 @@ namespace MazerPlatformer
 
             /* Ask the gameworld to draw itself */
             _gameWorld.Draw(_spriteBatch);
+
+            /* Draw high Score */
+
+            _spriteBatch.DrawString(_font, $"Game Object Count: {_gameWorld.GameObjectCount}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Collision Events: {collisionsDetected}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y+30),
+                Color.White);
+
+            _spriteBatch.DrawString(_font, $"NPC Collisions: {npcCllisionsDetected}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
+                Color.White);
 
             _spriteBatch.End();
             base.Draw(gameTime);

@@ -37,6 +37,13 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/captain-m-001-light.png
 
+#begin Sprites/gameFont.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Sprites/gameFont.spritefont
+
 #begin Sprites/hero_a.png
 /importer:TextureImporter
 /processor:TextureProcessor

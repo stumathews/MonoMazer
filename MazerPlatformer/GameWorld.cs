@@ -24,8 +24,12 @@ namespace MazerPlatformer
         private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
         private readonly Random _random = new Random();
 
+        public event CollisionArgs OnGameWorldCollision = delegate { };
+
         public int CellWidth { get; private set; }
         public int CellHeight { get; private set; }
+
+        public int GameObjectCount => _gameObjects.Keys.Count();
 
         private Level level;
         private bool _unloading = false;
@@ -137,6 +141,7 @@ namespace MazerPlatformer
 
         /// <summary>
         /// Detactivate objects that collided (will be removed before next update)
+        /// Informs the Game (Mazer) that a collision occured
         /// </summary>
         /// <param name="obj1"></param>
         /// <param name="obj2"></param>
@@ -145,6 +150,8 @@ namespace MazerPlatformer
         {
             if (_unloading) return;
             Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
+            
+            OnGameWorldCollision?.Invoke(obj1, obj2);
 
             if (obj1.Id == Player.Id)
                 obj2.Active = obj2.Type != GameObjectType.NPC; // keep Non-NPCs(walls etc.) active, even on collision
