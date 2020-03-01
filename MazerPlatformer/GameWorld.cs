@@ -83,7 +83,8 @@ namespace MazerPlatformer
         public void StartLevel()
         {
             if (!string.IsNullOrEmpty(level.LevelFile.SongFileName))
-            {                
+            {
+                MediaPlayer.IsRepeating = true;
                 MediaPlayer.Play(_currentSong);
             }
         }

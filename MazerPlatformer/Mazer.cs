@@ -41,7 +41,7 @@ namespace MazerPlatformer
         private PlayingGameState _playingState;
         public GameStates _currentGameState = GameStates.Paused;
 
-        private int currentLevel = 1;
+        private int _currentLevel = 1;
         private int collisionsDetected;
         private int npcCllisionsDetected;
         private SpriteFont _font;
@@ -54,11 +54,11 @@ namespace MazerPlatformer
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+            //graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+            //graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
 
-            //graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
-            //graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
+            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
+            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
             graphics.ApplyChanges();
 
             _gameCommands = new CommandManager();
@@ -107,7 +107,7 @@ namespace MazerPlatformer
             {
                 _gameWorld.UnloadContent();
 
-                _gameWorld.LoadContent(rows: 10, cols: 10, ++currentLevel);
+                _gameWorld.LoadContent(rows: 10, cols: 10, ++_currentLevel);
                 _gameWorld.Initialize();
                 StartLevel();
             });
@@ -215,7 +215,7 @@ namespace MazerPlatformer
 
             MediaPlayer.Play(_gameMusic);
 
-            _gameWorld.LoadContent(rows: 10, cols: 10, currentLevel);
+            _gameWorld.LoadContent(rows: 10, cols: 10, _currentLevel);
         }
 
         /// <summary>
@@ -270,7 +270,7 @@ namespace MazerPlatformer
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Level: {npcCllisionsDetected} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Level: {_currentLevel} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 
