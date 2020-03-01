@@ -23,6 +23,7 @@ namespace MazerPlatformer
             public int? SpriteHeight { get; set; }
             public int? SpriteFrameTime { get; set; }
             public int? SpriteFrameCount { get; set; }
+            public string SongFileName { get; set; }
         }
 
         public int Rows { get; }
@@ -33,7 +34,7 @@ namespace MazerPlatformer
         public int LevelNumber { get; }
         private static readonly Random _randomGenerator = new Random();
         public string LevelFileName { get; set; }
-        public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
+        public LevelDetails LevelFile { get; internal set; } = new LevelDetails();        
 
         public Level(int rows, int cols, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber) 
         {

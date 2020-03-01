@@ -59,7 +59,10 @@ namespace MazerPlatformer
             _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Down, (gameTime) => SetPlayerState(Animation.Direction.Down));
             _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Left, (gameTime) => SetPlayerState(Animation.Direction.Left));
             _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Right, (gameTime) => SetPlayerState(Animation.Direction.Right));
-            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => _currentState = PlayerStates.Idle;
+            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) =>
+            {
+                _currentState = PlayerStates.Idle;
+            };
             
 
             Animation.Initialize(AnimationStrip.Texture, GetCentre(), AnimationStrip.FrameWidth, AnimationStrip.FrameHeight, 

@@ -5,12 +5,20 @@ namespace MazerPlatformer
 {
     public class PauseState : State
     {
-        private readonly GameWorld _gameWorld;
+        private readonly Mazer _game;
         
-        public PauseState(ref GameWorld gameWorld) : base("Pause")
+        public PauseState(Mazer game) : base("Pause")
         {
-            _gameWorld = gameWorld;
+            _game = game;
             Name = "Idle";
+        }
+
+        public override void Enter(object owner)
+        {
+            base.Enter(owner);
+            
+            _game._currentGameState = Mazer.GameStates.Paused;
+            _game.ShowMenu();
         }
     }
 }

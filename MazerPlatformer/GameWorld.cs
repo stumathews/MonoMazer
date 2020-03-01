@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
+using Microsoft.Xna.Framework.Media;
 
 namespace MazerPlatformer
 {
@@ -32,6 +33,8 @@ namespace MazerPlatformer
         public int GameObjectCount => _gameObjects.Keys.Count();
 
         private Level level;
+        private Song _currentSong;
+        public string GetCurrentSong() { return level.LevelFile.SongFileName; }
         private bool _unloading = false;
 
         public Player Player;
@@ -59,6 +62,12 @@ namespace MazerPlatformer
 
             level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
             level.Load();
+
+            // This should probably be in the level class managed by some fsm    
+            
+            if(!string.IsNullOrEmpty(level.LevelFile.SongFileName))
+                _currentSong = ContentManager.Load<Song>(level.LevelFile.SongFileName);
+
             var rooms = level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
             Player = level.MakePlayer(playerRoom: rooms[_random.Next(0, Rows * Cols)]);
@@ -69,6 +78,14 @@ namespace MazerPlatformer
 
             foreach (var room in rooms)
                 _gameObjects.Add(room.Id, room);            
+        }
+
+        public void StartLevel()
+        {
+            if (!string.IsNullOrEmpty(level.LevelFile.SongFileName))
+            {                
+                MediaPlayer.Play(_currentSong);
+            }
         }
 
         public void UnloadContent()
@@ -87,7 +104,7 @@ namespace MazerPlatformer
         /// Listen for scoring, special moves, power-ups etc
         /// </summary>
         public void Initialize()
-        {
+        {            
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
