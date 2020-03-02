@@ -26,7 +26,7 @@ namespace MazerPlatformer
             _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveDown(time));
             _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveLeft(time));
             _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveRight(time));
-            MediaPlayer.Stop();
+            
 
             base.Enter(owner);
         }

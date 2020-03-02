@@ -80,7 +80,7 @@ namespace MazerPlatformer
                 _gameObjects.Add(room.Id, room);            
         }
 
-        public void StartLevel()
+        public void StartOrResumeLevelMusic()
         {
             if (!string.IsNullOrEmpty(level.LevelFile.SongFileName))
             {
@@ -89,6 +89,9 @@ namespace MazerPlatformer
             }
         }
 
+        /// <summary>
+        /// Unload the game world, basically save it
+        /// </summary>
         public void UnloadContent()
         {
             _unloading = true;

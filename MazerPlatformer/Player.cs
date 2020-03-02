@@ -9,12 +9,14 @@ using GameLibFramework.Src.FSM;
 using GameLib.EventDriven;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Player;
 
 namespace MazerPlatformer
 {
     /* Our Player is a Game Object */
     public class Player : GameObject
     {
+        public enum PlayerDirection { Up, Down, Left, Right };
         public enum PlayerStates {Idle, Moving, Colliding};
         private const int MoveStep = 3;
         private MovingState _movingState;
@@ -23,27 +25,37 @@ namespace MazerPlatformer
         internal readonly Animation Animation = new Animation(Animation.Direction.Down);
         public const string PlayerId = "Player";
         public CommandManager _playerCommands = new CommandManager();
-        public PlayerStates _currentState { get; set; } 
+        public PlayerStates CurrentState { get; set; } 
+        public PlayerDirection CurrentDirection { get; internal set; }
+        private bool _ignoreCollisions = false;
 
         public AnimationStrip AnimationStrip { get; }
+        public bool CanMove { get; internal set; }
 
         public Player(int x, int y, int w, int h, AnimationStrip animationStrip) : base(x, y, PlayerId, w, h, GameObjectType.Player)
         {
             AnimationStrip = animationStrip;
         }
 
-        public void SetPlayerState(Animation.Direction direction)
+        public void SetPlayerState(PlayerDirection direction)
         {
             switch (direction)
             {
-                case Animation.Direction.Up:                
-                case Animation.Direction.Right:
-                case Animation.Direction.Down:
-                case Animation.Direction.Left:
-                    Animation.CurrentDirection = direction;
-                    _currentState = PlayerStates.Moving;
+                case PlayerDirection.Up:
+                    Animation.CurrentDirection = Animation.Direction.Up;
+                    break;
+                case PlayerDirection.Right:
+                    Animation.CurrentDirection = Animation.Direction.Right;
+                    break;
+                case PlayerDirection.Down:
+                    Animation.CurrentDirection = Animation.Direction.Down;
+                    break;
+                case PlayerDirection.Left:
+                    Animation.CurrentDirection = Animation.Direction.Left;
                     break;
             }
+
+            CurrentDirection = direction;
         }
 
         public override void Initialize()
@@ -51,27 +63,27 @@ namespace MazerPlatformer
             // Get notified when I collide with another object (collision handled in base class)
             OnCollision += Player_OnCollision;
 
+            CurrentDirection = PlayerDirection.Down;
+
             _movingState = new MovingState(PlayerStates.Moving.ToString(), this);
             _collisionState = new CollisionState(PlayerStates.Colliding.ToString(), this);
             _idleState = new IdleState(PlayerStates.Idle.ToString(), this);
 
-            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Up, (gameTime) => SetPlayerState(Animation.Direction.Up));
-            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Down, (gameTime) => SetPlayerState(Animation.Direction.Down));
-            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Left, (gameTime) => SetPlayerState(Animation.Direction.Left));
-            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Right, (gameTime) => SetPlayerState(Animation.Direction.Right));
-            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) =>
-            {
-                _currentState = PlayerStates.Idle;
-            };
-            
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Up, (gameTime) => SetPlayerState(PlayerDirection.Up));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Down, (gameTime) => SetPlayerState(PlayerDirection.Down));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Left, (gameTime) => SetPlayerState(PlayerDirection.Left));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Right, (gameTime) => SetPlayerState(PlayerDirection.Right));
+            _playerCommands.AddKeyDownCommand(Microsoft.Xna.Framework.Input.Keys.Space, (gt) => _ignoreCollisions = true);
+            _playerCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Space, (gt) => _ignoreCollisions = false);
+            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => CurrentState = PlayerStates.Idle;            
 
             Animation.Initialize(AnimationStrip.Texture, GetCentre(), AnimationStrip.FrameWidth, AnimationStrip.FrameHeight, 
                                  AnimationStrip.FrameCount, AnimationStrip.Color, AnimationStrip.Scale, AnimationStrip.Looping,
                                  AnimationStrip.FrameTime);
 
-            var idleTransition = new Transition(_idleState, () => _currentState == PlayerStates.Idle);
-            var movingTransition = new Transition(_movingState, () => _currentState == PlayerStates.Moving);
-            var collidingTransition = new Transition(_collisionState, () => _currentState == PlayerStates.Colliding);
+            var idleTransition = new Transition(_idleState, () => CurrentState == PlayerStates.Idle);
+            var movingTransition = new Transition(_movingState, () => CurrentState == PlayerStates.Moving);
+            var collidingTransition = new Transition(_collisionState, () => CurrentState == PlayerStates.Colliding);
 
             _idleState.AddTransition(movingTransition);
             _movingState.AddTransition(idleTransition);
@@ -121,17 +133,20 @@ namespace MazerPlatformer
         /// <param name="object2"></param>
         private void Player_OnCollision(GameObject object1, GameObject object2)
         {
-            _currentState = PlayerStates.Colliding;
+            if(!_ignoreCollisions)
+                CurrentState = PlayerStates.Colliding;
         }
-
-        
-        
 
         public void MoveUp(GameTime dt) => Y -= ScaleMoveByGameTime(dt);
         public void MoveDown(GameTime dt) => Y += ScaleMoveByGameTime(dt);
         public void MoveRight(GameTime dt) => X += ScaleMoveByGameTime(dt);
         public void MoveLeft(GameTime dt) => X -= ScaleMoveByGameTime(dt);
-        private int ScaleMoveByGameTime(GameTime dt) => MoveStep;
+        private int ScaleMoveByGameTime(GameTime dt)
+        {
+            if (!CanMove)
+                return 0;
+            return MoveStep;
+        }
 
         /// <summary>
         /// Triggered when a collision occured with another object
@@ -155,11 +170,20 @@ namespace MazerPlatformer
         }
 
         public Player Player { get; }
+
+        protected void SetToMovingStateIfCanMove()
+        {
+            if (Player.CurrentState == PlayerStates.Idle)
+                Player.CanMove = true;
+
+            if (Player.CanMove)
+                Player.CurrentState = PlayerStates.Moving;
+        }
     }
 
     public class CollisionState : PlayerState
     {
-
+        private PlayerDirection playerDirectionOnCollision;
         public CollisionState(string name, Player player) : base(name, player)
         {
         }
@@ -167,13 +191,19 @@ namespace MazerPlatformer
         public override void Enter(object owner)
         {
             base.Enter(owner);
+            playerDirectionOnCollision = Player.CurrentDirection;
+
         }
 
         public override void Update(object owner, GameTime gameTime)
         {
-            
+
             base.Update(owner, gameTime);
+            Player.CanMove = Player.CurrentDirection != playerDirectionOnCollision;
+            SetToMovingStateIfCanMove();
         }
+
+        
     }
 
     public class MovingState : PlayerState
@@ -185,6 +215,7 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
             Player.Animation.Idle = false;
+            Player.CanMove = true;
         }
     }
 
@@ -197,6 +228,7 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
             Player.Animation.Idle = true;
+            SetToMovingStateIfCanMove();
         }
     }
 }
