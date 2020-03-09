@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using GameLibFramework.Src.Animation;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -26,6 +25,9 @@ namespace MazerPlatformer
         private readonly Random _random = new Random();
 
         public event CollisionArgs OnGameWorldCollision = delegate { };
+        public event Player.PlayerStateChanged OnPlayerStateChanged = delegate { };
+        public event Player.PlayerDirectionChanged OnPlayerDirectionChanged = delegate { };
+        public event Player.PlayerCollisionDirectionChanged OnPlayerCollisionDirectionChanged = delegate { };
 
         public int CellWidth { get; private set; }
         public int CellHeight { get; private set; }
@@ -38,6 +40,7 @@ namespace MazerPlatformer
         private bool _unloading = false;
 
         public Player Player;
+        private Player.PlayerDirection _playerCollisionDirection;
 
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
@@ -108,13 +111,20 @@ namespace MazerPlatformer
         /// Listen for scoring, special moves, power-ups etc
         /// </summary>
         public void Initialize()
-        {            
+        {
+            // Hook up the Player events to the external world ie game UI
+            Player.OnPlayerStateChanged += state => OnPlayerStateChanged?.Invoke(state);
+            Player.OnPlayerDirectionChanged += direction => OnPlayerDirectionChanged(direction);
+            Player.OnPlayerCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged(direction);
+            
+
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
                 gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision);
             }
         }
+
 
         /// <summary>
         /// We ask each game object within the game world to draw itself

@@ -33,6 +33,9 @@ namespace MazerPlatformer
 
         public GameStates _currentGameState = GameStates.Paused;
 
+        private const int numCols = 10;
+        private const int numRows = 10;
+
         public enum GameStates
         {
             Paused, Playing
@@ -48,6 +51,9 @@ namespace MazerPlatformer
         Button quitButton;
 
         public Song _menuMusic;
+        private Player.PlayerStates _playerState;
+        private Player.PlayerDirection _playerDirection;
+        private Player.PlayerDirection _playerCollisionDirection;
 
         public Mazer()
         {
@@ -79,7 +85,7 @@ namespace MazerPlatformer
             _font = Content.Load<SpriteFont>("Sprites/gameFont");
             _menuMusic = Content.Load<Song>("Music/bgm_menu");
             
-            _gameWorld.LoadContent(rows: 10, cols: 10, _currentLevel);
+            _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: _currentLevel);
         }
 
         /// <summary>
@@ -119,7 +125,7 @@ namespace MazerPlatformer
                 _gameWorld.UnloadContent();
 
                 // Ready the gameworld for the next level
-                _gameWorld.LoadContent(rows: 10, cols: 10, levelNumber: ++_currentLevel);
+                _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: ++_currentLevel);
                 _gameWorld.Initialize();
                 StartOrResumeLevel();
             });
@@ -131,10 +137,18 @@ namespace MazerPlatformer
             _gameWorld.Initialize(); // Basically initialize each object in the game world/level
 
             // Let the game world inform us of what its doing:
-            _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision; 
+            _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+            _gameWorld.OnPlayerStateChanged += state => _playerState = state;
+            _gameWorld.OnPlayerDirectionChanged += direction => _playerDirection = direction;
+            _gameWorld.OnPlayerCollisionDirectionChanged += direction => _playerCollisionDirection = direction;
+
         }
-              
-       
+
+        private void _gameWorld_OnPlayerStateChanged(Player.PlayerStates state)
+        {
+            throw new NotImplementedException();
+        }
+
         internal void StartOrResumeLevel()
         {
             HideMenu();
@@ -289,6 +303,17 @@ namespace MazerPlatformer
 
             _spriteBatch.DrawString(_font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
+                Color.White);
+
+            _spriteBatch.DrawString(_font, $"Player State: {_playerState}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
+                Color.White);
+
+            _spriteBatch.DrawString(_font, $"Player Direction: {_playerDirection}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 300),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_playerCollisionDirection}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
                 Color.White);
         }
 

@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
-using GameLibFramework.Src.Animation;
+using GameLibFramework.Animation;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -152,7 +152,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public Player MakePlayer(Room playerRoom)
         {
-            AnimationStrip playerAnimtion = new AnimationStrip(
+            AnimationInfo playerAnimtion = new AnimationInfo(
                texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile)
                                                        ? @"Sprites\pirate5" 
                                                        : LevelFile.PlayerSpriteFile),
@@ -162,10 +162,9 @@ namespace MazerPlatformer
                color: Color.White,
                scale: 1.0f,
                looping: true,
-               frameTime: 150,
-               rows: 4);
+               frameTime: 150);
 
-            return new Player(x: playerRoom.X, y: playerRoom.Y, w: 48, h: 64, animationStrip: playerAnimtion);
+            return new Player(x: playerRoom.X, y: playerRoom.Y, w: 48, h: 64, animationInfo: playerAnimtion);
         }
 
         public List<NPC> MakeNPCs(List<Room> rooms)
@@ -174,7 +173,7 @@ namespace MazerPlatformer
             for (int i = 0; i < 10; i++)
             {
                 var pirateNumber = _randomGenerator.Next(1, 4);
-                var strip = new AnimationStrip(
+                var strip = new AnimationInfo(
                     texture: ContentManager.Load<Texture2D>($@"Sprites\pirate{pirateNumber}"),
                     frameWidth: 48,
                     frameHeight: 64,
@@ -182,8 +181,7 @@ namespace MazerPlatformer
                     color: Color.White,
                     scale: 1.0f,
                     looping: true,
-                    frameTime: 150,
-                    rows: 4);
+                    frameTime: 150);
 
                 var randomRoom = rooms[_randomGenerator.Next(0, Rows * Cols)];
                 var npc = new NPC(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.NPC, strip);

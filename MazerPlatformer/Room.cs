@@ -15,7 +15,7 @@ namespace MazerPlatformer
 	{
 		public enum Side { Bottom, Right, Top, Left }
 
-		private const float WallThickness = 3.0f;
+		public const float WallThickness = 3.0f;
 
 		// Keeps track of which sides have been removed
 		private readonly bool[] _hasSide = { /*Top*/ true, /*Right*/ true , /*Bottom*/ true, /*Left*/ true }; 

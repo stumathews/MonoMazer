@@ -62,7 +62,7 @@ namespace MazerPlatformer
             _maxPoint.Y = H;
 
             // Every object gets a bounding box - this might be not needed (see boundingSphere)
-            BoundingBox = new BoundingBox(new Vector3( X, Y,0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
+            BoundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
 
             // Every object gets a bounding sphere that is used for collision detection
             BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
@@ -79,7 +79,7 @@ namespace MazerPlatformer
         // Every object can check if its colliding with another object's bounding box
         public virtual bool IsCollidingWith(GameObject otherObject)
         {
-            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere) && Active;
+            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
             otherObject.IsColliding = IsColliding;
             return IsColliding;
         }

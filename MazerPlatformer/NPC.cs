@@ -1,11 +1,11 @@
-﻿using GameLibFramework.Src.Animation;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using GameLibFramework.Animation;
 
 namespace MazerPlatformer
 {
@@ -13,25 +13,25 @@ namespace MazerPlatformer
     {
         private Animation _animation;
 
-        public AnimationStrip AnimationStrip { get; }
+        public AnimationInfo AnimationInfo { get; }
 
-        public NPC(int x, int y, string id, int w, int h, GameObjectType type, AnimationStrip animationStrip) : base(x, y, id, w, h, type)
+        public NPC(int x, int y, string id, int w, int h, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, w, h, type)
         {
-            AnimationStrip = animationStrip;
+            AnimationInfo = animationInfo;
         }
 
         public override void Initialize()
         {
-            _animation = new Animation(Animation.Direction.NonDirectional, idle: false);
-            _animation.Initialize(AnimationStrip.Texture,
+            _animation = new Animation(Animation.AnimationDirection.NonDirectional, idle: false);
+            _animation.Initialize(AnimationInfo.Texture,
                 GetCentre(),
-                AnimationStrip.FrameWidth,
-                AnimationStrip.FrameHeight,
-                AnimationStrip.FrameCount,
-                AnimationStrip.Color,
-                AnimationStrip.Scale,
-                AnimationStrip.Looping,
-                AnimationStrip.FrameTime);
+                AnimationInfo.FrameWidth,
+                AnimationInfo.FrameHeight,
+                AnimationInfo.FrameCount,
+                AnimationInfo.Color,
+                AnimationInfo.Scale,
+                AnimationInfo.Looping,
+                AnimationInfo.FrameTime);
         }
 
         public override void Draw(SpriteBatch spriteBatch)
