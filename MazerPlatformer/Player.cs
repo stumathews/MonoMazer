@@ -38,6 +38,7 @@ namespace MazerPlatformer
 
         private AnimationInfo AnimationInfo { get; }
         internal Animation Animation;
+        public PlayerDirection LastCollisionDirection;
 
         public bool CanMove { private get; set; }
 
@@ -117,15 +118,17 @@ namespace MazerPlatformer
         /// <summary>
         /// I collided with something, set my current state to colliding
         /// </summary>
-        /// <param name="object1"></param>
-        /// <param name="object2"></param>
-        private void Player_OnCollision(GameObject object1, GameObject object2)
+        /// <param name="self"></param>
+        /// <param name="otherObject"></param>
+        private void Player_OnCollision(GameObject self, GameObject otherObject)
         {
-            if(!_ignoreCollisions)
+            if (!_ignoreCollisions)
+            {
                 CurrentState = PlayerStates.Colliding;
+            }
         }
 
-        private void SetState(PlayerStates state)
+        public void SetState(PlayerStates state)
         {
             CurrentState = state;
             OnPlayerStateChanged?.Invoke(state);
@@ -161,8 +164,11 @@ namespace MazerPlatformer
             }
         }
 
-        public void SetCollisionDirection(PlayerDirection direction) 
-            => OnPlayerCollisionDirectionChanged?.Invoke(direction);
+        public void SetCollisionDirection(PlayerDirection direction)
+        {
+            LastCollisionDirection = direction;
+            OnPlayerCollisionDirectionChanged?.Invoke(direction);
+        }
 
         public void MoveUp(GameTime dt) => Y -= ScaleMoveByGameTime(dt);
         public void MoveDown(GameTime dt) => Y += ScaleMoveByGameTime(dt);
@@ -186,34 +192,13 @@ namespace MazerPlatformer
             _playerDirectionOnCollision = Player.CurrentDirection;
 
             Player.SetCollisionDirection(_playerDirectionOnCollision);
-            
+
             Player.CanMove = false;
-            
-            // Artificially nudge the player out of the collision
-            switch (_playerDirectionOnCollision)
-            {
-                case PlayerDirection.Up:
-                    NudgeOut(() => Player.MoveDown(null));
-                    break;
-                case PlayerDirection.Down:
-                    NudgeOut(() => Player.MoveUp(null));
-                    break;
-                case PlayerDirection.Left:
-                    NudgeOut(() => Player.MoveRight(null));
-                    break;
-                case PlayerDirection.Right:
-                    NudgeOut(() => Player.MoveLeft(null));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-            
-            // local func
-            void NudgeOut(Action action)
-            {
-                for (var i = 0; i < 2; i++) action();
-            }
+
+            CheckIfNudgeNeeded();
         }
+
+        
 
         public override void Update(object owner, GameTime gameTime)
         {
@@ -237,6 +222,7 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
             Player.Animation.Idle = false;
+            CheckIfNudgeNeeded();            
         }
     }
 
@@ -259,6 +245,35 @@ namespace MazerPlatformer
         }
 
         protected Player Player { get; }
+
+        protected void CheckIfNudgeNeeded()
+        {
+            // Artificially nudge the player out of the collision
+            switch (Player.LastCollisionDirection)
+            {
+                case PlayerDirection.Up:
+                    NudgeOut(() => Player.MoveDown(null));
+                    break;
+                case PlayerDirection.Down:
+                    NudgeOut(() => Player.MoveUp(null));
+                    break;
+                case PlayerDirection.Left:
+                    NudgeOut(() => Player.MoveRight(null));
+                    break;
+                case PlayerDirection.Right:
+                    NudgeOut(() => Player.MoveLeft(null));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            // local func
+            void NudgeOut(Action nudgeAction)
+            {
+                while (Player.IsCollidingWith(Player.LastCollidedWithObject))
+                    nudgeAction();
+            }
+        }
     }
 
 }

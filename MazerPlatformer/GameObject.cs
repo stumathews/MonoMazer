@@ -24,6 +24,7 @@ namespace MazerPlatformer
         //public Rectangle BoundingBox; // every game object gets automatic bounding box support 
         public BoundingBox BoundingBox; // every game object gets automatic bounding box support 
         public BoundingSphere BoundingSphere;
+        public GameObject LastCollidedWithObject;
         
         private Vector2 _centre;
         private Vector2 _maxPoint;
@@ -79,14 +80,20 @@ namespace MazerPlatformer
         // Every object can check if its colliding with another object's bounding box
         public virtual bool IsCollidingWith(GameObject otherObject)
         {
-            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
+            if (otherObject == null || otherObject.Id.Equals(Id)) 
+                return false;
+            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);
+            IsColliding = IsColliding && otherObject.Active;
             otherObject.IsColliding = IsColliding;
+            if (IsColliding) LastCollidedWithObject = otherObject;
             return IsColliding;
         }
 
         public virtual void CollisionOccuredWith(GameObject otherObject)
         {
             var handler = OnCollision; // Microsoft recommends assinging to temp object to avoid race condition
+            //IsColliding = true;
+            //LastCollidedWithObject = otherObject;
             handler?.Invoke(this, otherObject);
         }
 
