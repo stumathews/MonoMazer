@@ -113,7 +113,7 @@ namespace MazerPlatformer
             StateMachine.Initialise(CharacterIdleState.Name);
         }
 
-        protected void SetState(CharacterStates state)
+        public void SetState(CharacterStates state)
         {
             CurrentState = state;
             OnStateChanged?.Invoke(state);

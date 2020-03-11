@@ -21,7 +21,7 @@ namespace MazerPlatformer
         SpriteBatch _spriteBatch;
 
         // Top level game commands such as start, quit etc
-        private CommandManager _gameCommands;
+        private CommandManager _gameCommands = CommandManager.GetInstance();
 
         // GameWorld, contains the player and level details
         private GameWorld _gameWorld;
