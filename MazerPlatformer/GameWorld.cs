@@ -25,9 +25,9 @@ namespace MazerPlatformer
         private readonly Random _random = new Random();
 
         public event CollisionArgs OnGameWorldCollision = delegate { };
-        public event Player.PlayerStateChanged OnPlayerStateChanged = delegate { };
-        public event Player.PlayerDirectionChanged OnPlayerDirectionChanged = delegate { };
-        public event Player.PlayerCollisionDirectionChanged OnPlayerCollisionDirectionChanged = delegate { };
+        public event Player.StateChanged OnPlayerStateChanged = delegate { };
+        public event Player.DirectionChanged OnPlayerDirectionChanged = delegate { };
+        public event Player.CollisionDirectionChanged OnPlayerCollisionDirectionChanged = delegate { };
 
         public int CellWidth { get; private set; }
         public int CellHeight { get; private set; }
@@ -40,7 +40,7 @@ namespace MazerPlatformer
         private bool _unloading = false;
 
         public Player Player;
-        private Player.PlayerDirection _playerCollisionDirection;
+        private Player.CharacterDirection _characterCollisionDirection;
 
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
@@ -113,9 +113,9 @@ namespace MazerPlatformer
         public void Initialize()
         {
             // Hook up the Player events to the external world ie game UI
-            Player.OnPlayerStateChanged += state => OnPlayerStateChanged?.Invoke(state);
-            Player.OnPlayerDirectionChanged += direction => OnPlayerDirectionChanged(direction);
-            Player.OnPlayerCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged(direction);
+            Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state);
+            Player.OnDirectionChanged += direction => OnPlayerDirectionChanged(direction);
+            Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged(direction);
             
 
             foreach (var gameObject in _gameObjects)

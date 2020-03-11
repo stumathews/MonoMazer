@@ -51,9 +51,9 @@ namespace MazerPlatformer
         Button quitButton;
 
         public Song _menuMusic;
-        private Player.PlayerStates _playerState;
-        private Player.PlayerDirection _playerDirection;
-        private Player.PlayerDirection _playerCollisionDirection;
+        private Player.CharacterStates _characterState;
+        private Player.CharacterDirection _characterDirection;
+        private Player.CharacterDirection _characterCollisionDirection;
 
         public Mazer()
         {
@@ -138,13 +138,13 @@ namespace MazerPlatformer
 
             // Let the game world inform us of what its doing:
             _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-            _gameWorld.OnPlayerStateChanged += state => _playerState = state;
-            _gameWorld.OnPlayerDirectionChanged += direction => _playerDirection = direction;
-            _gameWorld.OnPlayerCollisionDirectionChanged += direction => _playerCollisionDirection = direction;
+            _gameWorld.OnPlayerStateChanged += state => _characterState = state;
+            _gameWorld.OnPlayerDirectionChanged += direction => _characterDirection = direction;
+            _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
 
         }
 
-        private void _gameWorld_OnPlayerStateChanged(Player.PlayerStates state)
+        private void _gameWorld_OnPlayerStateChanged(Player.CharacterStates state)
         {
             throw new NotImplementedException();
         }
@@ -305,14 +305,14 @@ namespace MazerPlatformer
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player State: {_playerState}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player Direction: {_playerDirection}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 300),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_playerCollisionDirection}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
                 Color.White);
         }
