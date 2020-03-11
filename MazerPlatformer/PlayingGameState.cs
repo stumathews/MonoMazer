@@ -12,7 +12,7 @@ namespace MazerPlatformer
 
         public delegate void Nothing();
 
-        private readonly CommandManager _playingCommands = new CommandManager();
+        private readonly CommandManager _playingCommands = CommandManager.GetInstance();
         
 
         public PlayingGameState(ref GameWorld gameWorld) : base("PlayingGame")

@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Input;
 using GeonBit.UI;
 using GeonBit.UI.Entities;
 using Microsoft.Xna.Framework.Media;
+using static MazerPlatformer.Character;
 
 namespace MazerPlatformer
 {
@@ -51,9 +52,9 @@ namespace MazerPlatformer
         Button quitButton;
 
         public Song _menuMusic;
-        private Player.CharacterStates _characterState;
-        private Player.CharacterDirection _characterDirection;
-        private Player.CharacterDirection _characterCollisionDirection;
+        private Character.CharacterStates _characterState;
+        private CharacterDirection _characterDirection;
+        private CharacterDirection _characterCollisionDirection;
 
         public Mazer()
         {
@@ -66,7 +67,7 @@ namespace MazerPlatformer
             //graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
             graphics.ApplyChanges();
 
-            _gameCommands = new CommandManager();
+            _gameCommands = CommandManager.GetInstance();
             _gameStateMachine = new FSM(this);
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch); // Create our game world
@@ -142,11 +143,6 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerDirectionChanged += direction => _characterDirection = direction;
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
 
-        }
-
-        private void _gameWorld_OnPlayerStateChanged(Player.CharacterStates state)
-        {
-            throw new NotImplementedException();
         }
 
         internal void StartOrResumeLevel()

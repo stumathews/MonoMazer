@@ -17,16 +17,11 @@ namespace MazerPlatformer
         public const string PlayerId = "Player";
 
         private bool _ignoreCollisions;
-        
-        private readonly CommandManager _playerCommands = new CommandManager();
+
+        private readonly CommandManager _playerCommands = CommandManager.GetInstance();
 
         public Player(int x, int y, int w, int h, AnimationInfo animationInfo) : base(x, y, PlayerId, w, h, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
-
-        //public override event StateChanged OnStateChanged = delegate { };
-        //public override event DirectionChanged OnDirectionChanged = delegate { };
-        //public override event CollisionDirectionChanged OnCollisionDirectionChanged = delegate { };
-
         
         public override void Initialize()
         {
@@ -36,7 +31,10 @@ namespace MazerPlatformer
             // Note the player movment commands are managed by the top level UI
 
             _playerCommands.AddKeyDownCommand(Keys.Space, (gt) => _ignoreCollisions = true);
-            _playerCommands.AddKeyUpCommand(Keys.Space, (gt) => _ignoreCollisions = false);
+            _playerCommands.AddKeyUpCommand(Keys.Space, (gt) =>
+            {
+                _ignoreCollisions = false;
+            });
             _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) =>
             {
                 SetState(CharacterStates.Idle);

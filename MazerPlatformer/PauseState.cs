@@ -7,7 +7,7 @@ namespace MazerPlatformer
 {
     public class PauseState : State
     {
-        private readonly CommandManager _pauseCommands = new CommandManager();
+        private readonly CommandManager _pauseCommands = CommandManager.GetInstance();
         private readonly Mazer _game;
         
         public PauseState(Mazer game) : base("Pause")
