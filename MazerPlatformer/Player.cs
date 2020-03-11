@@ -37,7 +37,10 @@ namespace MazerPlatformer
 
             _playerCommands.AddKeyDownCommand(Keys.Space, (gt) => _ignoreCollisions = true);
             _playerCommands.AddKeyUpCommand(Keys.Space, (gt) => _ignoreCollisions = false);
-            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => SetState(CharacterStates.Idle);            
+            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) =>
+            {
+                SetState(CharacterStates.Idle);
+            };            
 
             
             CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);

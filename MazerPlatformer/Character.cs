@@ -180,16 +180,16 @@ namespace MazerPlatformer
             // Artificially nudge the player out of the collision
             switch (_characterDirectionOnCollision)
             {
-                case MazerPlatformer.Character.CharacterDirection.Up:
+                case Character.CharacterDirection.Up:
                     NudgeOut(() => Character.MoveDown(null));
                     break;
-                case MazerPlatformer.Character.CharacterDirection.Down:
+                case Character.CharacterDirection.Down:
                     NudgeOut(() => Character.MoveUp(null));
                     break;
-                case MazerPlatformer.Character.CharacterDirection.Left:
+                case Character.CharacterDirection.Left:
                     NudgeOut(() => Character.MoveRight(null));
                     break;
-                case MazerPlatformer.Character.CharacterDirection.Right:
+                case Character.CharacterDirection.Right:
                     NudgeOut(() => Character.MoveLeft(null));
                     break;
                 default:
