@@ -83,7 +83,7 @@ namespace MazerPlatformer
 			DrawSide(Side.Left);
 
 			/* Diagnostics are drawn over the objects: see 'Diagnostics' class for details */
-			DrawObjectDiganostics(spriteBatch);
+			DrawObjectDiagnostics(spriteBatch);
 		}
 
 		private void DrawSide(Side side)

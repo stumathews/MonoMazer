@@ -23,7 +23,7 @@ namespace MazerPlatformer
         public override void Draw(SpriteBatch spriteBatch)
         {
             Animation.Draw(spriteBatch);
-            DrawObjectDiganostics(spriteBatch);
+            DrawObjectDiagnostics(spriteBatch);
         }
 
         public override void Update(GameTime gameTime, GameWorld gameWorld)

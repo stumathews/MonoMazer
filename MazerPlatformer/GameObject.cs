@@ -1,6 +1,6 @@
 ﻿using System;
 using C3.XNA;
-using GameLibFramework.Src.FSM;
+using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -101,19 +101,18 @@ namespace MazerPlatformer
             return IsColliding;
         }
 
+        // Not sure this is a good as it could be because the Game world is what calls this 
+        // as its the game world is what checks for collisions
         public virtual void CollisionOccuredWith(GameObject otherObject)
         {
-            var handler = OnCollision; // Microsoft recommends assinging to temp object to avoid race condition
+            var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
             IsColliding = true;
             LastObjectCollidedWith = otherObject;
             handler?.Invoke(this, otherObject);
         }
 
-        private Vector2 Centre
-        {
-            get => _centre;
-            set => _centre = value;
-        }
+        // Get the centre of the game object
+        private Vector2 Centre => _centre;
 
         public Vector2 MaxPoint
         {
@@ -131,31 +130,36 @@ namespace MazerPlatformer
 
         #region Diganostics
 
+        // Draw the centre point of the object
         protected void DrawCentrePoint(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawCentrePoint) return;
             spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f);
         }
 
+        // Draw the max point (lower right point)
         protected void DrawMaxPoint(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawMaxPoint) return;
             spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Blue, 3f);
         }
 
+        // Draw the bounding box
         protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawGameObjectBounds) return;
             spriteBatch.DrawRectangle(BoundingBox.ToRectangle(), Color.Lime, 1.5f);
         }
 
+        // Draw the bounding sphere
         protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
         {
             if (!Diganostics.DrawGameObjectBounds) return;
             spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua);
         }
 
-        protected void DrawObjectDiganostics(SpriteBatch spriteBatch)
+        // Draw all the diagnostics together
+        protected void DrawObjectDiagnostics(SpriteBatch spriteBatch)
         {
             DrawCentrePoint(spriteBatch);
             DrawMaxPoint(spriteBatch);
@@ -163,13 +167,11 @@ namespace MazerPlatformer
             DrawGameObjectBoundingSphere(spriteBatch);
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch)
-        {
-        }
+        // Specific game objects need to initialize
+        public virtual void Draw(SpriteBatch spriteBatch) { }
 
-        public virtual void Initialize()
-        {
-        }
+        // Specific game objects need to initialize themselves
+        public virtual void Initialize() { }
 
         #endregion
     }

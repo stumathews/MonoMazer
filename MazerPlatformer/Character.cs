@@ -1,7 +1,7 @@
 ﻿using System;
 using GameLib.EventDriven;
 using GameLibFramework.Animation;
-using GameLibFramework.Src.FSM;
+using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 
 namespace MazerPlatformer
@@ -167,6 +167,7 @@ namespace MazerPlatformer
         protected Character Character { get; }
     }
 
+    // Currently just removes the idle state 
     public class CharacterMovingState : CharacterState
     {
         public CharacterMovingState(string name, Character character) : base(name, character) {}
@@ -177,6 +178,7 @@ namespace MazerPlatformer
         }
     }
 
+    // Currently only 
     public class CharacterIdleState : CharacterState
     {
         public CharacterIdleState(string name, Character character) : base(name, character) { }

@@ -1,5 +1,5 @@
-﻿using GameLibFramework.Src.FSM;
-using GameLib.EventDriven;
+﻿using GameLib.EventDriven;
+using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
