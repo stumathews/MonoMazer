@@ -32,7 +32,7 @@ namespace MazerPlatformer
         public SpriteBatch SpriteBatch { get; }
         public ContentManager ContentManager { get; }
         public int LevelNumber { get; }
-        private static readonly Random _randomGenerator = new Random();
+        private static readonly Random RandomGenerator = new Random();
         public string LevelFileName { get; set; }
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();        
 
@@ -94,28 +94,20 @@ namespace MazerPlatformer
                     var nextRoom = mazeGrid[nextIndex];
                     
                     if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
-                    {
                         removableSides.Add(Room.Side.Top);
-                    }
 
                     if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
-                    {
                         removableSides.Add(Room.Side.Bottom);
-                    }
 
                     if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
-                    {
                         removableSides.Add(Room.Side.Left);
-                    }
 
                     if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) && mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
-                    {
                         removableSides.Add(Room.Side.Right);
-                    }
 
                     // which of the sides should we remove for this square?
 
-                    var rInt = _randomGenerator.Next(0, removableSides.Count);
+                    var rInt = RandomGenerator.Next(0, removableSides.Count);
                     var randSideIndex = rInt;
 
                     switch (removableSides[randSideIndex])
@@ -152,7 +144,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public Player MakePlayer(Room playerRoom)
         {
-            AnimationInfo playerAnimtion = new AnimationInfo(
+            var playerAnimation = new AnimationInfo(
                texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile)
                                                        ? @"Sprites\pirate5" 
                                                        : LevelFile.PlayerSpriteFile),
@@ -164,15 +156,15 @@ namespace MazerPlatformer
                looping: true,
                frameTime: 150);
 
-            return new Player(x: playerRoom.X, y: playerRoom.Y, w: 48, h: 64, animationInfo: playerAnimtion);
+            return new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, w: 48, h: 64, animationInfo: playerAnimation);
         }
 
-        public List<Npc> MakeNPCs(List<Room> rooms)
+        public List<Npc> MakeNpCs(List<Room> rooms)
         {
             var npcs = new List<Npc>();
             for (int i = 0; i < 10; i++)
             {
-                var pirateNumber = _randomGenerator.Next(1, 4);
+                var pirateNumber = RandomGenerator.Next(1, 4);
                 var strip = new AnimationInfo(
                     texture: ContentManager.Load<Texture2D>($@"Sprites\pirate{pirateNumber}"),
                     frameWidth: 48,
@@ -183,8 +175,8 @@ namespace MazerPlatformer
                     looping: true,
                     frameTime: 150);
 
-                var randomRoom = rooms[_randomGenerator.Next(0, Rows * Cols)];
-                var npc = new Npc(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
+                var randomRoom = rooms[RandomGenerator.Next(0, Rows * Cols)];
+                var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
 
                 npcs.Add(npc);
             }

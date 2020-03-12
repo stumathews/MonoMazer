@@ -24,23 +24,22 @@ namespace MazerPlatformer
         private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
         private readonly Random _random = new Random();
 
-        public event CollisionArgs OnGameWorldCollision = delegate { };
-        public event Player.StateChanged OnPlayerStateChanged = delegate { };
-        public event Player.DirectionChanged OnPlayerDirectionChanged = delegate { };
-        public event Player.CollisionDirectionChanged OnPlayerCollisionDirectionChanged = delegate { };
+        public event CollisionArgs OnGameWorldCollision;
+        public event Character.StateChanged OnPlayerStateChanged;
+        public event Character.DirectionChanged OnPlayerDirectionChanged;
+        public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
 
         public int CellWidth { get; private set; }
         public int CellHeight { get; private set; }
 
         public int GameObjectCount => _gameObjects.Keys.Count();
 
-        private Level level;
+        private Level _level;
         private Song _currentSong;
-        public string GetCurrentSong() { return level.LevelFile.SongFileName; }
+        public string GetCurrentSong() { return _level.LevelFile.SongFileName; }
         private bool _unloading = false;
 
         public Player Player;
-        private Player.CharacterDirection _characterCollisionDirection;
 
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
@@ -63,20 +62,20 @@ namespace MazerPlatformer
             CellWidth = GraphicsDevice.Viewport.Width / Cols;
             CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
-            level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
-            level.Load();
+            _level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
+            _level.Load();
 
             // This should probably be in the level class managed by some fsm    
             
-            if(!string.IsNullOrEmpty(level.LevelFile.SongFileName))
-                _currentSong = ContentManager.Load<Song>(level.LevelFile.SongFileName);
+            if(!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
+                _currentSong = ContentManager.Load<Song>(_level.LevelFile.SongFileName);
 
-            var rooms = level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
+            var rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
-            Player = level.MakePlayer(playerRoom: rooms[_random.Next(0, Rows * Cols)]);
+            Player = _level.MakePlayer(playerRoom: rooms[_random.Next(0, Rows * Cols)]);
                 _gameObjects.Add(Player.PlayerId, Player);
 
-            foreach (var npc in level.MakeNPCs(rooms))
+            foreach (var npc in _level.MakeNpCs(rooms))
                 _gameObjects.Add(npc.Id, npc);
 
             foreach (var room in rooms)
@@ -85,7 +84,7 @@ namespace MazerPlatformer
 
         public void StartOrResumeLevelMusic()
         {
-            if (!string.IsNullOrEmpty(level.LevelFile.SongFileName))
+            if (!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
             {
                 MediaPlayer.IsRepeating = true;
                 MediaPlayer.Play(_currentSong);
@@ -98,7 +97,7 @@ namespace MazerPlatformer
         public void UnloadContent()
         {
             _unloading = true;
-            level.Save();
+            _level.Save();
             _gameObjects.Clear();
             Player = null;
             _unloading = false;
