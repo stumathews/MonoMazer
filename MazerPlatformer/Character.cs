@@ -1,4 +1,5 @@
 ﻿using System;
+using GameLib.EventDriven;
 using GameLibFramework.Animation;
 using GameLibFramework.Src.FSM;
 using Microsoft.Xna.Framework;
@@ -9,29 +10,97 @@ namespace MazerPlatformer
     {
         internal Animation Animation;
         protected CharacterMovingState CharacterMovingState;
-        protected CollisionState CollisionState;
         protected CharacterIdleState CharacterIdleState;
+        protected CharacterDirection LastCollisionDirection;
 
-        protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type)
-        {
-        }
+        protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
 
         private const int MoveStep = 3;
 
         public enum CharacterDirection { Up, Down, Left, Right };
+        public enum CharacterStates { Idle, Moving };
 
         public CharacterDirection CurrentDirection { get; protected set; }
         protected AnimationInfo AnimationInfo { get; set; }
         public bool CanMove { private get; set; }
         protected CharacterStates CurrentState { get; set; }
 
-        public delegate void DirectionChanged(CharacterDirection direction);
-
-        public delegate void CollisionDirectionChanged(CharacterDirection direction);
-
         public virtual event StateChanged OnStateChanged;
         public virtual event DirectionChanged OnDirectionChanged;
         public virtual event CollisionDirectionChanged OnCollisionDirectionChanged;
+
+        public delegate void DirectionChanged(CharacterDirection direction);
+        public delegate void CollisionDirectionChanged(CharacterDirection direction);
+
+        public delegate void StateChanged(CharacterStates state);
+        
+        public void MoveUp(GameTime dt)
+        {
+            SetCharacterDirection(CharacterDirection.Up);
+            Y -= ScaleMoveByGameTime(dt);            
+        }
+
+        public void MoveDown(GameTime dt)
+        {
+            SetCharacterDirection(CharacterDirection.Down);
+            Y += ScaleMoveByGameTime(dt);
+        }
+
+        public void MoveRight(GameTime dt)
+        {
+            SetCharacterDirection(CharacterDirection.Right);
+            X += ScaleMoveByGameTime(dt);
+        }
+
+        public void MoveLeft(GameTime dt)
+        {
+            SetCharacterDirection(CharacterDirection.Left);
+            X -= ScaleMoveByGameTime(dt);
+        }
+
+        protected void InitializeCharacter()
+        {
+            OnCollision += (GameObject object1, GameObject object2) => SetCollisionDirection(CurrentDirection);
+            CurrentDirection = CharacterDirection.Down;
+            Animation = new Animation(Animation.AnimationDirection.Down);
+
+            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, 
+                AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
+                AnimationInfo.FrameTime);
+
+            // Base character states
+
+            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
+            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
+
+            var idleTransition = new Transition(CharacterIdleState, () => CurrentState == CharacterStates.Idle);
+            var movingTransition = new Transition(CharacterMovingState, () => CurrentState == CharacterStates.Moving && !IsColliding);
+
+            CharacterMovingState.AddTransition(idleTransition);
+
+            CharacterIdleState.AddTransition(movingTransition);
+
+            StateMachine.AddState(CharacterIdleState);
+            StateMachine.AddState(CharacterMovingState);
+
+            StateMachine.Initialise(CharacterIdleState.Name);
+        }
+
+        // See if we can make this private
+        public void SetState(CharacterStates state)
+        {
+            CurrentState = state;
+            OnStateChanged?.Invoke(state);
+        }
+
+        private void SetCharacterDirection(CharacterDirection direction)
+        {
+            CurrentDirection = direction;
+
+            SetAnimationDirection(direction);
+            OnDirectionChanged?.Invoke(direction);
+            SetState(CharacterStates.Moving);
+        }
 
         private void SetAnimationDirection(CharacterDirection direction)
         {
@@ -54,79 +123,23 @@ namespace MazerPlatformer
             }
         }
 
-        public void SetCollisionDirection(CharacterDirection direction) 
-            => OnCollisionDirectionChanged?.Invoke(direction);
-
-        public void MoveUp(GameTime dt)
+        private void SetCollisionDirection(CharacterDirection direction)
         {
-            Y -= ScaleMoveByGameTime(dt);
-            SetCharacterDirection(CharacterDirection.Up);
-        }
-
-        public void MoveDown(GameTime dt)
-        {
-            Y += ScaleMoveByGameTime(dt);
-            SetCharacterDirection(CharacterDirection.Down);
-        }
-
-        public void MoveRight(GameTime dt)
-        {
-            X += ScaleMoveByGameTime(dt);
-            SetCharacterDirection(CharacterDirection.Right);
-        }
-
-        public void MoveLeft(GameTime dt)
-        {
-            X -= ScaleMoveByGameTime(dt);
-            SetCharacterDirection(CharacterDirection.Left);
+            LastCollisionDirection = direction;
+            OnCollisionDirectionChanged?.Invoke(direction);
         }
 
         private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
+    }
 
-        public enum CharacterStates {Idle, Moving, Colliding};
-
-        public delegate void StateChanged(CharacterStates state);
-
-        protected void InitializeCharacter()
+    public class CharacterState : State
+    {
+        protected CharacterState(string name, Character character) : base(name)
         {
-            CurrentDirection = CharacterDirection.Down;
-            Animation = new Animation(Animation.AnimationDirection.Down);
-
-            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, 
-                AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
-                AnimationInfo.FrameTime);
-
-            var idleTransition = new Transition(CharacterIdleState, () => CurrentState == CharacterStates.Idle);
-            var movingTransition = new Transition(CharacterMovingState, () => CurrentState == CharacterStates.Moving);
-            var collidingTransition = new Transition(CollisionState, () => CurrentState == CharacterStates.Colliding);
-
-            CharacterMovingState.AddTransition(idleTransition);
-            CharacterMovingState.AddTransition(collidingTransition);
-
-            CharacterIdleState.AddTransition(movingTransition);
-            CollisionState.AddTransition(idleTransition);
-
-            StateMachine.AddState(CharacterIdleState);
-            StateMachine.AddState(CharacterMovingState);
-            StateMachine.AddState(CollisionState);
-
-            StateMachine.Initialise(CharacterIdleState.Name);
+            Character = character;
         }
 
-        public void SetState(CharacterStates state)
-        {
-            CurrentState = state;
-            OnStateChanged?.Invoke(state);
-        }
-
-        private void SetCharacterDirection(CharacterDirection direction)
-        {
-            CurrentDirection = direction;
-
-            SetAnimationDirection(direction);
-            OnDirectionChanged?.Invoke(direction);
-            SetState(CharacterStates.Moving);
-        }
+        protected Character Character { get; }
     }
 
     public class CharacterMovingState : CharacterState
@@ -146,74 +159,6 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
             Character.Animation.Idle = true;
-            Character.CanMove = true;
-        }
-    }
-   
-    public class CharacterState: State
-    {
-        protected CharacterState(string name, Character character) : base(name)
-        {
-            Character = character;
-        }
-
-        protected Character Character { get; }
-    }
-
-      public class CollisionState : CharacterState
-    {
-        private Character.CharacterDirection _characterDirectionOnCollision;
-
-        public CollisionState(string name, Character character) : base(name, character) { }
-
-       
-        public override void Enter(object owner)
-        {
-            base.Enter(owner);
-
-            _characterDirectionOnCollision = Character.CurrentDirection;
-
-            Character.SetCollisionDirection(_characterDirectionOnCollision);
-            
-            Character.CanMove = false;
-            
-            // Artificially nudge the player out of the collision
-            switch (_characterDirectionOnCollision)
-            {
-                case Character.CharacterDirection.Up:
-                    NudgeOut(() => Character.MoveDown(null));
-                    break;
-                case Character.CharacterDirection.Down:
-                    NudgeOut(() => Character.MoveUp(null));
-                    break;
-                case Character.CharacterDirection.Left:
-                    NudgeOut(() => Character.MoveRight(null));
-                    break;
-                case Character.CharacterDirection.Right:
-                    NudgeOut(() => Character.MoveLeft(null));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-            
-            // local func
-            void NudgeOut(Action action)
-            {
-                for (var i = 0; i < 2; i++) action();
-            }
-        }
-
-        public override void Update(object owner, GameTime gameTime)
-        {
-            base.Update(owner, gameTime);
-
-            if (_characterDirectionOnCollision != Character.CurrentDirection )
-                Character.CanMove = true;
-        }
-
-        public override void Exit(object owner)
-        {
-            base.Exit(owner);
             Character.CanMove = true;
         }
     }

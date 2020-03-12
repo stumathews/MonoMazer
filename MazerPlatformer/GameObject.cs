@@ -27,6 +27,7 @@ namespace MazerPlatformer
         
         private Vector2 _centre;
         private Vector2 _maxPoint;
+        public GameObject LastObjectCollidedWith;
 
         public Vector2 GetCentre()
         {
@@ -79,14 +80,19 @@ namespace MazerPlatformer
         // Every object can check if its colliding with another object's bounding box
         public virtual bool IsCollidingWith(GameObject otherObject)
         {
+            if (otherObject == null || otherObject.Id == Id) return false;
             IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
             otherObject.IsColliding = IsColliding;
+            if (IsColliding)
+                LastObjectCollidedWith = otherObject;
             return IsColliding;
         }
 
         public virtual void CollisionOccuredWith(GameObject otherObject)
         {
             var handler = OnCollision; // Microsoft recommends assinging to temp object to avoid race condition
+            IsColliding = true;
+            LastObjectCollidedWith = otherObject;
             handler?.Invoke(this, otherObject);
         }
 

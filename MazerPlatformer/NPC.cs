@@ -20,7 +20,7 @@ namespace MazerPlatformer
         public override void Initialize()
         {
             CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
-            CollisionState = new CollisionState(CharacterStates.Colliding.ToString(), this);
+            
             CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
 
             InitializeCharacter();

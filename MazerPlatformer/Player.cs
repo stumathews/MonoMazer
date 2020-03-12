@@ -15,40 +15,22 @@ namespace MazerPlatformer
     public class Player : Character
     {
         public const string PlayerId = "Player";
-
-        private bool _ignoreCollisions;
-
+        
         private readonly CommandManager _playerCommands = CommandManager.GetInstance();
 
         public Player(int x, int y, int w, int h, AnimationInfo animationInfo) : base(x, y, PlayerId, w, h, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
-        
+
         public override void Initialize()
         {
             // Get notified when I collide with another object (collision handled in base class)
-            OnCollision += Player_OnCollision;
-
-            // Note the player movment commands are managed by the top level UI
-
-            _playerCommands.AddKeyDownCommand(Keys.Space, (gt) => _ignoreCollisions = true);
-            _playerCommands.AddKeyUpCommand(Keys.Space, (gt) =>
-            {
-                _ignoreCollisions = false;
-            });
-            _playerCommands.OnKeyUp += (object sender, KeyboardEventArgs e) =>
-            {
-                SetState(CharacterStates.Idle);
-            };            
-
+            OnCollision += HandleCollision;
             
-            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
-            CollisionState = new CollisionState(CharacterStates.Colliding.ToString(), this);
-            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
-
+            // Can some of this go into a factory/builder?
             InitializeCharacter();
         }
-
-
+        
+        // I can update myselfs
         public override void Update(GameTime gameTime, GameWorld gameWorld)
         {
             base.Update(gameTime, gameWorld);
@@ -56,7 +38,7 @@ namespace MazerPlatformer
             Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
         }
 
-     
+        // I can draw myself
         public override void Draw(SpriteBatch spriteBatch)
         {
             Animation.Draw(spriteBatch);
@@ -67,16 +49,29 @@ namespace MazerPlatformer
             DrawObjectDiganostics(spriteBatch);
         }
 
-        
-        /// <summary>
-        /// I collided with something, set my current state to colliding
-        /// </summary>
-        /// <param name="object1"></param>
-        /// <param name="object2"></param>
-        private void Player_OnCollision(GameObject object1, GameObject object2)
+        // I can handle my own collisions
+        public void HandleCollision(GameObject object1, GameObject object2)
         {
-            if(!_ignoreCollisions)
-                CurrentState = CharacterStates.Colliding;
+            CanMove = false;
+
+            // Artificially nudge the player out of the collision
+            switch (LastCollisionDirection)
+            {
+                case CharacterDirection.Up:
+                    Y += 1;
+                    break;
+                case CharacterDirection.Down:
+                    Y -= 1;
+                    break;
+                case CharacterDirection.Left:
+                    X += 1;
+                    break;
+                case CharacterDirection.Right:
+                    X -= 1;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
     }
 }
