@@ -270,7 +270,7 @@ namespace MazerPlatformer
         /// <param name="object2"></param>
         private void _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
         {
-            if (object1.Type == GameObject.GameObjectType.NPC)
+            if (object1.Type == GameObject.GameObjectType.Npc)
                 NumCollisionsWithPlayerAndNPCs++;
 
             NumGameCollisionsEvents++;

@@ -35,7 +35,6 @@ namespace MazerPlatformer
         // Characters can or cant change its position at a moment in time
         public bool CanMove { private get; set; }
 
-
         // Inform subscribers when Character state changed
         public virtual event StateChanged OnStateChanged;
 
@@ -85,28 +84,30 @@ namespace MazerPlatformer
             StateMachine.Initialise(CharacterIdleState.Name);
         }
 
-        public void MoveUp(GameTime dt)
+        // Move ie change the character's position
+        public void MoveInDirection(CharacterDirection direction, GameTime dt)
         {
-            SetCharacterDirection(CharacterDirection.Up);
-            Y -= ScaleMoveByGameTime(dt);
-        }
+            switch (direction)
+            {
+                case CharacterDirection.Up:
+                    Y -= ScaleMoveByGameTime(dt);
+                    break;
+                case CharacterDirection.Down:
 
-        public void MoveDown(GameTime dt)
-        {
-            SetCharacterDirection(CharacterDirection.Down);
-            Y += ScaleMoveByGameTime(dt);
-        }
+                    Y += ScaleMoveByGameTime(dt);
+                    break;
+                case CharacterDirection.Left:
 
-        public void MoveRight(GameTime dt)
-        {
-            SetCharacterDirection(CharacterDirection.Right);
-            X += ScaleMoveByGameTime(dt);
-        }
+                    X -= ScaleMoveByGameTime(dt);
+                    break;
+                case CharacterDirection.Right:
 
-        public void MoveLeft(GameTime dt)
-        {
-            SetCharacterDirection(CharacterDirection.Left);
-            X -= ScaleMoveByGameTime(dt);
+                    X += ScaleMoveByGameTime(dt);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+            }
+            SetCharacterDirection(direction);
         }
 
         // See if we can make this private
@@ -155,6 +156,7 @@ namespace MazerPlatformer
         private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
     }
 
+    // State that provides access to the Underlying character
     public class CharacterState : State
     {
         protected CharacterState(string name, Character character) : base(name)

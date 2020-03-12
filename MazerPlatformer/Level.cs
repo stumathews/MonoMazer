@@ -184,7 +184,7 @@ namespace MazerPlatformer
                     frameTime: 150);
 
                 var randomRoom = rooms[_randomGenerator.Next(0, Rows * Cols)];
-                var npc = new Npc(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.NPC, strip);
+                var npc = new Npc(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
 
                 npcs.Add(npc);
             }

@@ -184,6 +184,7 @@ namespace MazerPlatformer
 				Side side = item.Key;
 				SideCharacterisitic thisWallProperty = item.Value;
 				
+				// TODO: Why use a Bounding sphere?
 				//if (otherObject.BoundingBox.Intersects(thisWallProperty.Bounds) && HasSide(side))
 				if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side))
 				{

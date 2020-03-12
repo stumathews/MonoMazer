@@ -8,35 +8,40 @@ namespace MazerPlatformer
 {
     public abstract class GameObject : PerFrame
     {
-        public enum GameObjectType { Room, Player, NPC }
+        // Types of game object
+        public enum GameObjectType { Room, Player, Npc }
+
+        // Tracks if the game object is currently colliding
         public bool IsColliding;
-        protected readonly FSM StateMachine; // Every game object has possible states
+
+        // Every game object has possible states
+        protected readonly FSM StateMachine;
+
+        // Underlying type of game object
         public readonly GameObjectType Type;
 
-        /* Location and dimension of the game object */
+        // Location and dimension of the game object
         public int X { get; protected set; }
         public int Y { get; protected set; }
         public string Id { get; set; }
         public int W { get; }
         public int H { get; }
+
+        // Tracks if an object is scheduled to be removed 
         public bool Active { get; set; }
 
-        //public Rectangle BoundingBox; // every game object gets automatic bounding box support 
-        public BoundingBox BoundingBox; // every game object gets automatic bounding box support 
+        // every game object gets automatic bounding box support 
+        public BoundingBox BoundingBox; 
+
+        // This is currently not being used?
         public BoundingSphere BoundingSphere;
-        
-        private Vector2 _centre;
+
+        // The maximum point of the bounding box around the player (bottom right)
         private Vector2 _maxPoint;
-        public GameObject LastObjectCollidedWith;
+        
+        private GameObject LastObjectCollidedWith;
 
-        public Vector2 GetCentre()
-        {
-            _centre.X = X + W / 2;
-            _centre.Y = Y + H / 2;
-            return _centre;
-        }
-
-        // Create a basic game Object
+        // A basic game Object outline
         protected GameObject(int x, int y, string id, int w, int h, GameObjectType type)
         {
             X = x;
@@ -50,11 +55,19 @@ namespace MazerPlatformer
             Active = true;
         }
 
+        // Determine the centre point of the game object in 2D space
+        private Vector2 _centre;
+        public Vector2 GetCentre()
+        {
+            _centre.X = X + W / 2;
+            _centre.Y = Y + H / 2;
+            return _centre;
+        }
+
+        
         private void CalculateBoundingBox()
         {
             // Keep track of our centre
-            _centre.X = X + H/2;
-            _centre.Y = Y + H/2;
             _centre = GetCentre();
 
             // Keep track of the max point of the bounding box
@@ -62,10 +75,10 @@ namespace MazerPlatformer
             _maxPoint.X = W;
             _maxPoint.Y = H;
 
-            // Every object gets a bounding box - this might be not needed (see boundingSphere)
+            // Every object gets a bounding box
             BoundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
 
-            // Every object gets a bounding sphere that is used for collision detection
+            // Every object gets a bounding sphere - why do we need this?
             BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
         }
 

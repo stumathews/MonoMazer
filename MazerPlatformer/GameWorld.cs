@@ -185,7 +185,7 @@ namespace MazerPlatformer
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
             if (obj1.Id == Player.Id)
-                obj2.Active = obj2.Type != GameObjectType.NPC; // keep Non-NPCs(walls etc.) active, even on collision
+                obj2.Active = obj2.Type != GameObjectType.Npc; // keep Non-NPCs(walls etc.) active, even on collision
         }
     }
 }

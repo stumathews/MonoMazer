@@ -22,10 +22,10 @@ namespace MazerPlatformer
 
         public override void Enter(object owner)
         {
-            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.Player.MoveUp(time));
-            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveDown(time));
-            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveLeft(time));
-            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveRight(time));
+            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Up ,time));
+            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Down, time));
+            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Left, time));
+            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Right, time));
             
             // Is this the right thing to do?
             _playingCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => _gameWorld.Player.SetState(Character.CharacterStates.Idle);
