@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
+using GameLib.EventDriven;
 using Microsoft.Xna.Framework.Media;
 
 namespace MazerPlatformer
@@ -116,7 +117,6 @@ namespace MazerPlatformer
             Player.OnDirectionChanged += direction => OnPlayerDirectionChanged(direction);
             Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged(direction);
             
-
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
@@ -161,16 +161,15 @@ namespace MazerPlatformer
             {
                 gameObject.Update(gameTime, gameWorld);
 
-                if (gameObject.IsCollidingWith(Player) && !gameObject.IsPlayer())
-                {
-                    Player.CollisionOccuredWith(gameObject);
-                    gameObject.CollisionOccuredWith(Player);
-                }
+                if (!gameObject.IsCollidingWith(Player) || gameObject.IsPlayer()) continue;
+
+                Player.CollisionOccuredWith(gameObject);
+                gameObject.CollisionOccuredWith(Player);
             }
         }
 
         /// <summary>
-        /// Detactivate objects that collided (will be removed before next update)
+        /// Deactivate objects that collided (will be removed before next update)
         /// Informs the Game (Mazer) that a collision occured
         /// </summary>
         /// <param name="obj1"></param>
@@ -185,6 +184,12 @@ namespace MazerPlatformer
 
             if (obj1.Id == Player.Id)
                 obj2.Active = obj2.Type != GameObjectType.Npc; // keep Non-NPCs(walls etc.) active, even on collision
+        }
+
+        // Inform the Game world that the up button was pressed, make the player idle
+        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs)
+        {
+            Player.SetState(Character.CharacterStates.Idle);
         }
     }
 }

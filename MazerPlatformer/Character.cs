@@ -15,9 +15,6 @@ namespace MazerPlatformer
         // These are the base states that any character can be in
         public enum CharacterStates { Idle, Moving };
 
-        protected CharacterMovingState CharacterMovingState;
-        protected CharacterIdleState CharacterIdleState;
-
         protected CharacterStates CurrentState { get; set; }
 
         // The last direction the character faced when it collided
@@ -50,11 +47,16 @@ namespace MazerPlatformer
         public delegate void StateChanged(CharacterStates state);
 
         protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
+
         
         protected void InitializeCharacter()
         {
             // We detect our down collisions
             OnCollision += (object1, object2) => SetCollisionDirection(CurrentDirection);
+
+            // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
+            // Should we remove this functionality?
+            OnStateChanged += OnMyStateChanged;
             
             // We start of facing down
             CurrentDirection = CharacterDirection.Down;
@@ -65,23 +67,8 @@ namespace MazerPlatformer
                 AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
                 AnimationInfo.FrameTime);
 
-            // Setup character states and transitions shared by all characters
-
-            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
-            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
-
-            var idleTransition = new Transition(CharacterIdleState, () => CurrentState == CharacterStates.Idle);
-            var movingTransition = new Transition(CharacterMovingState, () => CurrentState == CharacterStates.Moving && !IsColliding);
-
-            CharacterMovingState.AddTransition(idleTransition);
-            CharacterIdleState.AddTransition(movingTransition);
-
-            // Setup and initialize the base State machine to manage the base character states
-
-            StateMachine.AddState(CharacterIdleState);
-            StateMachine.AddState(CharacterMovingState);
-
-            StateMachine.Initialise(CharacterIdleState.Name);
+            // TODO: No state machine support yet - allow passing in states for state machine for this character
+            StateMachine.Initialise(string.Empty);
         }
 
         // Move ie change the character's position
@@ -124,6 +111,9 @@ namespace MazerPlatformer
             SetAnimationDirection(direction);
             OnDirectionChanged?.Invoke(direction);
             SetState(CharacterStates.Moving);
+
+            Animation.Idle = false;
+            CanMove = true;
         }
 
         private void SetAnimationDirection(CharacterDirection direction)
@@ -147,6 +137,12 @@ namespace MazerPlatformer
             }
         }
 
+        // I can do unique things when my state changes
+        private void OnMyStateChanged(CharacterStates state)
+        {
+            if (state == CharacterStates.Idle) Animation.Idle = true;
+        }
+
         private void SetCollisionDirection(CharacterDirection direction)
         {
             LastCollisionDirection = direction;
@@ -155,39 +151,4 @@ namespace MazerPlatformer
 
         private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
     }
-
-    // State that provides access to the Underlying character
-    public class CharacterState : State
-    {
-        protected CharacterState(string name, Character character) : base(name)
-        {
-            Character = character;
-        }
-
-        protected Character Character { get; }
-    }
-
-    // Currently just removes the idle state 
-    public class CharacterMovingState : CharacterState
-    {
-        public CharacterMovingState(string name, Character character) : base(name, character) {}
-        public override void Update(object owner, GameTime gameTime)
-        {
-            base.Update(owner, gameTime);
-            Character.Animation.Idle = false;
-        }
-    }
-
-    // Currently only 
-    public class CharacterIdleState : CharacterState
-    {
-        public CharacterIdleState(string name, Character character) : base(name, character) { }
-        public override void Update(object owner, GameTime gameTime)
-        {
-            base.Update(owner, gameTime);
-            Character.Animation.Idle = true;
-            Character.CanMove = true;
-        }
-    }
-
 }

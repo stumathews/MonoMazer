@@ -26,9 +26,7 @@ namespace MazerPlatformer
             _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Down, time));
             _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Left, time));
             _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Right, time));
-            
-            // Is this the right thing to do?
-            _playingCommands.OnKeyUp += (object sender, KeyboardEventArgs e) => _gameWorld.Player.SetState(Character.CharacterStates.Idle);
+            _playingCommands.OnKeyUp += (sender, e) => _gameWorld.OnKeyUp(sender, e);
 
             base.Enter(owner);
         }
