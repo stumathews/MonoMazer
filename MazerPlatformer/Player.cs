@@ -15,7 +15,6 @@ namespace MazerPlatformer
     public class Player : Character
     {
         public const string PlayerId = "Player";
-        
         private readonly CommandManager _playerCommands = CommandManager.GetInstance();
 
         public Player(int x, int y, int w, int h, AnimationInfo animationInfo) : base(x, y, PlayerId, w, h, GameObjectType.Player) 
@@ -30,7 +29,7 @@ namespace MazerPlatformer
             InitializeCharacter();
         }
         
-        // I can update myselfs
+        // I can update myself
         public override void Update(GameTime gameTime, GameWorld gameWorld)
         {
             base.Update(gameTime, gameWorld);

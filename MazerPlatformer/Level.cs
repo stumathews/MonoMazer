@@ -167,9 +167,9 @@ namespace MazerPlatformer
             return new Player(x: playerRoom.X, y: playerRoom.Y, w: 48, h: 64, animationInfo: playerAnimtion);
         }
 
-        public List<NPC> MakeNPCs(List<Room> rooms)
+        public List<Npc> MakeNPCs(List<Room> rooms)
         {
-            var npcs = new List<NPC>();
+            var npcs = new List<Npc>();
             for (int i = 0; i < 10; i++)
             {
                 var pirateNumber = _randomGenerator.Next(1, 4);
@@ -184,7 +184,7 @@ namespace MazerPlatformer
                     frameTime: 150);
 
                 var randomRoom = rooms[_randomGenerator.Next(0, Rows * Cols)];
-                var npc = new NPC(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.NPC, strip);
+                var npc = new Npc(randomRoom.X, randomRoom.Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.NPC, strip);
 
                 npcs.Add(npc);
             }

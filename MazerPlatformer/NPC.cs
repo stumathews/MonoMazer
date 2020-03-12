@@ -9,33 +9,15 @@ using GameLibFramework.Animation;
 
 namespace MazerPlatformer
 {
-    public class NPC : Character
+    public class Npc : Character
     {
-        //private Animation _animation;
-
-
-        public NPC(int x, int y, string id, int w, int h, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, w, h, type) 
+        public Npc(int x, int y, string id, int w, int h, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, w, h, type) 
             => AnimationInfo = animationInfo;
 
         public override void Initialize()
         {
-            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
-            
-            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
-
             InitializeCharacter();
             Animation.Idle = false;
-
-            //_animation = new Animation(Animation.AnimationDirection.NonDirectional, idle: false);
-            //_animation.Initialize(AnimationInfo.Texture,
-            //    GetCentre(),
-            //    AnimationInfo.FrameWidth,
-            //    AnimationInfo.FrameHeight,
-            //    AnimationInfo.FrameCount,
-            //    AnimationInfo.Color,
-            //    AnimationInfo.Scale,
-            //    AnimationInfo.Looping,
-            //    AnimationInfo.FrameTime);
         }
 
         public override void Draw(SpriteBatch spriteBatch)

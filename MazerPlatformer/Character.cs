@@ -8,36 +8,87 @@ namespace MazerPlatformer
 {
     public abstract class Character : GameObject
     {
+        // Every character has associated with them, an animation that this class manages
         internal Animation Animation;
-        protected CharacterMovingState CharacterMovingState;
-        protected CharacterIdleState CharacterIdleState;
-        protected CharacterDirection LastCollisionDirection;
+        protected AnimationInfo AnimationInfo { get; set; }
 
-        protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
-
-        private const int MoveStep = 3;
-
-        public enum CharacterDirection { Up, Down, Left, Right };
+        // These are the base states that any character can be in
         public enum CharacterStates { Idle, Moving };
 
-        public CharacterDirection CurrentDirection { get; protected set; }
-        protected AnimationInfo AnimationInfo { get; set; }
-        public bool CanMove { private get; set; }
+        protected CharacterMovingState CharacterMovingState;
+        protected CharacterIdleState CharacterIdleState;
+
         protected CharacterStates CurrentState { get; set; }
 
+        // The last direction the character faced when it collided
+        protected CharacterDirection LastCollisionDirection;
+
+        // Current direction of the character
+        public CharacterDirection CurrentDirection { get; protected set; }
+
+        // All characters move 3 Pixels at a time
+        private const int MoveStep = 3;
+
+        // All characters are facing a direction at any moment int time
+        public enum CharacterDirection { Up, Down, Left, Right };
+
+        // Characters can or cant change its position at a moment in time
+        public bool CanMove { private get; set; }
+
+
+        // Inform subscribers when Character state changed
         public virtual event StateChanged OnStateChanged;
+
+        // Inform subscribers when Character direction changed
         public virtual event DirectionChanged OnDirectionChanged;
+
+        // Inform subscribers when Character collision direction changed (might not need this anymore)
         public virtual event CollisionDirectionChanged OnCollisionDirectionChanged;
 
+        /* Delegates that are used for the character events */
         public delegate void DirectionChanged(CharacterDirection direction);
         public delegate void CollisionDirectionChanged(CharacterDirection direction);
-
         public delegate void StateChanged(CharacterStates state);
+
+        protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
         
+        protected void InitializeCharacter()
+        {
+            // We detect our down collisions
+            OnCollision += (object1, object2) => SetCollisionDirection(CurrentDirection);
+            
+            // We start of facing down
+            CurrentDirection = CharacterDirection.Down;
+            Animation = new Animation(Animation.AnimationDirection.Down);
+
+            // Initialize the characters animation
+            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, 
+                AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
+                AnimationInfo.FrameTime);
+
+            // Setup character states and transitions shared by all characters
+
+            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
+            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
+
+            var idleTransition = new Transition(CharacterIdleState, () => CurrentState == CharacterStates.Idle);
+            var movingTransition = new Transition(CharacterMovingState, () => CurrentState == CharacterStates.Moving && !IsColliding);
+
+            CharacterMovingState.AddTransition(idleTransition);
+            CharacterIdleState.AddTransition(movingTransition);
+
+            // Setup and initialize the base State machine to manage the base character states
+
+            StateMachine.AddState(CharacterIdleState);
+            StateMachine.AddState(CharacterMovingState);
+
+            StateMachine.Initialise(CharacterIdleState.Name);
+        }
+
         public void MoveUp(GameTime dt)
         {
             SetCharacterDirection(CharacterDirection.Up);
-            Y -= ScaleMoveByGameTime(dt);            
+            Y -= ScaleMoveByGameTime(dt);
         }
 
         public void MoveDown(GameTime dt)
@@ -56,34 +107,6 @@ namespace MazerPlatformer
         {
             SetCharacterDirection(CharacterDirection.Left);
             X -= ScaleMoveByGameTime(dt);
-        }
-
-        protected void InitializeCharacter()
-        {
-            OnCollision += (GameObject object1, GameObject object2) => SetCollisionDirection(CurrentDirection);
-            CurrentDirection = CharacterDirection.Down;
-            Animation = new Animation(Animation.AnimationDirection.Down);
-
-            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, 
-                AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
-                AnimationInfo.FrameTime);
-
-            // Base character states
-
-            CharacterMovingState = new CharacterMovingState(CharacterStates.Moving.ToString(), this);
-            CharacterIdleState = new CharacterIdleState(CharacterStates.Idle.ToString(), this);
-
-            var idleTransition = new Transition(CharacterIdleState, () => CurrentState == CharacterStates.Idle);
-            var movingTransition = new Transition(CharacterMovingState, () => CurrentState == CharacterStates.Moving && !IsColliding);
-
-            CharacterMovingState.AddTransition(idleTransition);
-
-            CharacterIdleState.AddTransition(movingTransition);
-
-            StateMachine.AddState(CharacterIdleState);
-            StateMachine.AddState(CharacterMovingState);
-
-            StateMachine.Initialise(CharacterIdleState.Name);
         }
 
         // See if we can make this private
