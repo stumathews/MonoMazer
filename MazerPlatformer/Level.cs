@@ -188,6 +188,7 @@ namespace MazerPlatformer
                 var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 1);
+                npc.AddState(new WonderingState("default", npc));
                 npcs.Add(npc);
             }
 

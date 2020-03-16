@@ -198,7 +198,7 @@ namespace MazerPlatformer
 					Console.WriteLine($"{side} collided with object {otherObject.Id}");
 					thisWallProperty.Color = Color.White;
 					collision = true;
-					CollisionOccuredWith(otherObject);
+					//CollisionOccuredWith(otherObject);
 					//RemoveSide(side);
 				}
 			}

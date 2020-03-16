@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using GameLibFramework.Animation;
@@ -25,9 +26,6 @@ namespace MazerPlatformer
 
         public override void Initialize()
         {
-            _wonderingState = new WonderingState("default", this);
-
-            AddState(_wonderingState);
             base.Initialize();
             Animation.Idle = false;
         }
@@ -44,13 +42,6 @@ namespace MazerPlatformer
             base.Update(gameTime, gameWorld);
             Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
         }
-
-        public override void CollisionOccuredWith(GameObject otherObject)
-        {
-            // Collided with another object
-            NudgeOutOfCollision();
-
-        }
     }
 
     public class WonderingState : State
@@ -60,38 +51,6 @@ namespace MazerPlatformer
         public WonderingState(string name, Npc owner) : base(name)
         {
             Owner = owner;
-        }
-
-        public override void Update(object owner, GameTime gameTime)
-        {
-            base.Update(owner, gameTime);
-            Console.WriteLine("Currently in Wondering state");
-            
-            if (Owner.IsColliding)
-            {
-                Owner.CanMove = false;
-                switch (Owner.CurrentDirection)
-                {
-                    case Character.CharacterDirection.Up:
-                        Owner.MoveInDirection(Character.CharacterDirection.Down, gameTime);
-                        break;
-                    case Character.CharacterDirection.Down:
-                        Owner.MoveInDirection(Character.CharacterDirection.Up, gameTime);
-                        break;
-                    case Character.CharacterDirection.Left:
-                        Owner.MoveInDirection(Character.CharacterDirection.Right, gameTime);
-                        break;
-                    case Character.CharacterDirection.Right:
-                        Owner.MoveInDirection(Character.CharacterDirection.Left, gameTime);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-
-            Owner.MoveInDirection(Owner.CurrentDirection, gameTime);
-
-            
         }
     }
 }

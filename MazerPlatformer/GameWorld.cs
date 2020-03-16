@@ -193,11 +193,6 @@ namespace MazerPlatformer
                             room.CollisionOccuredWith(gameObject);
                             gameObject.CollisionOccuredWith(room);
                         }
-                        else
-                        {
-                            room.IsColliding = false;
-                            gameObject.IsColliding = false;
-                        }
                     }
                 }
 
