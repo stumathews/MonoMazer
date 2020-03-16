@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using C3.XNA;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
@@ -38,7 +41,9 @@ namespace MazerPlatformer
 
         // The maximum point of the bounding box around the player (bottom right)
         private Vector2 _maxPoint;
-        
+
+        public List<MazerPlatformer.Component> Components = new List<Component>();
+
         private GameObject LastObjectCollidedWith;
 
         // A basic game Object outline
@@ -120,9 +125,81 @@ namespace MazerPlatformer
             set => _maxPoint = value;
         }
 
+        /// <summary>
+        /// Find a component of the game object
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public Component FindComponent(string name)
+        {
+            return Components.SingleOrDefault(o => o.Id.Equals(name));
+        }
+
+        /// <summary>
+        /// Find a component, assuming there is only one of this type otherwise throws
+        /// </summary>
+        public Component FindComponentByType(Component.ComponentType type) => Components.Single(o => o.Type == type);
+
+        /// <summary>
+        /// Update a component of the game object
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="newValue"></param>
+        /// <returns></returns>
+        public bool UpdateComponent(string name, object newValue)
+        {
+            var found = Components.SingleOrDefault(o => o.Id.Equals(name));
+            return UpdateComponent(newValue, found);
+        }
+
+        
+        private bool UpdateComponent( object newValue, Component found)
+        {
+            if (found == null) return false;
+            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, found.Value, newValue);
+            found.Value = newValue;
+            return true;
+        }
+
+        /// <summary>
+        /// Updates by type, throws if more than one type of this component exists in the game object
+        /// </summary>
+        /// <param name="newValue"></param>
+        /// <returns></returns>
+        public bool UpdateComponentByType(Component.ComponentType type, object  newValue)
+        {
+            var found = Components.Single(o => o.Type == type);
+            return UpdateComponent(newValue, found);
+        }
+
+        public Component AddComponent(Component.ComponentType type, object value, string id = null)
+        {
+            var component = new Component(type, value, id);
+            Components.Add(component);
+            return component;
+        }
+
+        /// <summary>
+        /// Add a component to the game object
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="type"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public Component AddComponent(string name, Component.ComponentType type, object value, string id = null)
+        {
+            var component = new MazerPlatformer.Component(type, value, id);
+            Components.Add(component);
+            return component;
+        }
+
         #region Events
 
-        public delegate void CollisionArgs(GameObject object1, GameObject object2);
+        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName,
+            Component.ComponentType componentType, object oldValue, object newValue);
+
+        public event GameObjectComponentChanged OnGameObjectComponentChanged;
+        public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
 
         public event CollisionArgs OnCollision;
 
@@ -171,7 +248,7 @@ namespace MazerPlatformer
         public virtual void Draw(SpriteBatch spriteBatch) { }
 
         // Specific game objects need to initialize themselves
-        public virtual void Initialize() { }
+        public virtual void Initialize() {}
 
         #endregion
     }

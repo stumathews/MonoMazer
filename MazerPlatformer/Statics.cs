@@ -20,6 +20,11 @@ namespace MazerPlatformer
             return new BoundingBox(new Vector3(rect.X, rect.Y, 0), new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0));
         }
 
+        public static T ParseEnum<T>(this string value)
+        {
+            return (T)Enum.Parse(typeof(T), value, true);
+        }
+
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
     }
 

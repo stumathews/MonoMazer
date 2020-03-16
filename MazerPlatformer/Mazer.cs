@@ -45,6 +45,8 @@ namespace MazerPlatformer
         private int _currentLevel = 1;              
         private int NumGameCollisionsEvents;
         private int NumCollisionsWithPlayerAndNPCs;
+        private int _playerPoints;
+        private int _playerHealth;
         private SpriteFont _font;
 
         Panel mainMenu;
@@ -142,7 +144,22 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerStateChanged += state => _characterState = state;
             _gameWorld.OnPlayerDirectionChanged += direction => _characterDirection = direction;
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
+            _gameWorld.OnPlayerComponentChanged += GameWorldOnOnPlayerComponentChanged;
 
+        }
+
+        private void GameWorldOnOnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+        {
+            switch (componentType)
+            {
+                // Player changed somehow
+                case Component.ComponentType.Health:
+                    _playerHealth = (int)newValue;
+                    break;
+                case Component.ComponentType.Points:
+                    _playerPoints = (int) newValue;
+                    break;
+            }
         }
 
         internal void StartOrResumeLevel()
@@ -310,6 +327,12 @@ namespace MazerPlatformer
                 Color.White);
             _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 390),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 420),
                 Color.White);
         }
 

@@ -8,6 +8,7 @@ using GameLibFramework.Animation;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Component;
 using static MazerPlatformer.GameObject;
 
 namespace MazerPlatformer
@@ -177,43 +178,53 @@ namespace MazerPlatformer
 
                 var randomRoom = rooms[RandomGenerator.Next(0, Rows * Cols)];
                 var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
-
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
+                npc.AddComponent(ComponentType.HitPoints, 1);
                 npcs.Add(npc);
             }
 
-            // Lets add some baloons
-            for (int i = 0; i < 5; i++)
+            // Lets add some balloons
+            for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\balloon-pink");
-
+                npc.AddComponent(ComponentType.Points, 10);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                
                 npcs.Add(npc);
             }
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\balloon-blue");
+                npc.AddComponent(ComponentType.Points, 20);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
 
                 npcs.Add(npc);
             }
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\balloon-green");
+                npc.Components.Add(new Component( ComponentType.Points, 30));
+
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
 
                 npcs.Add(npc);
             }
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\balloon-orange");
-
+                npc.AddComponent(ComponentType.Points, 30);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1);
-
+                npc.AddComponent(ComponentType.Points, 40);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
 

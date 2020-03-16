@@ -11,6 +11,12 @@ namespace MazerPlatformer
 {
     public class Npc : Character
     {
+        public enum NpcTypes
+        {
+            Pickup,
+            Enemy
+        };
+
         public Npc(int x, int y, string id, int w, int h, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, w, h, type) 
             => AnimationInfo = animationInfo;
 

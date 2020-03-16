@@ -29,6 +29,7 @@ namespace MazerPlatformer
         public event Character.StateChanged OnPlayerStateChanged;
         public event Character.DirectionChanged OnPlayerDirectionChanged;
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
+        public event GameObjectComponentChanged OnPlayerComponentChanged;
 
         public int CellWidth { get; private set; }
         public int CellHeight { get; private set; }
@@ -113,15 +114,26 @@ namespace MazerPlatformer
         public void Initialize()
         {
             // Hook up the Player events to the external world ie game UI
-            Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state);
-            Player.OnDirectionChanged += direction => OnPlayerDirectionChanged(direction);
-            Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged(direction);
-            
+            Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state); // want to know when the player's state changes
+            Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
+            Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
+            Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) // want to know when the player's components change
+                => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
+
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
-                gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision);
+                gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
+                gameObject.Value.OnGameObjectComponentChanged += ValueOnOnGameObjectComponentChanged; // be informed about this objects component updates
             }
+        }
+
+        // The game world wants to know about every component update/change that occurs in the world
+        private void ValueOnOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+        {
+            // A game object changed!
+            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
+
         }
 
 
