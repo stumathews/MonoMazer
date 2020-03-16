@@ -162,7 +162,7 @@ namespace MazerPlatformer
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
             var npcs = new List<Npc>();
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var pirateNumber = RandomGenerator.Next(1, 4);
                 var strip = new AnimationInfo(
@@ -180,7 +180,63 @@ namespace MazerPlatformer
 
                 npcs.Add(npc);
             }
+
+            // Lets add some baloons
+            for (int i = 0; i < 5; i++)
+            {
+                var npc = CreateCharacter(rooms, $@"Sprites\balloon-pink");
+
+                npcs.Add(npc);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                var npc = CreateCharacter(rooms, $@"Sprites\balloon-blue");
+
+                npcs.Add(npc);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                var npc = CreateCharacter(rooms, $@"Sprites\balloon-green");
+
+                npcs.Add(npc);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                var npc = CreateCharacter(rooms, $@"Sprites\balloon-orange");
+
+                npcs.Add(npc);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                var npc = CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1);
+
+                npcs.Add(npc);
+            }
+
+
             return npcs;
+        }
+
+        private Npc CreateCharacter(List<Room> rooms, string assetName, int frameWidth = 48, int frameHeight = 64, int frameCount = 3)
+        {
+            var strip = new AnimationInfo(
+                texture: ContentManager.Load<Texture2D>(assetName),
+                frameWidth: frameWidth,
+                frameHeight: frameHeight,
+                frameCount: frameCount,
+                color: Color.White,
+                scale: 1.0f,
+                looping: true,
+                frameTime: 150);
+
+            var randomRoom = rooms[RandomGenerator.Next(0, Rows * Cols)];
+            var npc = new Npc((int) randomRoom.GetCentre().X, (int) randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64,
+                GameObjectType.Npc, strip);
+            return npc;
         }
 
         public void Save()
