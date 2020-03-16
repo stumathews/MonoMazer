@@ -23,13 +23,11 @@ namespace MazerPlatformer
 
         public override void Initialize()
         {
+            base.Initialize();
             AddComponent(ComponentType.Health, 100); // start off with 100 health
             AddComponent(ComponentType.Points, 0); // start off with 0 points
             // Get notified when I collide with another object (collision handled in base class)
             OnCollision += HandleCollision;
-            
-            // Can some of this go into a factory/builder?
-            InitializeCharacter();
         }
 
 
@@ -55,26 +53,7 @@ namespace MazerPlatformer
         // I can handle my own collisions
         public void HandleCollision(GameObject thisObject, GameObject otherObject)
         {
-            CanMove = false;
-
-            // Artificially nudge the player out of the collision
-            switch (LastCollisionDirection)
-            {
-                case CharacterDirection.Up:
-                    Y += 1;
-                    break;
-                case CharacterDirection.Down:
-                    Y -= 1;
-                    break;
-                case CharacterDirection.Left:
-                    X += 1;
-                    break;
-                case CharacterDirection.Right:
-                    X -= 1;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            NudgeOutOfCollision();
 
             // Change my health component to be affected by the hitpoints of the other object
             if (otherObject.Type == GameObjectType.Npc)

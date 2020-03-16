@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.572
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MazerPlatformer", "MazerPlatformer\MazerPlatformer.csproj", "{C038107F-5715-427E-B24A-A3A98AAB5877}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLibFramework", "..\GameLib\GameLibFramework\GameLibFramework.csproj", "{A5656886-5F78-40B2-97EF-D6C22BD8FF23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +31,14 @@ Global
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|x86.ActiveCfg = Release|Any CPU
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|x86.Build.0 = Release|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|x86.Build.0 = Debug|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|x86.ActiveCfg = Release|Any CPU
+		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

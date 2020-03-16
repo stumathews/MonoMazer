@@ -48,27 +48,30 @@ namespace MazerPlatformer
 
         protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
 
-        
-        protected void InitializeCharacter()
+        public override void Initialize()
         {
+            base.Initialize();
+
             // We detect our down collisions
-            OnCollision += (object1, object2) => SetCollisionDirection(CurrentDirection);
+            OnCollision += HandleCharacterCollision;
 
             // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
             // Should we remove this functionality?
             OnStateChanged += OnMyStateChanged;
-            
+
             // We start of facing down
             CurrentDirection = CharacterDirection.Down;
             Animation = new Animation(Animation.AnimationDirection.Down);
 
             // Initialize the characters animation
-            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, 
+            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight,
                 AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
                 AnimationInfo.FrameTime);
+        }
 
-            // TODO: No state machine support yet - allow passing in states for state machine for this character
-            StateMachine.Initialise(string.Empty);
+        private void HandleCharacterCollision(GameObject object1, GameObject object2)
+        {
+            SetCollisionDirection(CurrentDirection);
         }
 
         // Move ie change the character's position
@@ -150,5 +153,28 @@ namespace MazerPlatformer
         }
 
         private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
+
+        protected void NudgeOutOfCollision()
+        {
+            CanMove = false;
+            // Artificially nudge the player out of the collision
+            switch (LastCollisionDirection)
+            {
+                case CharacterDirection.Up:
+                    Y += 1;
+                    break;
+                case CharacterDirection.Down:
+                    Y -= 1;
+                    break;
+                case CharacterDirection.Left:
+                    X += 1;
+                    break;
+                case CharacterDirection.Right:
+                    X -= 1;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
     }
 }

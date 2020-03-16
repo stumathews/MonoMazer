@@ -23,14 +23,20 @@ namespace MazerPlatformer
 
 		private readonly RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
 		
+		public Room RoomAbove { get; set; }
+        public Room RoomBelow { get; set; }
+        public Room RoomRight { get; set; }
+        public Room RoomLeft { get; set; }
+
 		/* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidsWith() override */
 		Rectangle topBounds;
 		Rectangle bottomBounds;
 		Rectangle leftBounds;
 		Rectangle rightBounds;
 		private SpriteBatch SpriteBatch { get; }
+        public int RoomNumber { get; }
 
-		/// <summary>
+        /// <summary>
 		/// Conceptual model of a room, which is based on a sqaure with potentially removable walls
 		/// </summary>
 		/// <param name="x">Top left X</param>
@@ -40,12 +46,13 @@ namespace MazerPlatformer
 		/// <param name="graphicsDevice"></param>
 		/// <param name="spriteBatch"></param>
 		/// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
-		public Room(int x, int y, int width, int height, SpriteBatch spriteBatch) 
+		public Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber) 
 			         : base(x:x, y: y, id: Guid.NewGuid().ToString(), w: width, h: height, type: GameObjectType.Room)
 		{
 			SpriteBatch = spriteBatch;
+            RoomNumber = roomNumber;
 
-			// This allows for reasoning about rectangles in terms of points A, B, C, D
+            // This allows for reasoning about rectangles in terms of points A, B, C, D
 			_rectDetails = new RectDetails(X, Y, W, H);
 
 			/* Walls have collision bounds that dont change - collect them */

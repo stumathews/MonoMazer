@@ -40,6 +40,7 @@ namespace MazerPlatformer
         private Song _currentSong;
         public string GetCurrentSong() { return _level.LevelFile.SongFileName; }
         private bool _unloading = false;
+        private List<Room> _rooms = new List<Room>();
 
         public Player Player;
 
@@ -72,15 +73,15 @@ namespace MazerPlatformer
             if(!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
                 _currentSong = ContentManager.Load<Song>(_level.LevelFile.SongFileName);
 
-            var rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
+            _rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
-            Player = _level.MakePlayer(playerRoom: rooms[_random.Next(0, Rows * Cols)]);
+            Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
                 _gameObjects.Add(Player.PlayerId, Player);
 
-            foreach (var npc in _level.MakeNpCs(rooms))
+            foreach (var npc in _level.MakeNpCs(_rooms))
                 _gameObjects.Add(npc.Id, npc);
 
-            foreach (var room in rooms)
+            foreach (var room in _rooms)
                 _gameObjects.Add(room.Id, room);            
         }
 
@@ -173,10 +174,39 @@ namespace MazerPlatformer
             {
                 gameObject.Update(gameTime, gameWorld);
 
+                
+                // Determine which room the game object is in
+                var col = (int)Math.Ceiling((float)gameObject.X / CellWidth);
+                var row = (int)Math.Ceiling((float)gameObject.Y / CellHeight);
+                var roomNumber = ((row-1) * Cols) + col-1;
+                if (roomNumber >= 0 && roomNumber <= ((Rows * Cols)-1))
+                {
+                    var roomIn = _rooms[roomNumber];
+                    var adjacentRooms = new[] {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
+
+
+                    foreach (var room in adjacentRooms)
+                    {
+                        if (room == null) continue;
+                        if (room.IsCollidingWith(gameObject))
+                        {
+                            room.CollisionOccuredWith(gameObject);
+                            gameObject.CollisionOccuredWith(room);
+                        }
+                        else
+                        {
+                            room.IsColliding = false;
+                            gameObject.IsColliding = false;
+                        }
+                    }
+                }
+
+                //// we care only about collisions with the player
                 if (!gameObject.IsCollidingWith(Player) || gameObject.IsPlayer()) continue;
 
                 Player.CollisionOccuredWith(gameObject);
                 gameObject.CollisionOccuredWith(Player);
+
             }
         }
 
@@ -195,7 +225,7 @@ namespace MazerPlatformer
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
             if (obj1.Id == Player.Id)
-                obj2.Active = obj2.Type != GameObjectType.Npc; // keep Non-NPCs(walls etc.) active, even on collision
+                obj2.Active = obj2.Type == GameObjectType.Room;
         }
 
         // Inform the Game world that the up button was pressed, make the player idle

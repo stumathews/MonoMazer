@@ -58,7 +58,7 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: SpriteBatch);
+                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols)+col);
                     mazeGrid.Add(square);
                 }
             }           
@@ -93,6 +93,11 @@ namespace MazerPlatformer
                     var removableSides = new List<Room.Side>();
                     var currentRoom = mazeGrid[i];
                     var nextRoom = mazeGrid[nextIndex];
+
+                    currentRoom.RoomAbove = canRemoveAbove ? mazeGrid[roomAboveIndex] : null;
+                    currentRoom.RoomBelow = canRemoveBelow ? mazeGrid[roomBelowIndex] : null;
+                    currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
+                    currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
                     
                     if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
                         removableSides.Add(Room.Side.Top);

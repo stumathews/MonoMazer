@@ -20,6 +20,9 @@ namespace MazerPlatformer
         // Every game object has possible states
         protected readonly FSM StateMachine;
 
+        protected readonly List<Transition> StateTransitions = new List<Transition>();
+        protected readonly List<State> States = new List<State>();
+
         // Underlying type of game object
         public readonly GameObjectType Type;
 
@@ -43,8 +46,6 @@ namespace MazerPlatformer
         private Vector2 _maxPoint;
 
         public List<MazerPlatformer.Component> Components = new List<Component>();
-
-        private GameObject LastObjectCollidedWith;
 
         // A basic game Object outline
         protected GameObject(int x, int y, string id, int w, int h, GameObjectType type)
@@ -101,8 +102,7 @@ namespace MazerPlatformer
             if (otherObject == null || otherObject.Id == Id) return false;
             IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
             otherObject.IsColliding = IsColliding;
-            if (IsColliding)
-                LastObjectCollidedWith = otherObject;
+            
             return IsColliding;
         }
 
@@ -112,7 +112,6 @@ namespace MazerPlatformer
         {
             var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
             IsColliding = true;
-            LastObjectCollidedWith = otherObject;
             handler?.Invoke(this, otherObject);
         }
 
@@ -126,43 +125,10 @@ namespace MazerPlatformer
         }
 
         /// <summary>
-        /// Find a component of the game object
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public Component FindComponent(string name)
-        {
-            return Components.SingleOrDefault(o => o.Id.Equals(name));
-        }
-
-        /// <summary>
         /// Find a component, assuming there is only one of this type otherwise throws
         /// </summary>
         public Component FindComponentByType(Component.ComponentType type) => Components.Single(o => o.Type == type);
-
-        /// <summary>
-        /// Update a component of the game object
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="newValue"></param>
-        /// <returns></returns>
-        public bool UpdateComponent(string name, object newValue)
-        {
-            var found = Components.SingleOrDefault(o => o.Id.Equals(name));
-            return UpdateComponent(newValue, found);
-        }
-
         
-        private bool UpdateComponent( object newValue, Component found)
-        {
-            if (found == null) return false;
-            var oldValue = found.Value;
-            found.Value = newValue;
-
-            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
-            return true;
-        }
-
         /// <summary>
         /// Updates by type, throws if more than one type of this component exists in the game object
         /// </summary>
@@ -181,6 +147,18 @@ namespace MazerPlatformer
             return component;
         }
 
+        private bool UpdateComponent(object newValue, Component found)
+        {
+            if (found == null) return false;
+            var oldValue = found.Value;
+            found.Value = newValue;
+
+            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
+            return true;
+        }
+
+        
+
         /// <summary>
         /// Add a component to the game object
         /// </summary>
@@ -193,6 +171,11 @@ namespace MazerPlatformer
             var component = new MazerPlatformer.Component(type, value, id);
             Components.Add(component);
             return component;
+        }
+
+        public void AddState(State state)
+        {
+            States.Add(state);
         }
 
         #region Events
@@ -250,7 +233,16 @@ namespace MazerPlatformer
         public virtual void Draw(SpriteBatch spriteBatch) { }
 
         // Specific game objects need to initialize themselves
-        public virtual void Initialize() {}
+        public virtual void Initialize()
+        {
+            // We enter the default state whatever that is
+            foreach(var state in States)
+                StateMachine.AddState(state);
+
+            StateMachine.Initialise(States.Any() 
+                ? States.FirstOrDefault(s=>s.Name == "default")?.Name ?? States.First()?.Name 
+                : null);
+        }
 
         #endregion
     }
