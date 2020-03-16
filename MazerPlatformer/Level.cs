@@ -157,7 +157,10 @@ namespace MazerPlatformer
                looping: true,
                frameTime: 150);
 
-            return new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, w: 48, h: 64, animationInfo: playerAnimation);
+            var player = new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, w: 48, h: 64, animationInfo: playerAnimation);
+
+            
+            return player;
         }
 
         public List<Npc> MakeNpCs(List<Room> rooms)
@@ -223,8 +226,8 @@ namespace MazerPlatformer
             for (var i = 0; i < 5; i++)
             {
                 var npc = CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1);
-                npc.AddComponent(ComponentType.Points, 40);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                npc.AddComponent(ComponentType.HitPoints, 40);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
             }
 

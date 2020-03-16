@@ -25,7 +25,6 @@ namespace MazerPlatformer
         {
             AddComponent(ComponentType.Health, 100); // start off with 100 health
             AddComponent(ComponentType.Points, 0); // start off with 0 points
-
             // Get notified when I collide with another object (collision handled in base class)
             OnCollision += HandleCollision;
             
@@ -94,7 +93,9 @@ namespace MazerPlatformer
                 {
                     var pickupPoints = (int) otherObject.FindComponentByType(ComponentType.Points).Value;
                     var myPoints = (int)FindComponentByType(ComponentType.Points).Value;
-                    UpdateComponentByType(ComponentType.Points, myPoints + pickupPoints);
+                    var levelPoints = myPoints + pickupPoints;
+                    
+                    UpdateComponentByType(ComponentType.Points, levelPoints);
                 }
             }
         }

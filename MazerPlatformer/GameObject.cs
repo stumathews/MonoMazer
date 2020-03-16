@@ -156,8 +156,10 @@ namespace MazerPlatformer
         private bool UpdateComponent( object newValue, Component found)
         {
             if (found == null) return false;
-            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, found.Value, newValue);
+            var oldValue = found.Value;
             found.Value = newValue;
+
+            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
             return true;
         }
 

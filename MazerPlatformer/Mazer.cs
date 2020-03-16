@@ -43,10 +43,10 @@ namespace MazerPlatformer
         }
 
         private int _currentLevel = 1;              
-        private int NumGameCollisionsEvents;
-        private int NumCollisionsWithPlayerAndNPCs;
-        private int _playerPoints;
-        private int _playerHealth;
+        private int _numGameCollisionsEvents;
+        private int _numCollisionsWithPlayerAndNpCs;
+        private int _playerPoints = 0;
+        private int _playerHealth = 100;
         private SpriteFont _font;
 
         Panel mainMenu;
@@ -103,7 +103,7 @@ namespace MazerPlatformer
 
             UserInterface.Initialize(Content, BuiltinThemes.hd);
 
-            _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartOrResumeLevel());
+            _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartOrResumeLevel(isStart: true));
             _gameCommands.AddKeyUpCommand(Keys.P, (time) => _currentGameState = GameStates.Paused);
             _gameCommands.AddKeyUpCommand(Keys.O, (time) => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
             _gameCommands.AddKeyUpCommand(Keys.K, (time) => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
@@ -130,7 +130,7 @@ namespace MazerPlatformer
                 // Ready the gameworld for the next level
                 _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: ++_currentLevel);
                 _gameWorld.Initialize();
-                StartOrResumeLevel();
+                StartOrResumeLevel(isStart: true);
             });
 
             SetupMenuUI();
@@ -162,11 +162,16 @@ namespace MazerPlatformer
             }
         }
 
-        internal void StartOrResumeLevel()
+        internal void StartOrResumeLevel(bool isStart)
         {
             HideMenu();
             _currentGameState = GameStates.Playing;
             _gameWorld.StartOrResumeLevelMusic();
+            if (isStart)
+            {
+                _playerHealth = 100;
+                _playerPoints = 0;
+            }
         }
         
         private void SetupMenuUI()
@@ -189,12 +194,12 @@ namespace MazerPlatformer
             startGameButton.OnClick += (Entity entity) =>
             {
                 _currentLevel = 1;
-                StartOrResumeLevel();
+                StartOrResumeLevel(isStart: true);
             };
             mainMenu.AddChild(startGameButton);
 
             Button resumeGameButton = new Button("Resume game");
-            resumeGameButton.OnClick = (Entity entity) => StartOrResumeLevel();
+            resumeGameButton.OnClick = (Entity entity) => StartOrResumeLevel(isStart: false);
             mainMenu.AddChild(resumeGameButton);
                         
             Button diagnostics = new Button("Diagnostics On/Off");
@@ -288,9 +293,9 @@ namespace MazerPlatformer
         private void _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
         {
             if (object1.Type == GameObject.GameObjectType.Npc)
-                NumCollisionsWithPlayerAndNPCs++;
+                _numCollisionsWithPlayerAndNpCs++;
 
-            NumGameCollisionsEvents++;
+            _numGameCollisionsEvents++;
         }
 
         /// <summary>
@@ -302,11 +307,11 @@ namespace MazerPlatformer
             _spriteBatch.DrawString(_font, $"Game Object Count: {_gameWorld.GameObjectCount}", new Vector2(
                                 GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
                             Color.White);
-            _spriteBatch.DrawString(_font, $"Collision Events: {NumGameCollisionsEvents}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"NPC Collisions: {NumCollisionsWithPlayerAndNPCs}", new Vector2(
+            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
