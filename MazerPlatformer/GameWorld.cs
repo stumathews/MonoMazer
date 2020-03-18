@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -174,12 +175,13 @@ namespace MazerPlatformer
             foreach (var id in inactiveIds)
                 _gameObjects.Remove(id);
 
-            var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active);
+            var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
             {
                 gameObject.Update(gameTime, gameWorld);
 
-                // Optimization: We wont be asking every room to check itself for collisions, we'll be asking each other game object which room its in and its adjacent rooms and we'll check those
+                // Optimization: We wont be asking every room to check itself for collisions,
+                // we'll be asking each game object which room its in, and from that room we can find adjacent rooms and we'll check those
                 if (gameObject.Type == GameObjectType.Room)
                     continue;
 
@@ -187,13 +189,13 @@ namespace MazerPlatformer
             }
         }
 
-        public void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects)
+        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects)
         {
             // Determine which room the game object is in
             var col = ToRoomColumn(gameObject);
             var row = ToRoomRow(gameObject);
             var roomNumber = ((row - 1) * Cols) + col - 1;
-
+            
             // Only check for collisions with adjacent rooms or current room
             if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
             {
@@ -204,18 +206,14 @@ namespace MazerPlatformer
                 collisionRooms.AddRange(adjacentRooms);
                 collisionRooms.Add(roomIn);
 
-                foreach (var room in collisionRooms)
-                {
-                    if (room == null) continue;
-                    NotifyIfColliding(gameObject, room);
-                }
+                if(roomIn.RoomNumber != roomNumber) throw new ArgumentException("We didn't get the room number we expected!");
 
-                // While we're in this room, are there any other objects in it that we might collide with
-                var otherObjectsInRoom = activeGameObjects.Where(o => ToRoomColumn(o) == col && ToRoomRow(o) == row);
-                foreach (var other in otherObjectsInRoom)
-                {
+                foreach (var room in collisionRooms.Where(room => room != null))
+                    NotifyIfColliding(gameObject, room);
+
+                // Wait!, while we're in this room, are there any other objects in here that we might collide with? (Player, Pickups etc)
+                foreach (var other in activeGameObjects.Where(go => ToRoomColumn(go) == col && ToRoomRow(go) == row))
                     NotifyIfColliding(gameObject, other);
-                }
             }
 
             // local functions
@@ -225,7 +223,7 @@ namespace MazerPlatformer
 
             void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
             {
-                // We dont consider colliding into other objects of the same type as colliding (pickups, Npcs)
+                // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
                 if (gameObject.Type == gameObject2.Type)
                     return;
 
