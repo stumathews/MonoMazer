@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
+using System.Net;
 using GameLib.EventDriven;
 using Microsoft.Xna.Framework.Media;
 
@@ -173,7 +174,8 @@ namespace MazerPlatformer
             foreach (var id in inactiveIds)
                 _gameObjects.Remove(id);
 
-            foreach (var gameObject in _gameObjects.Values.Where(obj => obj.Active))
+            var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active);
+            foreach (var gameObject in activeGameObjects)
             {
                 gameObject.Update(gameTime, gameWorld);
 
@@ -181,15 +183,15 @@ namespace MazerPlatformer
                 if (gameObject.Type == GameObjectType.Room)
                     continue;
 
-                CheckForRoomCollision(gameObject);
+                CheckForObjectCollisions(gameObject, activeGameObjects);
             }
         }
 
-        public void CheckForRoomCollision(GameObject gameObject)
+        public void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects)
         {
             // Determine which room the game object is in
-            var col = (int) Math.Ceiling((float) gameObject.X / CellWidth);
-            var row = (int) Math.Ceiling((float) gameObject.Y / CellHeight);
+            var col = ToRoomColumn(gameObject);
+            var row = ToRoomRow(gameObject);
             var roomNumber = ((row - 1) * Cols) + col - 1;
 
             // Only check for collisions with adjacent rooms or current room
@@ -205,15 +207,36 @@ namespace MazerPlatformer
                 foreach (var room in collisionRooms)
                 {
                     if (room == null) continue;
-                    if (room.IsCollidingWith(gameObject))
-                    {
-                        room.CollisionOccuredWith(gameObject);
-                        gameObject.CollisionOccuredWith(room);
-                    }
-                    else
-                    {
-                        room.IsColliding = gameObject.IsColliding = false;
-                    }
+                    NotifyIfColliding(gameObject, room);
+                }
+
+                // While we're in this room, are there any other objects in it that we might collide with
+                var otherObjectsInRoom = activeGameObjects.Where(o => ToRoomColumn(o) == col && ToRoomRow(o) == row);
+                foreach (var other in otherObjectsInRoom)
+                {
+                    NotifyIfColliding(gameObject, other);
+                }
+            }
+
+            // local functions
+
+            int ToRoomRow(GameObject o1) => (int)Math.Ceiling((float)o1.Y / CellHeight);
+            int ToRoomColumn(GameObject gameObject1) => (int)Math.Ceiling((float)gameObject1.X / CellWidth);
+
+            void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
+            {
+                // We dont consider colliding into other objects of the same type as colliding (pickups, Npcs)
+                if (gameObject.Type == gameObject2.Type)
+                    return;
+
+                if (gameObject2.IsCollidingWith(gameObject1))
+                {
+                    gameObject2.CollisionOccuredWith(gameObject1);
+                    gameObject1.CollisionOccuredWith(gameObject2);
+                }
+                else
+                {
+                    gameObject2.IsColliding = gameObject1.IsColliding = false;
                 }
             }
         }

@@ -33,7 +33,7 @@ namespace MazerPlatformer
         public GraphicsDevice GraphicsDevice { get; }
         public SpriteBatch SpriteBatch { get; }
         public ContentManager ContentManager { get; }
-        private CharacterBuilder characterBuidler;
+        private CharacterBuilder npcBuilder;
         public int LevelNumber { get; }
         public static readonly Random RandomGenerator = new Random();
         public string LevelFileName { get; set; }
@@ -48,7 +48,7 @@ namespace MazerPlatformer
             ContentManager = contentManager;
             LevelNumber = levelNumber;
             LevelFileName = $"Level{LevelNumber}.xml";
-            characterBuidler = new CharacterBuilder(ContentManager, Rows, Cols); // should move this into a initialise function
+            npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols); // should move this into a initialise function
         }        
 
         public List<Room> MakeRooms(bool removeRandomSides = false)
@@ -174,72 +174,46 @@ namespace MazerPlatformer
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
             var npcs = new List<Npc>();
+
+            // Add some enemy pirates
             for (int i = 0; i < 10; i++)
             {
-                var pirateNumber = RandomGenerator.Next(1, 4);
-                var strip = new AnimationInfo(
-                    texture: ContentManager.Load<Texture2D>($@"Sprites\pirate{pirateNumber}"),
-                    frameWidth: 48,
-                    frameHeight: 64,
-                    frameCount: 3,
-                    color: Color.White,
-                    scale: 1.0f,
-                    looping: true,
-                    frameTime: 150);
-
-                var randomRoom = rooms[RandomGenerator.Next(0, Rows * Cols)];
-                var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\pirate{RandomGenerator.Next(1, 4)}");
+                npc.AddComponent(ComponentType.HitPoints, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
-                npc.AddComponent(ComponentType.HitPoints, 1);
-
-                // Decision state makes the NPC idle and stops it from moving
-                var decisionState = new DecisionState("default", npc);
-                var movingState = new MovingState("moving", npc);
-                var collidingState = new CollidingState("colliding", npc);
-                
-                decisionState.Transitions.Add(new Transition(movingState, ()=> npc.NpcStaticState == Npc.NpcStaticStates.Moving));
-                movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Coliding));
-                collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
-
-
-                npc.AddState(movingState);
-                npc.AddState(collidingState);
-                npc.AddState(decisionState);
                 npcs.Add(npc);
             }
 
-            // Lets add some balloons
+            // Add some Enemy Dodos - more dangerous!
             for (var i = 0; i < 5; i++)
             {
-                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", frameCount: 1, type: Npc.NpcTypes.Enemy);
+                npc.AddComponent(ComponentType.HitPoints, 40);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
+                npcs.Add(npc);
+            }
+
+            // Lets add some pick ups in increasing order of value
+
+            for (var i = 0; i < 5; i++)
+            {
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 10);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                
                 npcs.Add(npc);
             }
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 20);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-
                 npcs.Add(npc);
             }
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
-                npc.Components.Add(new Component( ComponentType.Points, 30));
-
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < 5; i++)
-            {
-                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 30);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -247,12 +221,11 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1, type: Npc.NpcTypes.Enemy);
-                npc.AddComponent(ComponentType.HitPoints, 40);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
+                npc.AddComponent(ComponentType.Points, 40);
+                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
-
 
             return npcs;
         }

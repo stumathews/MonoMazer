@@ -24,7 +24,7 @@ namespace MazerPlatformer
             Cols = cols;
         }
 
-        public Npc CreateCharacter(List<Room> rooms, string assetName, int frameWidth = 48, int frameHeight = 64,
+        public Npc CreateNpc(List<Room> rooms, string assetName, int frameWidth = 48, int frameHeight = 64,
             int frameCount = 3, Npc.NpcTypes type = Npc.NpcTypes.Enemy)
         {
             var strip = new AnimationInfo(
@@ -41,21 +41,20 @@ namespace MazerPlatformer
             var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64,
                 GameObject.GameObjectType.Npc, strip);
 
-            if(type == Npc.NpcTypes.Enemy)
-            {
-                var decisionState = new DecisionState("default", npc);
-                var movingState = new MovingState("moving", npc);
-                var collidingState = new CollidingState("colliding", npc);
+            if (type != Npc.NpcTypes.Enemy) return npc;
 
-                decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Moving));
-                movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Coliding));
-                collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
+            var decisionState = new DecisionState("default", npc);
+            var movingState = new MovingState("moving", npc);
+            var collidingState = new CollidingState("colliding", npc);
+
+            decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Moving));
+            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Coliding));
+            collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
 
 
-                npc.AddState(movingState);
-                npc.AddState(collidingState);
-                npc.AddState(decisionState);
-            }
+            npc.AddState(movingState);
+            npc.AddState(collidingState);
+            npc.AddState(decisionState);
 
             return npc;
         }

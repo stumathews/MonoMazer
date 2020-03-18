@@ -129,9 +129,10 @@ namespace MazerPlatformer
                 _gameWorld.UnloadContent();
 
                 // Ready the gameworld for the next level
-                _gameWorld.Initialize();
-                _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: ++_currentLevel);
                 
+                _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: ++_currentLevel);
+                _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
+
                 StartOrResumeLevel(isStart: true);
             });
 
