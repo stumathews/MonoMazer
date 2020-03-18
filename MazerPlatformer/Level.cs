@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using GameLibFramework.Animation;
+using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -88,7 +89,7 @@ namespace MazerPlatformer
                     bool canRemoveAbove = roomAboveIndex > 0;
                     bool canRemoveBelow = roomBelowIndex < totalRooms;
                     bool canRemoveLeft = thisColumn - 1 >= 1;
-                    bool canRemoveRight = thisColumn + 1 <= Cols;
+                    bool canRemoveRight = thisColumn - 1 <= Cols;
 
                     var removableSides = new List<Room.Side>();
                     var currentRoom = mazeGrid[i];
@@ -188,7 +189,22 @@ namespace MazerPlatformer
                 var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64, GameObjectType.Npc, strip);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 1);
-                npc.AddState(new WonderingState("default", npc));
+
+                // Decision state makes the NPC idle and stops it from moving
+                var decisionState = new DecisionState("default", npc);
+                var walkingState = new MovingState("moving", npc);
+                
+                // Once in decision state, idle and stationary, we can move to walking state if not colliding
+                decisionState.Transitions.Add(new Transition(walkingState, ()=> !npc.IsColliding ));
+
+                // If we are walking, and then collide go back into decision mode to find out what to do
+                walkingState.Transitions.Add(new Transition(decisionState, () => npc.IsColliding));
+
+                var idleState = new IdleState("idle", npc);
+
+                npc.AddState(walkingState);
+                npc.AddState(idleState);
+                npc.AddState(decisionState);
                 npcs.Add(npc);
             }
 

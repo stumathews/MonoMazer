@@ -154,7 +154,7 @@ namespace MazerPlatformer
 
         private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
 
-        protected void NudgeOutOfCollision()
+        public void NudgeOutOfCollision()
         {
             CanMove = false;
             // Artificially nudge the player out of the collision

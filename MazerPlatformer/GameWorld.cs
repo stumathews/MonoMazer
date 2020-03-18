@@ -174,7 +174,6 @@ namespace MazerPlatformer
             {
                 gameObject.Update(gameTime, gameWorld);
 
-                
                 // Determine which room the game object is in
                 var col = (int)Math.Ceiling((float)gameObject.X / CellWidth);
                 var row = (int)Math.Ceiling((float)gameObject.Y / CellHeight);
@@ -182,10 +181,13 @@ namespace MazerPlatformer
                 if (roomNumber >= 0 && roomNumber <= ((Rows * Cols)-1))
                 {
                     var roomIn = _rooms[roomNumber];
-                    var adjacentRooms = new[] {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
+                    var adjacentRooms = new List<Room> {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
+                    var collisionRooms = new List<Room>();
 
+                    collisionRooms.AddRange(adjacentRooms);
+                    collisionRooms.Add(roomIn);
 
-                    foreach (var room in adjacentRooms)
+                    foreach (var room in collisionRooms)
                     {
                         if (room == null) continue;
                         if (room.IsCollidingWith(gameObject))
@@ -197,10 +199,10 @@ namespace MazerPlatformer
                 }
 
                 //// we care only about collisions with the player
-                if (!gameObject.IsCollidingWith(Player) || gameObject.IsPlayer()) continue;
+                //if (!gameObject.IsCollidingWith(Player) || gameObject.IsPlayer()) continue;
 
-                Player.CollisionOccuredWith(gameObject);
-                gameObject.CollisionOccuredWith(Player);
+                //Player.CollisionOccuredWith(gameObject);
+                //gameObject.CollisionOccuredWith(Player);
 
             }
         }
