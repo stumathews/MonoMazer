@@ -15,7 +15,7 @@ namespace MazerPlatformer
         // These are the base states that any character can be in
         public enum CharacterStates { Idle, Moving };
 
-        protected CharacterStates CurrentState { get; set; }
+        public CharacterStates CurrentState { get; set; }
 
         // The last direction the character faced when it collided
         protected CharacterDirection LastCollisionDirection;
@@ -107,7 +107,7 @@ namespace MazerPlatformer
             OnStateChanged?.Invoke(state);
         }
 
-        private void SetCharacterDirection(CharacterDirection direction)
+        public void SetCharacterDirection(CharacterDirection direction)
         {
             CurrentDirection = direction;
 

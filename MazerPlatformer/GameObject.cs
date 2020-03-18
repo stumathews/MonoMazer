@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using C3.XNA;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static System.String;
 
 namespace MazerPlatformer
 {
@@ -32,6 +32,7 @@ namespace MazerPlatformer
         public string Id { get; set; }
         public int W { get; }
         public int H { get; }
+        public string InfoText { get; set; }
 
         // Tracks if an object is scheduled to be removed 
         public bool Active { get; set; }
@@ -230,7 +231,14 @@ namespace MazerPlatformer
         }
 
         // Specific game objects need to initialize
-        public virtual void Draw(SpriteBatch spriteBatch) { }
+        public virtual void Draw(SpriteBatch spriteBatch)
+        {
+            // All game objects can ask to draw some text over it if it wants
+            if(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText)
+            {
+                spriteBatch.DrawString(Mazer.Font, InfoText, new Vector2(X-10, Y-10), Color.White); // dependency on Mazer for game font ok.
+            }
+        }
 
         // Specific game objects need to initialize themselves
         public virtual void Initialize()

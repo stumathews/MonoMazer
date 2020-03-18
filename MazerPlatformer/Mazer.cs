@@ -47,7 +47,7 @@ namespace MazerPlatformer
         private int _numCollisionsWithPlayerAndNpCs;
         private int _playerPoints = 0;
         private int _playerHealth = 100;
-        private SpriteFont _font;
+        public static SpriteFont Font;
 
         Panel mainMenu;
         Button startGameButton;
@@ -85,7 +85,7 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _playingState = new PlayingGameState(ref _gameWorld); //SMTODO: Should this have access directly on the Game World?
-            _font = Content.Load<SpriteFont>("Sprites/gameFont");
+            Font = Content.Load<SpriteFont>("Sprites/gameFont");
             _menuMusic = Content.Load<Song>("Music/bgm_menu");
             
             _gameWorld.LoadContent(rows: numRows, cols: numCols, levelNumber: _currentLevel);
@@ -114,6 +114,7 @@ namespace MazerPlatformer
             _gameCommands.AddKeyUpCommand(Keys.B, (time) => Diganostics.DrawBottom = !Diganostics.DrawBottom);
             _gameCommands.AddKeyUpCommand(Keys.R, (time) => Diganostics.DrawRight = !Diganostics.DrawRight);
             _gameCommands.AddKeyUpCommand(Keys.L, (time) => Diganostics.DrawLeft = !Diganostics.DrawLeft);
+            _gameCommands.AddKeyUpCommand(Keys.I, (time) => Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText);
             _gameCommands.AddKeyUpCommand(Keys.A, (time) => EnableAllDiganostics());
             _gameCommands.AddKeyUpCommand(Keys.Escape, (time) =>
             {
@@ -304,39 +305,39 @@ namespace MazerPlatformer
         /// <param name="gameTime"></param>
         private void DrawInGameStats(GameTime gameTime)
         {
-            _spriteBatch.DrawString(_font, $"Game Object Count: {_gameWorld.GameObjectCount}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Game Object Count: {_gameWorld.GameObjectCount}", new Vector2(
                                 GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
                             Color.White);
-            _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
+            _spriteBatch.DrawString(Font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Level: {_currentLevel} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Level: {_currentLevel} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
+            _spriteBatch.DrawString(Font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Player State: {_characterState}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Player Direction: {_characterDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 300),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Player Health: {_playerHealth}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 390),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Player Points: {_playerPoints}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 420),
                 Color.White);
         }
@@ -347,6 +348,7 @@ namespace MazerPlatformer
             Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
             Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
             Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
+            Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
         }
     }
 }

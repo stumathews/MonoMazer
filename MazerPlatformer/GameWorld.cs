@@ -19,8 +19,8 @@ namespace MazerPlatformer
         private GraphicsDevice GraphicsDevice { get; }
         public SpriteBatch SpriteBatch { get; }
 
-        public int Rows { get; internal set; } // Rows Of rooms
-        public int Cols { get; internal set; } // Columns of rooms
+        private static int Rows { get; set; } // Rows Of rooms
+        private static int Cols { get; set; } // Columns of rooms
         
         private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
         private readonly Random _random = new Random();
@@ -31,8 +31,8 @@ namespace MazerPlatformer
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
 
-        public int CellWidth { get; private set; }
-        public int CellHeight { get; private set; }
+        public static int CellWidth { get; private set; }
+        public static int CellHeight { get; private set; }
 
         public int GameObjectCount => _gameObjects.Keys.Count();
 
@@ -40,7 +40,7 @@ namespace MazerPlatformer
         private Song _currentSong;
         public string GetCurrentSong() { return _level.LevelFile.SongFileName; }
         private bool _unloading = false;
-        private List<Room> _rooms = new List<Room>();
+        private List<Room> _rooms = new List<Room>(); 
 
         public Player Player;
 
@@ -51,6 +51,8 @@ namespace MazerPlatformer
             SpriteBatch = spriteBatch;
         }
 
+
+        
         /// <summary>
         /// Generate rooms rows x cols rooms in the level
         /// Add Npcs
@@ -174,36 +176,44 @@ namespace MazerPlatformer
             {
                 gameObject.Update(gameTime, gameWorld);
 
-                // Determine which room the game object is in
-                var col = (int)Math.Ceiling((float)gameObject.X / CellWidth);
-                var row = (int)Math.Ceiling((float)gameObject.Y / CellHeight);
-                var roomNumber = ((row-1) * Cols) + col-1;
-                if (roomNumber >= 0 && roomNumber <= ((Rows * Cols)-1))
+                // Optimization: We wont be asking every room to check itself for collisions, we'll be asking each other game object which room its in and its adjacent rooms and we'll check those
+                if (gameObject.Type == GameObjectType.Room)
+                    continue;
+
+                CheckForRoomCollision(gameObject);
+            }
+        }
+
+        public void CheckForRoomCollision(GameObject gameObject)
+        {
+            // Determine which room the game object is in
+            var col = (int) Math.Ceiling((float) gameObject.X / CellWidth);
+            var row = (int) Math.Ceiling((float) gameObject.Y / CellHeight);
+            var roomNumber = ((row - 1) * Cols) + col - 1;
+
+            // Only check for collisions with adjacent rooms or current room
+            if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
+            {
+                var roomIn = _rooms[roomNumber];
+                var adjacentRooms = new List<Room> {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
+                var collisionRooms = new List<Room>();
+
+                collisionRooms.AddRange(adjacentRooms);
+                collisionRooms.Add(roomIn);
+
+                foreach (var room in collisionRooms)
                 {
-                    var roomIn = _rooms[roomNumber];
-                    var adjacentRooms = new List<Room> {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
-                    var collisionRooms = new List<Room>();
-
-                    collisionRooms.AddRange(adjacentRooms);
-                    collisionRooms.Add(roomIn);
-
-                    foreach (var room in collisionRooms)
+                    if (room == null) continue;
+                    if (room.IsCollidingWith(gameObject))
                     {
-                        if (room == null) continue;
-                        if (room.IsCollidingWith(gameObject))
-                        {
-                            room.CollisionOccuredWith(gameObject);
-                            gameObject.CollisionOccuredWith(room);
-                        }
+                        room.CollisionOccuredWith(gameObject);
+                        gameObject.CollisionOccuredWith(room);
+                    }
+                    else
+                    {
+                        room.IsColliding = gameObject.IsColliding = false;
                     }
                 }
-
-                //// we care only about collisions with the player
-                //if (!gameObject.IsCollidingWith(Player) || gameObject.IsPlayer()) continue;
-
-                //Player.CollisionOccuredWith(gameObject);
-                //gameObject.CollisionOccuredWith(Player);
-
             }
         }
 

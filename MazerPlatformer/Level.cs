@@ -172,7 +172,7 @@ namespace MazerPlatformer
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
             var npcs = new List<Npc>();
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
                 var pirateNumber = RandomGenerator.Next(1, 4);
                 var strip = new AnimationInfo(
@@ -192,18 +192,16 @@ namespace MazerPlatformer
 
                 // Decision state makes the NPC idle and stops it from moving
                 var decisionState = new DecisionState("default", npc);
-                var walkingState = new MovingState("moving", npc);
+                var movingState = new MovingState("moving", npc);
+                var collidingState = new CollidingState("colliding", npc);
                 
-                // Once in decision state, idle and stationary, we can move to walking state if not colliding
-                decisionState.Transitions.Add(new Transition(walkingState, ()=> !npc.IsColliding ));
+                decisionState.Transitions.Add(new Transition(movingState, ()=> npc.NpcStaticState == Npc.NpcStaticStates.Moving));
+                movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Coliding));
+                collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
 
-                // If we are walking, and then collide go back into decision mode to find out what to do
-                walkingState.Transitions.Add(new Transition(decisionState, () => npc.IsColliding));
 
-                var idleState = new IdleState("idle", npc);
-
-                npc.AddState(walkingState);
-                npc.AddState(idleState);
+                npc.AddState(movingState);
+                npc.AddState(collidingState);
                 npc.AddState(decisionState);
                 npcs.Add(npc);
             }
