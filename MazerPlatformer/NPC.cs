@@ -179,7 +179,7 @@ namespace MazerPlatformer
             base.Update(owner, gameTime);
 
             // skip doing anything for a few secs
-            if (IsWithin(500, gameTime))
+            if (IsWithin(100, gameTime))
                 return;
 
             Npc.SwapDirection();

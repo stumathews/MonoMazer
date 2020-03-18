@@ -123,6 +123,7 @@ namespace MazerPlatformer
             Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) // want to know when the player's components change
                 => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
 
+
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();

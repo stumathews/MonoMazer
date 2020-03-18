@@ -33,8 +33,9 @@ namespace MazerPlatformer
         public GraphicsDevice GraphicsDevice { get; }
         public SpriteBatch SpriteBatch { get; }
         public ContentManager ContentManager { get; }
+        private CharacterBuilder characterBuidler;
         public int LevelNumber { get; }
-        private static readonly Random RandomGenerator = new Random();
+        public static readonly Random RandomGenerator = new Random();
         public string LevelFileName { get; set; }
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();        
 
@@ -47,6 +48,7 @@ namespace MazerPlatformer
             ContentManager = contentManager;
             LevelNumber = levelNumber;
             LevelFileName = $"Level{LevelNumber}.xml";
+            characterBuidler = new CharacterBuilder(ContentManager, Rows, Cols); // should move this into a initialise function
         }        
 
         public List<Room> MakeRooms(bool removeRandomSides = false)
@@ -209,7 +211,7 @@ namespace MazerPlatformer
             // Lets add some balloons
             for (var i = 0; i < 5; i++)
             {
-                var npc = CreateCharacter(rooms, $@"Sprites\balloon-pink");
+                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 10);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 
@@ -218,7 +220,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = CreateCharacter(rooms, $@"Sprites\balloon-blue");
+                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 20);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
 
@@ -227,7 +229,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = CreateCharacter(rooms, $@"Sprites\balloon-green");
+                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
                 npc.Components.Add(new Component( ComponentType.Points, 30));
 
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
@@ -237,7 +239,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = CreateCharacter(rooms, $@"Sprites\balloon-orange");
+                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 30);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -245,7 +247,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1);
+                var npc = characterBuidler.CreateCharacter(rooms, $@"Sprites\dodo", frameCount:1, type: Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -255,23 +257,7 @@ namespace MazerPlatformer
             return npcs;
         }
 
-        private Npc CreateCharacter(List<Room> rooms, string assetName, int frameWidth = 48, int frameHeight = 64, int frameCount = 3)
-        {
-            var strip = new AnimationInfo(
-                texture: ContentManager.Load<Texture2D>(assetName),
-                frameWidth: frameWidth,
-                frameHeight: frameHeight,
-                frameCount: frameCount,
-                color: Color.White,
-                scale: 1.0f,
-                looping: true,
-                frameTime: 150);
-
-            var randomRoom = rooms[RandomGenerator.Next(0, Rows * Cols)];
-            var npc = new Npc((int) randomRoom.GetCentre().X, (int) randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 48, 64,
-                GameObjectType.Npc, strip);
-            return npc;
-        }
+        
 
         public void Save()
         {

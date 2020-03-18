@@ -42,6 +42,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Character.cs" />
+    <Compile Include="CharacterBuilder.cs" />
     <Compile Include="Component.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GameWorld.cs" />
