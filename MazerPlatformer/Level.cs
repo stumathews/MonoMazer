@@ -37,7 +37,10 @@ namespace MazerPlatformer
         public int LevelNumber { get; }
         public static readonly Random RandomGenerator = new Random();
         public string LevelFileName { get; set; }
-        public LevelDetails LevelFile { get; internal set; } = new LevelDetails();        
+        public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
+
+        public event OnLoadInfo OnLevelLoad;
+        public delegate void OnLoadInfo(LevelDetails details);
 
         public Level(int rows, int cols, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber) 
         {
@@ -243,6 +246,8 @@ namespace MazerPlatformer
             {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
             }
+
+            OnLevelLoad?.Invoke(LevelFile);
         }
     }
 }

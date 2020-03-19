@@ -65,6 +65,7 @@ namespace MazerPlatformer
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
+        private string _currentSong;
 
         public Mazer()
         {
@@ -156,6 +157,7 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+            _gameWorld.OnSongChanged += filename => _currentSong = filename;
         }
 
         /// <summary>
@@ -338,7 +340,7 @@ namespace MazerPlatformer
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"Level: {_currentLevel} Music Track: {_gameWorld.GetCurrentSong()}", new Vector2(
+            _spriteBatch.DrawString(Font, $"Level: {_currentLevel} Music Track: {_currentSong}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 

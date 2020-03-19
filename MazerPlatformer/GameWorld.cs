@@ -17,7 +17,7 @@ namespace MazerPlatformer
     /// </summary>
     public class GameWorld : PerFrame
     {
-        public ContentManager ContentManager { get; }
+        private ContentManager ContentManager { get; }
         private GraphicsDevice GraphicsDevice { get; }
         private SpriteBatch SpriteBatch { get; }
 
@@ -27,22 +27,22 @@ namespace MazerPlatformer
         private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
         private readonly Random _random = new Random();
 
+        /* Interface to the Outside world*/
         public event CollisionArgs OnGameWorldCollision;
         public event Character.StateChanged OnPlayerStateChanged;
         public event Character.DirectionChanged OnPlayerDirectionChanged;
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
-
-
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved);
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved);
 
+        public event SongChanged OnSongChanged;
+        public delegate void SongChanged(string filename);
         private static int CellWidth { get; set; }
         private static int CellHeight { get; set; }
 
         private Level _level;
         private Song _currentSong;
-        public string GetCurrentSong() { return _level.LevelFile.SongFileName; }
         private bool _unloading = false;
         private List<Room> _rooms = new List<Room>();
 
@@ -54,8 +54,6 @@ namespace MazerPlatformer
             GraphicsDevice = graphicsDevice;
             SpriteBatch = spriteBatch;
         }
-
-
         
         /// <summary>
         /// Generate rooms rows x cols rooms in the level
@@ -72,12 +70,16 @@ namespace MazerPlatformer
             CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
             _level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
+            _level.OnLevelLoad += LevelOnOnLevelLoad;
             _level.Load();
 
             // This should probably be in the level class managed by some fsm    
-            
-            if(!String.IsNullOrEmpty(_level.LevelFile.SongFileName))
+
+            if (!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
+            {
                 _currentSong = ContentManager.Load<Song>(_level.LevelFile.SongFileName);
+                OnSongChanged?.Invoke(_level.LevelFile.SongFileName);
+            }
 
             _rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
@@ -91,22 +93,25 @@ namespace MazerPlatformer
                 AddToGameObjects(room.Id, room);            
         }
 
-        public void StartOrResumeLevelMusic()
+        private void LevelOnOnLevelLoad(Level.LevelDetails details)
         {
-            if (!String.IsNullOrEmpty(_level.LevelFile.SongFileName))
-            {
-                MediaPlayer.IsRepeating = true;
-                MediaPlayer.Play(_currentSong);
-            }
+            OnSongChanged?.Invoke(details.SongFileName);
         }
 
-        void AddToGameObjects(string id, GameObject gameObject)
+        public void StartOrResumeLevelMusic()
+        {
+            if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Play(_currentSong);
+        }
+
+        private void AddToGameObjects(string id, GameObject gameObject)
         {
             _gameObjects.Add(id, gameObject);
             OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false);
         }
 
-        void RemoveFromGameObjects(string id)
+        private void RemoveFromGameObjects(string id)
         {
             var gameObject = _gameObjects[id];
             if (gameObject == null)
