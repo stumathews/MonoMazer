@@ -45,7 +45,7 @@ namespace MazerPlatformer
 
         private Song _song;
 
-        public void PlaySound()
+        public void PlaySong()
         {
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Play(_song);
