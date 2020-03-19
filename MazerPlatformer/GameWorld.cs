@@ -43,7 +43,6 @@ namespace MazerPlatformer
 
         // Handles level loading/saving and making level game objects for the game world
         private Level _level;
-        private Song _currentSong;
 
         // We can unload and reload the game world to change levels
         private bool _unloading;
@@ -62,7 +61,7 @@ namespace MazerPlatformer
         }
         
         /// <summary>
-        /// Generate rooms rows x cols rooms in the level
+        /// Load the Content of the game world ie levels and sounds etc
         /// Add Npcs
         /// Add rooms
         /// Add player 
@@ -75,31 +74,26 @@ namespace MazerPlatformer
             CellWidth = GraphicsDevice.Viewport.Width / Cols;
             CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
+            // Make  new level
             _level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
             _level.OnLevelLoad += LevelOnOnLevelLoad;
+
+            // Load it up - handles opening saved level customization files
             _level.Load();
 
-            // This should probably be in the level class managed by some fsm    
-
-            if (!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
-            {
-                _currentSong = ContentManager.Load<Song>(_level.LevelFile.SongFileName);
-                OnSongChanged?.Invoke(_level.LevelFile.SongFileName);
-            }
-
+            // Make the room objects in the level
             _rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
+            foreach (var room in _rooms)
+                AddToGameObjects(room.Id, room);
 
+            // Make the player object for the level
             Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
-                AddToGameObjects(Player.PlayerId, Player);
+            AddToGameObjects(Player.PlayerId, Player);
 
+            // Make the NPCs for the level
             foreach (var npc in _level.MakeNpCs(_rooms))
                 AddToGameObjects(npc.Id, npc);
-
-            foreach (var room in _rooms)
-                AddToGameObjects(room.Id, room);            
         }
-
-       
 
         /// <summary>
         /// Unload the game world, basically save it
@@ -195,8 +189,8 @@ namespace MazerPlatformer
         public void StartOrResumeLevelMusic()
         {
             if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
-            MediaPlayer.IsRepeating = true;
-            MediaPlayer.Play(_currentSong);
+
+            _level.PlaySound();
         }
 
         private void AddToGameObjects(string id, GameObject gameObject)

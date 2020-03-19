@@ -9,6 +9,7 @@ using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Component;
 using static MazerPlatformer.GameObject;
 
@@ -41,6 +42,14 @@ namespace MazerPlatformer
 
         public event OnLoadInfo OnLevelLoad;
         public delegate void OnLoadInfo(LevelDetails details);
+
+        private Song _song;
+
+        public void PlaySound()
+        {
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Play(_song);
+        }
 
         public Level(int rows, int cols, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber) 
         {
@@ -246,6 +255,11 @@ namespace MazerPlatformer
             if (File.Exists(LevelFileName))
             {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
+            }
+
+            if (!string.IsNullOrEmpty(LevelFile.SongFileName))
+            {
+                _song = ContentManager.Load<Song>(LevelFile.SongFileName);
             }
 
             OnLevelLoad?.Invoke(LevelFile);
