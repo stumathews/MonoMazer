@@ -117,17 +117,17 @@ namespace MazerPlatformer
 
             _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartOrResumeLevel(isFreshStart: true));
             _gameCommands.AddKeyUpCommand(Keys.P, (time) => _currentGameState = GameStates.Paused);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad1, (time) => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad2, (time) => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad3, (time) => Diganostics.DrawLines = !Diganostics.DrawLines);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad4, (time) => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad5, (time) => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
+            _gameCommands.AddKeyUpCommand(Keys.D1, (time) => Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds);
+            _gameCommands.AddKeyUpCommand(Keys.D2, (time) => Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds);
+            _gameCommands.AddKeyUpCommand(Keys.D3, (time) => Diganostics.DrawLines = !Diganostics.DrawLines);
+            _gameCommands.AddKeyUpCommand(Keys.D4, (time) => Diganostics.DrawCentrePoint = !Diganostics.DrawCentrePoint);
+            _gameCommands.AddKeyUpCommand(Keys.D5, (time) => Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint);
             _gameCommands.AddKeyUpCommand(Keys.T, (time) => Diganostics.DrawTop = !Diganostics.DrawTop);
             _gameCommands.AddKeyUpCommand(Keys.B, (time) => Diganostics.DrawBottom = !Diganostics.DrawBottom);
             _gameCommands.AddKeyUpCommand(Keys.R, (time) => Diganostics.DrawRight = !Diganostics.DrawRight);
             _gameCommands.AddKeyUpCommand(Keys.L, (time) => Diganostics.DrawLeft = !Diganostics.DrawLeft);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad6, (time) => Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText);
-            _gameCommands.AddKeyUpCommand(Keys.NumPad0, (time) => EnableAllDiganostics());
+            _gameCommands.AddKeyUpCommand(Keys.D6, (time) => Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText);
+            _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiganostics());
             _gameCommands.AddKeyUpCommand(Keys.Escape, (time) =>
             {
                 _currentGameState = GameStates.Paused;
