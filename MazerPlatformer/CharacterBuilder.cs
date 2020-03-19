@@ -48,7 +48,7 @@ namespace MazerPlatformer
             var collidingState = new CollidingState("colliding", npc);
 
             decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Moving));
-            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Coliding));
+            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Colliding));
             collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
 
 

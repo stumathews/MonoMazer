@@ -26,7 +26,7 @@ namespace MazerPlatformer
         {
             Moving,
             Deciding,
-            Coliding
+            Colliding
         };
 
         public NpcStaticStates NpcStaticState { get; set; } = NpcStaticStates.Deciding;
@@ -47,7 +47,7 @@ namespace MazerPlatformer
 
         private void HandleCollision(GameObject thisobject, GameObject otherobject)
         {
-            NpcStaticState = NpcStaticStates.Coliding;
+            NpcStaticState = NpcStaticStates.Colliding;
             NudgeOutOfCollision();
         }
 

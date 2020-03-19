@@ -74,14 +74,16 @@ namespace MazerPlatformer
             CellWidth = GraphicsDevice.Viewport.Width / Cols;
             CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
-            // Make  new level
+            // Prepare a new level
             _level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
-            _level.OnLevelLoad += LevelOnOnLevelLoad;
+            _level.OnLoad += OnLevelLoad;
 
-            // Load it up - handles opening saved level customization files
+            // Make the level
             var levelGameObjects = _level.Load();
-            _rooms = _level.GetRooms();
             AddToGameObjects(levelGameObjects);
+
+            // We use the rooms locations for collisions detection optimizations later
+            _rooms = _level.GetRooms();
 
             // Make the player object for the level
             Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
@@ -185,7 +187,7 @@ namespace MazerPlatformer
             Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
         }
 
-        private void LevelOnOnLevelLoad(Level.LevelDetails details) => OnSongChanged?.Invoke(details.SongFileName);
+        private void OnLevelLoad(Level.LevelDetails details) => OnSongChanged?.Invoke(details.SongFileName);
 
         public void StartOrResumeLevelMusic()
         {

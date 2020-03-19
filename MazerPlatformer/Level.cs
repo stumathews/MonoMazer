@@ -41,7 +41,7 @@ namespace MazerPlatformer
         public string LevelFileName { get; set; }
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
 
-        public event OnLoadInfo OnLevelLoad;
+        public event OnLoadInfo OnLoad;
         public delegate void OnLoadInfo(LevelDetails details);
 
         
@@ -285,7 +285,7 @@ namespace MazerPlatformer
             foreach (var npc in MakeNpCs(_rooms))
                 AddToLevelGameObjects(npc.Id, npc);
 
-            OnLevelLoad?.Invoke(LevelFile);
+            OnLoad?.Invoke(LevelFile);
             return _levelGameObjects;
         }
 
@@ -295,6 +295,10 @@ namespace MazerPlatformer
             OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _levelGameObjects.Count());
         }
 
+        /// <summary>
+        /// Get the room objects in the level
+        /// </summary>
+        /// <returns>list of rooms created in the level</returns>
         public List<Room> GetRooms()
         {
             return _rooms;

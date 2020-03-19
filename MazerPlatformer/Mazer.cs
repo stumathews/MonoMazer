@@ -225,11 +225,13 @@ namespace MazerPlatformer
         internal void StartOrResumeLevel(bool isFreshStart)
         {
             HideMenu();
-            if (!isFreshStart) return;
-            _playerHealth = 100;
-            _playerPoints = 0;
             _currentGameState = GameStates.Playing;
             _gameWorld.StartOrResumeLevelMusic();
+            if (isFreshStart)
+            {
+                _playerHealth = 100;
+                _playerPoints = 0;
+            }
         }
 
         // Creates the UI elements that the menu will use
@@ -273,6 +275,7 @@ namespace MazerPlatformer
 
         internal void ShowMenu() => _mainMenu.Visible = true; // used by internal pause state
         private void HideMenu() => _mainMenu.Visible = false;
+        private bool IsMenuVisible() => _mainMenu.Visible;
 
         // Sets up the main game playing states (Playing, Paused) and initialize the state machine for the top level game (Character states are separate and are within the game world)
         private void InitializeGameStateMachine()
