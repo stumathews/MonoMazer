@@ -13,13 +13,13 @@ using Microsoft.Xna.Framework.Media;
 namespace MazerPlatformer
 {
     /// <summary>
-    /// Game world is contains the elements that can be updated/drawn each frame
+    /// Game world is contains the game elements such as characters, level objects etc that can be updated/drawn each frame
     /// </summary>
     public class GameWorld : PerFrame
     {
         public ContentManager ContentManager { get; }
         private GraphicsDevice GraphicsDevice { get; }
-        public SpriteBatch SpriteBatch { get; }
+        private SpriteBatch SpriteBatch { get; }
 
         private static int Rows { get; set; } // Rows Of rooms
         private static int Cols { get; set; } // Columns of rooms
@@ -33,18 +33,20 @@ namespace MazerPlatformer
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
 
-        public static int CellWidth { get; private set; }
-        public static int CellHeight { get; private set; }
 
-        public int GameObjectCount => _gameObjects.Keys.Count();
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved);
+        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
+
+        private static int CellWidth { get; set; }
+        private static int CellHeight { get; set; }
 
         private Level _level;
         private Song _currentSong;
         public string GetCurrentSong() { return _level.LevelFile.SongFileName; }
         private bool _unloading = false;
-        private List<Room> _rooms = new List<Room>(); 
+        private List<Room> _rooms = new List<Room>();
 
-        public Player Player;
+        internal Player Player;
 
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
@@ -74,28 +76,44 @@ namespace MazerPlatformer
 
             // This should probably be in the level class managed by some fsm    
             
-            if(!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
+            if(!String.IsNullOrEmpty(_level.LevelFile.SongFileName))
                 _currentSong = ContentManager.Load<Song>(_level.LevelFile.SongFileName);
 
             _rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
 
             Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
-                _gameObjects.Add(Player.PlayerId, Player);
+                AddToGameObjects(Player.PlayerId, Player);
 
             foreach (var npc in _level.MakeNpCs(_rooms))
-                _gameObjects.Add(npc.Id, npc);
+                AddToGameObjects(npc.Id, npc);
 
             foreach (var room in _rooms)
-                _gameObjects.Add(room.Id, room);            
+                AddToGameObjects(room.Id, room);            
         }
 
         public void StartOrResumeLevelMusic()
         {
-            if (!string.IsNullOrEmpty(_level.LevelFile.SongFileName))
+            if (!String.IsNullOrEmpty(_level.LevelFile.SongFileName))
             {
                 MediaPlayer.IsRepeating = true;
                 MediaPlayer.Play(_currentSong);
             }
+        }
+
+        void AddToGameObjects(string id, GameObject gameObject)
+        {
+            _gameObjects.Add(id, gameObject);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false);
+        }
+
+        void RemoveFromGameObjects(string id)
+        {
+            var gameObject = _gameObjects[id];
+            if (gameObject == null)
+                return;
+
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true);
+            _gameObjects.Remove(id);
         }
 
         /// <summary>
@@ -173,7 +191,7 @@ namespace MazerPlatformer
             var inactiveIds = _gameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
-                _gameObjects.Remove(id);
+                RemoveFromGameObjects(id);
 
             var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)

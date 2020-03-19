@@ -64,6 +64,7 @@ namespace MazerPlatformer
         private CharacterStates _characterState;
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
+        private int _numGameObjects;
 
         public Mazer()
         {
@@ -154,7 +155,7 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerDirectionChanged += direction => _characterDirection = direction;
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
-
+            _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
         }
 
         /// <summary>
@@ -200,7 +201,16 @@ namespace MazerPlatformer
             base.Draw(gameTime);
         }
 
-         // Update the UI when something interesting about the player's inventory changes (health, damage)
+        // Inform the UI that game objects have been removed or added
+        private void OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed)
+        {
+            if (removed)
+                _numGameObjects--;
+            else
+                _numGameObjects++;
+        }
+
+        // Update the UI when something interesting about the player's inventory changes (health, damage)
         private void OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
         {
             switch (componentType)
@@ -316,7 +326,8 @@ namespace MazerPlatformer
         /// <param name="gameTime"></param>
         private void DrawInGameStats(GameTime gameTime)
         {
-            _spriteBatch.DrawString(Font, $"Game Object Count: {_gameWorld.GameObjectCount}", new Vector2(
+            // Consider making GameObjectCount private and getting the info via an event instead
+            _spriteBatch.DrawString(Font, $"Game Object Count: {_numGameObjects}", new Vector2(
                                 GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
                             Color.White);
             _spriteBatch.DrawString(Font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(

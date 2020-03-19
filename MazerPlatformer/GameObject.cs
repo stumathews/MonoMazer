@@ -181,13 +181,11 @@ namespace MazerPlatformer
 
         #region Events
 
-        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName,
-            Component.ComponentType componentType, object oldValue, object newValue);
-
+        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
         public event GameObjectComponentChanged OnGameObjectComponentChanged;
         public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
-
         public event CollisionArgs OnCollision;
+
 
         #endregion
 
