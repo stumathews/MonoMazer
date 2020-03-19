@@ -96,7 +96,7 @@ namespace MazerPlatformer
         }
 
         /// <summary>
-        /// Unload the game world, basically save it
+        /// Unload the game world, and save it
         /// </summary>
         public void UnloadContent()
         {
@@ -190,7 +190,7 @@ namespace MazerPlatformer
         {
             if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
 
-            _level.PlaySound();
+            _level.PlaySong();
         }
 
         private void AddToGameObjects(string id, GameObject gameObject)
