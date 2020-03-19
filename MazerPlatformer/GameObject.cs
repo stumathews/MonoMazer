@@ -90,7 +90,7 @@ namespace MazerPlatformer
         }
 
         // Called every frame
-        public virtual void Update(GameTime gameTime, GameWorld gameWorld)
+        public virtual void Update(GameTime gameTime)
         {
             if (!Active) return;
             CalculateBoundingBox();

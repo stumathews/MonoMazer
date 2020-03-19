@@ -39,7 +39,7 @@ namespace MazerPlatformer
 
         public override void Update(object owner, GameTime gameTime)
         {
-            _gameWorld.Update(gameTime,_gameWorld); // Only update/process the gameworld while we are in the playing state
+            _gameWorld.Update(gameTime); // Only update/process the gameworld while we are in the playing state
             _playingCommands.Update(gameTime); // Only update/process input for the playing state, while in playing state
             base.Update(owner, gameTime);
         }

@@ -32,9 +32,9 @@ namespace MazerPlatformer
 
 
         // I can update myself
-        public override void Update(GameTime gameTime, GameWorld gameWorld)
+        public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime, gameWorld);
+            base.Update(gameTime);
             _playerCommands.Update(gameTime);
             Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
         }

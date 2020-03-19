@@ -159,7 +159,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="gameTime"></param>
         /// <param name="gameWorld"></param>
-        public void Update(GameTime gameTime, GameWorld gameWorld)
+        public void Update(GameTime gameTime)
         {
             if (_unloading) return;
 
@@ -171,7 +171,7 @@ namespace MazerPlatformer
             var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
             {
-                gameObject.Update(gameTime, gameWorld);
+                gameObject.Update(gameTime);
 
                 // Optimization: We wont be asking every room to check itself for collisions,
                 // we'll be asking each game object which room its in, and from that room we can find adjacent rooms and we'll check those
