@@ -34,7 +34,7 @@ namespace MazerPlatformer
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved);
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
         public event SongChanged OnSongChanged;
         public delegate void SongChanged(string filename);
 
@@ -202,7 +202,7 @@ namespace MazerPlatformer
         private void AddToGameObjects(string id, GameObject gameObject)
         {
             _gameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _gameObjects.Count());
         }
 
         private void RemoveFromGameObjects(string id)
@@ -211,7 +211,7 @@ namespace MazerPlatformer
             if (gameObject == null)
                 return;
 
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
             _gameObjects.Remove(id);
         }
 

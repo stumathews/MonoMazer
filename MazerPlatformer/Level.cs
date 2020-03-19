@@ -169,8 +169,9 @@ namespace MazerPlatformer
                frameTime: 150);
 
             var player = new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, w: 48, h: 64, animationInfo: playerAnimation);
+            player.AddComponent(ComponentType.Health, 100); // start off with 100 health
+            player.AddComponent(ComponentType.Points, 0); // start off with 0 points
 
-            
             return player;
         }
 

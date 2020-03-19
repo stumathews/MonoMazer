@@ -204,13 +204,7 @@ namespace MazerPlatformer
         }
 
         // Inform the UI that game objects have been removed or added
-        private void OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed)
-        {
-            if (removed)
-                _numGameObjects--;
-            else
-                _numGameObjects++;
-        }
+        private void OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed, int runningTotalCount) => _numGameObjects = runningTotalCount;
 
         // Update the UI when something interesting about the player's inventory changes (health, damage)
         private void OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)

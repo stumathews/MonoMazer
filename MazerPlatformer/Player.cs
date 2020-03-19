@@ -23,9 +23,6 @@ namespace MazerPlatformer
         public override void Initialize()
         {
             base.Initialize();
-            AddComponent(ComponentType.Health, 100); // start off with 100 health
-            AddComponent(ComponentType.Points, 0); // start off with 0 points
-
             // Get notified when I collide with another object (collision handled in base class)
             OnCollision += HandleCollision;
         }
