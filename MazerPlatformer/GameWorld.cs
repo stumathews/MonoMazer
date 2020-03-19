@@ -79,20 +79,21 @@ namespace MazerPlatformer
             _level.OnLevelLoad += LevelOnOnLevelLoad;
 
             // Load it up - handles opening saved level customization files
-            _level.Load();
-
-            // Make the room objects in the level
-            _rooms = _level.MakeRooms(removeRandomSides: Diganostics.RandomSides);
-            foreach (var room in _rooms)
-                AddToGameObjects(room.Id, room);
+            var levelGameObjects = _level.Load();
+            _rooms = _level.GetRooms();
+            AddToGameObjects(levelGameObjects);
 
             // Make the player object for the level
             Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
             AddToGameObjects(Player.PlayerId, Player);
+        }
 
-            // Make the NPCs for the level
-            foreach (var npc in _level.MakeNpCs(_rooms))
-                AddToGameObjects(npc.Id, npc);
+        private void AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
+        {
+            foreach (var levelGameObject in levelGameObjects)
+            {
+                AddToGameObjects(levelGameObject.Key, levelGameObject.Value);
+            }
         }
 
         /// <summary>

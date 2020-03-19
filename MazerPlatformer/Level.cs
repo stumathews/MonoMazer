@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
@@ -43,7 +44,20 @@ namespace MazerPlatformer
         public event OnLoadInfo OnLevelLoad;
         public delegate void OnLoadInfo(LevelDetails details);
 
+        
+        private readonly Dictionary<string, GameObject> _levelGameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+
+        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
+
         private Song _song;
+        private readonly Random _random = new Random();
+
+        // The player is special...
+        internal Player Player;
+
+        // List of rooms in the game world
+        private List<Room> _rooms = new List<Room>();
 
         public void PlaySong()
         {
@@ -250,7 +264,7 @@ namespace MazerPlatformer
             GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
         }
 
-        public void Load()
+        public Dictionary<string, GameObject> Load()
         {
             if (File.Exists(LevelFileName))
             {
@@ -262,7 +276,28 @@ namespace MazerPlatformer
                 _song = ContentManager.Load<Song>(LevelFile.SongFileName);
             }
 
+            // Make the room objects in the level
+            _rooms = MakeRooms(removeRandomSides: Diganostics.RandomSides);
+            foreach (var room in _rooms)
+                AddToLevelGameObjects(room.Id, room);
+
+            // Make the NPCs for the level
+            foreach (var npc in MakeNpCs(_rooms))
+                AddToLevelGameObjects(npc.Id, npc);
+
             OnLevelLoad?.Invoke(LevelFile);
+            return _levelGameObjects;
+        }
+
+        private void AddToLevelGameObjects(string id, GameObject gameObject)
+        {
+            _levelGameObjects.Add(id, gameObject);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _levelGameObjects.Count());
+        }
+
+        public List<Room> GetRooms()
+        {
+            return _rooms;
         }
     }
 }
