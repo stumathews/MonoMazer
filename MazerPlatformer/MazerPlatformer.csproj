@@ -59,6 +59,7 @@
     <Compile Include="RectDetails.cs" />
     <Compile Include="Room.cs" />
     <Compile Include="SideCharacterisitic.cs" />
+    <Compile Include="SimpleGameTimeTimer.cs" />
     <Compile Include="Statics.cs" />
   </ItemGroup>
   <ItemGroup>

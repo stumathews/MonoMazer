@@ -41,10 +41,9 @@ namespace MazerPlatformer
             Animation.Idle = false;
 
             // Npcs start off with random directions
-            var values = Enum.GetValues(typeof(CharacterDirection));
-            CurrentDirection = (CharacterDirection)values.GetValue(Level.RandomGenerator.Next(values.Length));
+            CurrentDirection = Statics.GetRandomEnumValue<CharacterDirection>();
         }
-
+        
         private void HandleCollision(GameObject thisobject, GameObject otherobject)
         {
             NpcStaticState = NpcStaticStates.Colliding;

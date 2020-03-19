@@ -28,12 +28,7 @@ namespace MazerPlatformer
         public Room RoomRight { get; set; }
         public Room RoomLeft { get; set; }
 
-		/* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidsWith() override */
-		Rectangle topBounds;
-		Rectangle bottomBounds;
-		Rectangle leftBounds;
-		Rectangle rightBounds;
-		private SpriteBatch SpriteBatch { get; }
+        private SpriteBatch SpriteBatch { get; }
         public int RoomNumber { get; }
 
         /// <summary>
@@ -49,7 +44,7 @@ namespace MazerPlatformer
 		public Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber) 
 			         : base(x:x, y: y, id: Guid.NewGuid().ToString(), w: width, h: height, type: GameObjectType.Room)
 		{
-			SpriteBatch = spriteBatch;
+            SpriteBatch = spriteBatch;
             RoomNumber = roomNumber;
 
             // This allows for reasoning about rectangles in terms of points A, B, C, D
@@ -70,10 +65,12 @@ namespace MazerPlatformer
 				 AD = Left  
 			*/
 
-			topBounds = new Rectangle(x: _rectDetails.GetAx(), y: _rectDetails.GetAy(), width: _rectDetails.GetAB(), height: 1);
-			bottomBounds = new Rectangle(x: _rectDetails.GetDx(), y: _rectDetails.GetDy(), width: _rectDetails.GetCD(), height: 1);
-			rightBounds = new Rectangle(x: _rectDetails.GetBx(), y:_rectDetails.GetBy(),  height: _rectDetails.GetBC(), width: 1 );
-			leftBounds = new Rectangle(x:_rectDetails.GetAx(), y:_rectDetails.GetAy(), height: _rectDetails.GetAD(), width: 1);
+
+            /* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidsWith() override */
+			var topBounds = new Rectangle(x: _rectDetails.GetAx(), y: _rectDetails.GetAy(), width: _rectDetails.GetAB(), height: 1);
+			var bottomBounds = new Rectangle(x: _rectDetails.GetDx(), y: _rectDetails.GetDy(), width: _rectDetails.GetCD(), height: 1);
+			var rightBounds = new Rectangle(x: _rectDetails.GetBx(), y:_rectDetails.GetBy(),  height: _rectDetails.GetBC(), width: 1 );
+			var leftBounds = new Rectangle(x:_rectDetails.GetAx(), y:_rectDetails.GetAy(), height: _rectDetails.GetAD(), width: 1);
 
 			/* Walls each have specific colours, bounds, nd potentioally other configurable vharacteristics in the game */
 			_wallProperties.Add(Side.Top, new SideCharacterisitic(Color.Black, topBounds));
@@ -121,7 +118,7 @@ namespace MazerPlatformer
 							SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
 					}
 
-			break;
+                    break;
 				case Side.Right:
 					if (Diganostics.DrawRight)
 					{
@@ -182,7 +179,7 @@ namespace MazerPlatformer
 			}
 		}
 
-		// Rooms only consider collions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
+		// Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
 		public override bool IsCollidingWith(GameObject otherObject)
 		{
 			bool collision = false;
@@ -190,15 +187,12 @@ namespace MazerPlatformer
 			{
 				Side side = item.Key;
 				SideCharacterisitic thisWallProperty = item.Value;
-				
-				// TODO: Why use a Bounding sphere?
-				//if (otherObject.BoundingBox.Intersects(thisWallProperty.Bounds) && HasSide(side))
+
 				if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side))
 				{
 					Console.WriteLine($"{side} collided with object {otherObject.Id}");
 					thisWallProperty.Color = Color.White;
 					collision = true;
-					//CollisionOccuredWith(otherObject);
 					//RemoveSide(side);
 				}
 			}

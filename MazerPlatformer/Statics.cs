@@ -26,6 +26,11 @@ namespace MazerPlatformer
         }
 
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
+        public static T GetRandomEnumValue<T>()
+        {
+            var values = Enum.GetValues(typeof(T));
+            return (T)values.GetValue(Level.RandomGenerator.Next(values.Length));
+        }
     }
 
     public static class Diganostics

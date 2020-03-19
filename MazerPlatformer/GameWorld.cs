@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
 using System.Net;
+using System.Timers;
 using GameLib.EventDriven;
 using Microsoft.Xna.Framework.Media;
 
@@ -53,6 +54,8 @@ namespace MazerPlatformer
         // The player is special...
         internal Player Player;
 
+        private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
+
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
             ContentManager = contentManager;
@@ -88,6 +91,9 @@ namespace MazerPlatformer
             // Make the player object for the level
             Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
             AddToGameObjects(Player.PlayerId, Player);
+
+            _removeWallTimer.Start();
+
         }
 
         private void AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
@@ -108,6 +114,7 @@ namespace MazerPlatformer
             _gameObjects.Clear();
             Player = null;
             _unloading = false;
+            _removeWallTimer.Stop();
         }
 
         /// <summary>
@@ -160,6 +167,8 @@ namespace MazerPlatformer
         {
             if (_unloading) return;
 
+            _removeWallTimer.Update(gameTime);
+
             var inactiveIds = _gameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
@@ -175,7 +184,7 @@ namespace MazerPlatformer
                 if (gameObject.Type == GameObjectType.Room)
                     continue;
 
-                CheckForObjectCollisions(gameObject, activeGameObjects);
+                CheckForObjectCollisions(gameObject, activeGameObjects, gameTime);
             }
         }
 
@@ -212,7 +221,8 @@ namespace MazerPlatformer
             _gameObjects.Remove(id);
         }
 
-        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects)
+        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects,
+            GameTime gameTime)
         {
             // Determine which room the game object is in
             var col = ToRoomColumn(gameObject);
@@ -237,6 +247,10 @@ namespace MazerPlatformer
                 // Wait!, while we're in this room, are there any other objects in here that we might collide with? (Player, Pickups etc)
                 foreach (var other in activeGameObjects.Where(go => ToRoomColumn(go) == col && ToRoomRow(go) == row))
                     NotifyIfColliding(gameObject, other);
+
+                // Wait!, while we're in this room is it time to randomly removes some walls?
+                //RemoveRandomWall(roomIn, _removeWallTimer);
+
             }
 
             // local functions
@@ -260,6 +274,33 @@ namespace MazerPlatformer
                     gameObject2.IsColliding = gameObject1.IsColliding = false;
                 }
             }
+        }
+
+        private static void RemoveRandomWall(Room roomIn, SimpleGameTimeTimer timer)
+        {
+            if (!timer.IsTimedOut()) return;
+
+            var randomSide = Statics.GetRandomEnumValue<Room.Side>();
+            switch (randomSide)
+            {
+                case Room.Side.Bottom:
+                    roomIn.RoomBelow?.RemoveSide(Room.Side.Top);
+                    break;
+                case Room.Side.Right:
+                    roomIn.RoomRight?.RemoveSide(Room.Side.Left);
+                    break;
+                case Room.Side.Top:
+                    roomIn.RoomAbove?.RemoveSide(Room.Side.Bottom);
+                    break;
+                case Room.Side.Left:
+                    roomIn.RoomLeft?.RemoveSide(Room.Side.Right);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            roomIn.RemoveSide(randomSide);
+            timer.Reset();
         }
 
         /// <summary>
