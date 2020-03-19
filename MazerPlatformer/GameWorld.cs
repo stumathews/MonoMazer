@@ -35,17 +35,23 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved);
-
         public event SongChanged OnSongChanged;
         public delegate void SongChanged(string filename);
+
         private static int CellWidth { get; set; }
         private static int CellHeight { get; set; }
 
+        // Handles level loading/saving and making level game objects for the game world
         private Level _level;
         private Song _currentSong;
-        private bool _unloading = false;
+
+        // We can unload and reload the game world to change levels
+        private bool _unloading;
+
+        // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
+        // The player is special...
         internal Player Player;
 
         public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
@@ -93,33 +99,7 @@ namespace MazerPlatformer
                 AddToGameObjects(room.Id, room);            
         }
 
-        private void LevelOnOnLevelLoad(Level.LevelDetails details)
-        {
-            OnSongChanged?.Invoke(details.SongFileName);
-        }
-
-        public void StartOrResumeLevelMusic()
-        {
-            if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
-            MediaPlayer.IsRepeating = true;
-            MediaPlayer.Play(_currentSong);
-        }
-
-        private void AddToGameObjects(string id, GameObject gameObject)
-        {
-            _gameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false);
-        }
-
-        private void RemoveFromGameObjects(string id)
-        {
-            var gameObject = _gameObjects[id];
-            if (gameObject == null)
-                return;
-
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true);
-            _gameObjects.Remove(id);
-        }
+       
 
         /// <summary>
         /// Unload the game world, basically save it
@@ -147,8 +127,7 @@ namespace MazerPlatformer
             Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) // want to know when the player's components change
                 => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
-
-
+            
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
@@ -156,16 +135,7 @@ namespace MazerPlatformer
                 gameObject.Value.OnGameObjectComponentChanged += ValueOnOnGameObjectComponentChanged; // be informed about this objects component updates
             }
         }
-
-        // The game world wants to know about every component update/change that occurs in the world
-        private void ValueOnOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
-        {
-            // A game object changed!
-            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
-
-        }
-
-
+        
         /// <summary>
         /// We ask each game object within the game world to draw itself
         /// </summary>
@@ -210,6 +180,39 @@ namespace MazerPlatformer
 
                 CheckForObjectCollisions(gameObject, activeGameObjects);
             }
+        }
+
+        // The game world wants to know about every component update/change that occurs in the world
+        private void ValueOnOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+        {
+            // See if we can hook this up to an event listener in the UI
+            // A game object changed!
+            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
+        }
+
+        private void LevelOnOnLevelLoad(Level.LevelDetails details) => OnSongChanged?.Invoke(details.SongFileName);
+
+        public void StartOrResumeLevelMusic()
+        {
+            if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Play(_currentSong);
+        }
+
+        private void AddToGameObjects(string id, GameObject gameObject)
+        {
+            _gameObjects.Add(id, gameObject);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false);
+        }
+
+        private void RemoveFromGameObjects(string id)
+        {
+            var gameObject = _gameObjects[id];
+            if (gameObject == null)
+                return;
+
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true);
+            _gameObjects.Remove(id);
         }
 
         private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects)
@@ -281,9 +284,6 @@ namespace MazerPlatformer
         }
 
         // Inform the Game world that the up button was pressed, make the player idle
-        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs)
-        {
-            Player.SetState(Character.CharacterStates.Idle);
-        }
+        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Player.SetState(Character.CharacterStates.Idle);
     }
 }
