@@ -187,7 +187,7 @@ namespace MazerPlatformer
             // Add some Enemy Dodos - more dangerous!
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", frameCount: 1, type: Npc.NpcTypes.Enemy);
+                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -236,6 +236,7 @@ namespace MazerPlatformer
         {
             GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
         }
+
         public void Load()
         {
             if (File.Exists(LevelFileName))

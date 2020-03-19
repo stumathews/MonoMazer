@@ -20,13 +20,13 @@ namespace MazerPlatformer
         public override void Initialize()
         {
             base.Initialize();
-            _pauseCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Escape, (dt) => _game.StartOrResumeLevel(isStart: false));
+            _pauseCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Escape, (dt) => _game.StartOrResumeLevel(isFreshStart: false));
         }
 
         public override void Enter(object owner)
         {
             base.Enter(owner);
-            MediaPlayer.Play(_game._menuMusic);
+            MediaPlayer.Play(_game.MenuMusic);
             _game.ShowMenu();           
             
         }

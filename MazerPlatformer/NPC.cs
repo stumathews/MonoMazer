@@ -39,6 +39,10 @@ namespace MazerPlatformer
             base.Initialize();
             OnCollision += HandleCollision;
             Animation.Idle = false;
+
+            // Npcs start off with random directions
+            var values = Enum.GetValues(typeof(CharacterDirection));
+            CurrentDirection = (CharacterDirection)values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
 
         private void HandleCollision(GameObject thisobject, GameObject otherobject)
