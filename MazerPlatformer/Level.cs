@@ -188,10 +188,10 @@ namespace MazerPlatformer
         public Player MakePlayer(Room playerRoom)
         {
             var playerAnimation = new AnimationInfo(
-               texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile) ? @"Sprites\pirate5" : LevelFile.PlayerSpriteFile),
+               texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile) ? @"Sprites\dark_soldier-sword" : LevelFile.PlayerSpriteFile),
                frameWidth: LevelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
                frameHeight: LevelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-               frameCount: LevelFile?.SpriteFrameCount ?? 3);
+               frameCount: LevelFile?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
 
             var player = new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, width: AnimationInfo.DefaultFrameWidth, height: AnimationInfo.DefaultFrameHeight, animationInfo: playerAnimation);
             player.AddComponent(ComponentType.Health, 100); // start off with 100 health

@@ -4889,6 +4889,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/captain-m-001-light.png
 
+#begin Sprites/dark_soldier-sword.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/dark_soldier-sword.png
+
 #begin Sprites/dodo.png
 /importer:TextureImporter
 /processor:TextureProcessor
