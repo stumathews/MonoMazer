@@ -3,11 +3,15 @@ using GameLib.EventDriven;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
     public abstract class Character : GameObject
     {
+        // All characters move 3 Pixels at a time
+        private const int MoveStep = 3;
+
         // Every character has associated with them, an animation that this class manages
         internal Animation Animation;
         protected AnimationInfo AnimationInfo { get; set; }
@@ -22,9 +26,6 @@ namespace MazerPlatformer
 
         // Current direction of the character
         public CharacterDirection CurrentDirection { get; protected set; }
-
-        // All characters move 3 Pixels at a time
-        private const int MoveStep = 3;
 
         // All characters are facing a direction at any moment int time
         public enum CharacterDirection { Up, Down, Left, Right };
@@ -46,7 +47,7 @@ namespace MazerPlatformer
         public delegate void CollisionDirectionChanged(CharacterDirection direction);
         public delegate void StateChanged(CharacterStates state);
 
-        protected Character(int x, int y, string id, int w, int h, GameObjectType type) : base(x, y, id, w, h, type) { }
+        protected Character(int x, int y, string id, int width, int height, GameObjectType type) : base(x, y, id, width, height, type) { }
 
         public override void Initialize()
         {
@@ -61,13 +62,15 @@ namespace MazerPlatformer
 
             // We start of facing down
             CurrentDirection = CharacterDirection.Down;
-            Animation = new Animation(Animation.AnimationDirection.Down);
+            Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
 
             // Initialize the characters animation
             Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight,
                 AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
                 AnimationInfo.FrameTime);
         }
+
+        public void SetAsIdle() => SetState(CharacterStates.Idle);
 
         private void HandleCharacterCollision(GameObject object1, GameObject object2)
         {
@@ -80,19 +83,19 @@ namespace MazerPlatformer
             switch (direction)
             {
                 case CharacterDirection.Up:
-                    Y -= ScaleMoveByGameTime(dt);
+                    Y -= MoveByStep();
                     break;
                 case CharacterDirection.Down:
 
-                    Y += ScaleMoveByGameTime(dt);
+                    Y += MoveByStep();
                     break;
                 case CharacterDirection.Left:
 
-                    X -= ScaleMoveByGameTime(dt);
+                    X -= MoveByStep();
                     break;
                 case CharacterDirection.Right:
 
-                    X += ScaleMoveByGameTime(dt);
+                    X += MoveByStep();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
@@ -100,14 +103,15 @@ namespace MazerPlatformer
             SetCharacterDirection(direction);
         }
 
-        // See if we can make this private
-        public void SetState(CharacterStates state)
+        
+
+        private void SetState(CharacterStates state)
         {
             CurrentState = state;
             OnStateChanged?.Invoke(state);
         }
 
-        public void SetCharacterDirection(CharacterDirection direction)
+        private void SetCharacterDirection(CharacterDirection direction)
         {
             CurrentDirection = direction;
 
@@ -152,9 +156,9 @@ namespace MazerPlatformer
             OnCollisionDirectionChanged?.Invoke(direction);
         }
 
-        private int ScaleMoveByGameTime(GameTime dt) => !CanMove ? 0 : MoveStep;
+        private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? MoveStep;
 
-        public void NudgeOutOfCollision()
+        protected void NudgeOutOfCollision()
         {
             CanMove = false;
             // Artificially nudge the player out of the collision
@@ -175,6 +179,39 @@ namespace MazerPlatformer
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public void SwapDirection()
+        {
+            switch (CurrentDirection)
+            {
+                case CharacterDirection.Up:
+                    SetCharacterDirection(CharacterDirection.Down);
+                    break;
+                case CharacterDirection.Down:
+                    SetCharacterDirection(CharacterDirection.Up);
+                    break;
+                case CharacterDirection.Left:
+                    SetCharacterDirection(CharacterDirection.Right);
+                    break;
+                case CharacterDirection.Right:
+                    SetCharacterDirection(CharacterDirection.Left);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            base.Draw(spriteBatch);
+            Animation.Draw(spriteBatch);
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            base.Update(gameTime);
+            Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
         }
     }
 }

@@ -7,10 +7,12 @@ using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using static System.String;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
-    public abstract class GameObject : PerFrame
+    // A fundamental Game Object
+    public abstract class GameObject : IDisposable, PerFrame
     {
         // Types of game object
         public enum GameObjectType { Room, Player, Npc }
@@ -31,15 +33,17 @@ namespace MazerPlatformer
         public int X { get; protected set; }
         public int Y { get; protected set; }
         public string Id { get; set; }
-        public int W { get; }
-        public int H { get; }
+        public int Width { get; }
+        public int Height { get; }
+
+        // Can have some text associated with game object, useful for indicating information about object visually on screen
         public string InfoText { get; set; }
 
-        // Tracks if an object is scheduled to be removed 
+        // Tracks if an object is active or not 
         public bool Active { get; set; }
 
-        // every game object gets automatic bounding box support 
-        public BoundingBox BoundingBox; 
+        // every game object gets automatic bounding box support, used for defining perimater - debugging only
+        private BoundingBox _boundingBox; 
 
         // This is currently not being used?
         public BoundingSphere BoundingSphere;
@@ -47,16 +51,23 @@ namespace MazerPlatformer
         // The maximum point of the bounding box around the player (bottom right)
         private Vector2 _maxPoint;
 
-        public List<MazerPlatformer.Component> Components = new List<Component>();
+        /// <summary>
+        /// Customizable inventory for every game object
+        /// </summary>
+        public List<Component> Components = new List<Component>();
 
-        // A basic game Object outline
-        protected GameObject(int x, int y, string id, int w, int h, GameObjectType type)
+        public event GameObjectComponentChanged OnGameObjectComponentChanged;
+        public event CollisionArgs OnCollision;
+        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
+        public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
+
+        protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
         {
             X = x;
             Y = y;
             Id = id;
-            W = w;
-            H = h;
+            Width = width;
+            Height = height;
             StateMachine = new FSM(this);
             Type = type;
             CalculateBoundingBox();
@@ -67,12 +78,11 @@ namespace MazerPlatformer
         private Vector2 _centre;
         public Vector2 GetCentre()
         {
-            _centre.X = X + W / 2;
-            _centre.Y = Y + H / 2;
+            _centre.X = X + Width / 2;
+            _centre.Y = Y + Height / 2;
             return _centre;
         }
 
-        
         private void CalculateBoundingBox()
         {
             // Keep track of our centre
@@ -80,13 +90,13 @@ namespace MazerPlatformer
 
             // Keep track of the max point of the bounding box
             _maxPoint = _centre;
-            _maxPoint.X = W;
-            _maxPoint.Y = H;
+            _maxPoint.X = Width;
+            _maxPoint.Y = Height;
 
-            // Every object gets a bounding box
-            BoundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
+            // Every object gets a bounding box, used internally for outlining square bounds of object
+            _boundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
 
-            // Every object gets a bounding sphere - why do we need this?
+            // Every object gets a bounding sphere and this is used for collision detection
             BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
         }
 
@@ -129,6 +139,7 @@ namespace MazerPlatformer
         /// <summary>
         /// Find a component, assuming there is only one of this type otherwise throws
         /// </summary>
+        /// <remarks>This should throw an exception if more than one of the same component type is found ie programmer error</remarks>
         public Component FindComponentByType(Component.ComponentType type) => Components.Single(o => o.Type == type);
         
         /// <summary>
@@ -136,11 +147,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="newValue"></param>
         /// <returns></returns>
-        public bool UpdateComponentByType(Component.ComponentType type, object  newValue)
-        {
-            var found = Components.Single(o => o.Type == type);
-            return UpdateComponent(newValue, found);
-        }
+        public bool UpdateComponentByType(Component.ComponentType type, object  newValue) => UpdateComponent(newValue, Components.Single(o => o.Type == type));
 
         public Component AddComponent(Component.ComponentType type, object value, string id = null)
         {
@@ -159,66 +166,21 @@ namespace MazerPlatformer
             return true;
         }
 
-        
-
-        /// <summary>
-        /// Add a component to the game object
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="type"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public Component AddComponent(string name, Component.ComponentType type, object value, string id = null)
-        {
-            var component = new MazerPlatformer.Component(type, value, id);
-            Components.Add(component);
-            return component;
-        }
-
-        public void AddState(State state)
-        {
-            States.Add(state);
-        }
-
-        #region Events
-
-        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
-        public event GameObjectComponentChanged OnGameObjectComponentChanged;
-        public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
-        public event CollisionArgs OnCollision;
-
-
-        #endregion
+        public void AddState(State state) => States.Add(state);
 
         #region Diganostics
 
         // Draw the centre point of the object
-        protected void DrawCentrePoint(SpriteBatch spriteBatch)
-        {
-            if (!Diganostics.DrawCentrePoint) return;
-            spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f);
-        }
-
+        protected void DrawCentrePoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawCentrePoint, ()=> spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f));
+        
         // Draw the max point (lower right point)
-        protected void DrawMaxPoint(SpriteBatch spriteBatch)
-        {
-            if (!Diganostics.DrawMaxPoint) return;
-            spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Blue, 3f);
-        }
+        protected void DrawMaxPoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawMaxPoint, ()=> spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f));
 
         // Draw the bounding box
-        protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch)
-        {
-            if (!Diganostics.DrawGameObjectBounds) return;
-            spriteBatch.DrawRectangle(BoundingBox.ToRectangle(), Color.Lime, 1.5f);
-        }
+        protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, ()=> spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f));
 
         // Draw the bounding sphere
-        protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
-        {
-            if (!Diganostics.DrawGameObjectBounds) return;
-            spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua);
-        }
+        protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua));
 
         // Draw all the diagnostics together
         protected void DrawObjectDiagnostics(SpriteBatch spriteBatch)
@@ -233,10 +195,10 @@ namespace MazerPlatformer
         public virtual void Draw(SpriteBatch spriteBatch)
         {
             // All game objects can ask to draw some text over it if it wants
-            if(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText)
-            {
-                spriteBatch.DrawString(Mazer.Font, InfoText, new Vector2(X-10, Y-10), Color.White); // dependency on Mazer for game font ok.
-            }
+            // dependency on Mazer for game font ok.
+            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () => spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White));
+
+            DrawObjectDiagnostics(spriteBatch);
         }
 
         // Specific game objects need to initialize themselves
@@ -252,5 +214,21 @@ namespace MazerPlatformer
         }
 
         #endregion
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposing) return;
+
+            // Cleanup objects we know we wont need or that other objects should not need.
+            Components.Clear();
+            States.Clear();
+            StateTransitions.Clear();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

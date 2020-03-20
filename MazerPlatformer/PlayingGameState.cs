@@ -1,4 +1,5 @@
 ﻿using GameLib.EventDriven;
+using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -8,25 +9,19 @@ namespace MazerPlatformer
 {
     public class PlayingGameState : State
     {
-        private readonly GameWorld _gameWorld;
-
-        public delegate void Nothing();
-
-        private readonly CommandManager _playingCommands = CommandManager.GetInstance();
-        
-
-        public PlayingGameState(ref GameWorld gameWorld) : base("PlayingGame")
-        {
-            _gameWorld = gameWorld;
-        }
+        private readonly Mazer _game;
+        private readonly CommandManager _playingCommands = CommandManager.GetNewInstance();
+        public PlayingGameState(Mazer game) : base("PlayingGame") => _game = game;
 
         public override void Enter(object owner)
         {
-            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.MovePlayer(Character.CharacterDirection.Up ,time));
-            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.MovePlayer(Character.CharacterDirection.Down, time));
-            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.MovePlayer(Character.CharacterDirection.Left, time));
-            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.MovePlayer(Character.CharacterDirection.Right, time));
-            _playingCommands.OnKeyUp += (sender, e) => _gameWorld.OnKeyUp(sender, e);
+            _playingCommands.AddKeyDownCommand(Keys.Up, time => _game.MovePlayerInDirection(Character.CharacterDirection.Up ,time));
+            _playingCommands.AddKeyDownCommand(Keys.Down, time => _game.MovePlayerInDirection(Character.CharacterDirection.Down, time));
+            _playingCommands.AddKeyDownCommand(Keys.Left, time => _game.MovePlayerInDirection(Character.CharacterDirection.Left, time));
+            _playingCommands.AddKeyDownCommand(Keys.Right, time => _game.MovePlayerInDirection(Character.CharacterDirection.Right, time));
+            
+            // Key up command is special, send it off to the GameWorld to interpret
+            _playingCommands.OnKeyUp += (sender, e) => _game.OnKeyUp(sender, e);
 
             base.Enter(owner);
         }
@@ -39,7 +34,7 @@ namespace MazerPlatformer
 
         public override void Update(object owner, GameTime gameTime)
         {
-            _gameWorld.Update(gameTime); // Only update/process the gameworld while we are in the playing state
+            _game.UpdateGameWorld(gameTime); // Only update/process the game world while we are in the playing state
             _playingCommands.Update(gameTime); // Only update/process input for the playing state, while in playing state
             base.Update(owner, gameTime);
         }

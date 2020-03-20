@@ -17,7 +17,7 @@ namespace MazerPlatformer
     {
         public const string PlayerId = "Player";
 
-        public Player(int x, int y, int w, int h, AnimationInfo animationInfo) : base(x, y, PlayerId, w, h, GameObjectType.Player) 
+        public Player(int x, int y, int width, int height, AnimationInfo animationInfo) : base(x, y, PlayerId, width, height, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
 
         public override void Initialize()
@@ -26,23 +26,14 @@ namespace MazerPlatformer
             // Get notified when I collide with another object (collision handled in base class)
             OnCollision += HandleCollision;
         }
-        
-        // I can update myself!
-        public override void Update(GameTime gameTime)
-        {
-            base.Update(gameTime);
-            Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
-        }
 
         // I can draw myself!
         public override void Draw(SpriteBatch spriteBatch)
         {
-            Animation.Draw(spriteBatch);
+            base.Draw(spriteBatch);
 
             if (Diganostics.DrawPlayerRectangle)
-                spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: W, height: H), color: Color.Gray);
-
-            DrawObjectDiagnostics(spriteBatch);
+                spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray);
         }
 
         // I can handle my own collisions

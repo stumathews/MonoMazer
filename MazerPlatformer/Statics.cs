@@ -31,6 +31,11 @@ namespace MazerPlatformer
             var values = Enum.GetValues(typeof(T));
             return (T)values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
+
+        public static void DoIf(bool condition, Action action)
+        {
+            if (condition) action?.Invoke();
+        }
     }
 
     public static class Diganostics

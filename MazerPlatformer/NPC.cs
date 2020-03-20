@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,7 +20,6 @@ namespace MazerPlatformer
             Enemy
         };
 
-
         public enum NpcStaticStates
         {
             Moving,
@@ -29,9 +27,10 @@ namespace MazerPlatformer
             Colliding
         };
 
+        // By default the NPC start off  in the Deciding state
         public NpcStaticStates NpcStaticState { get; set; } = NpcStaticStates.Deciding;
         
-        public Npc(int x, int y, string id, int w, int h, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, w, h, type) 
+        public Npc(int x, int y, string id, int width, int height, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, width, height, type) 
             => AnimationInfo = animationInfo;
 
         public override void Initialize()
@@ -40,73 +39,24 @@ namespace MazerPlatformer
             OnCollision += HandleCollision;
             Animation.Idle = false;
 
-            // Npcs start off with random directions
+            // NPCs start off with random directions
             CurrentDirection = Statics.GetRandomEnumValue<CharacterDirection>();
         }
         
-        private void HandleCollision(GameObject thisobject, GameObject otherobject)
+        private void HandleCollision(GameObject thisObject, GameObject otherObject)
         {
             NpcStaticState = NpcStaticStates.Colliding;
             NudgeOutOfCollision();
-        }
-
-
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            base.Draw(spriteBatch);
-            Animation.Draw(spriteBatch);
-            DrawObjectDiagnostics(spriteBatch);
-        }
-
-        public override void Update(GameTime gameTime)
-        {
-            base.Update(gameTime);
-            Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
-        }
-
-
-        public void SwapDirection()
-        {
-            switch (CurrentDirection)
-            {
-                case CharacterDirection.Up:
-                    SetCharacterDirection(CharacterDirection.Down);
-                    break;
-                case CharacterDirection.Down:
-                    SetCharacterDirection(CharacterDirection.Up);
-                    break;
-                case CharacterDirection.Left:
-                    SetCharacterDirection(CharacterDirection.Right);
-                    break;
-                case CharacterDirection.Right:
-                    SetCharacterDirection(CharacterDirection.Left);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
         }
     }
 
     public class NpcState : State
     {
-        protected float StateTime;
         protected float WaitTime;
         protected Npc Npc { get; set; }
         public NpcState(string name, Npc Npc) : base(name)
         {
             this.Npc = Npc;
-        }
-        
-        protected void DoFor(Action action, int millSeconds, GameTime gameTime, Action then = null)
-        {
-            if (StateTime < millSeconds)
-            {
-                action();
-                then?.Invoke();
-                StateTime = 0;
-            }
-
-            StateTime += gameTime.ElapsedGameTime.Milliseconds;
         }
 
         protected bool IsWithin(int milli, GameTime dt)
@@ -150,7 +100,7 @@ namespace MazerPlatformer
         {
             base.Enter(owner);
             Npc.InfoText = "C";
-            Npc.SetState(Character.CharacterStates.Idle);
+            Npc.SetAsIdle();
 
         }
 
@@ -158,11 +108,6 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
             Npc.NpcStaticState = Npc.NpcStaticStates.Deciding;
-        }
-
-        public override void Exit(object owner)
-        {
-            base.Exit(owner);
         }
     }
 
@@ -174,7 +119,7 @@ namespace MazerPlatformer
         {
             Npc.InfoText = "D";
             Npc.CanMove = false;
-            Npc.SetState(Character.CharacterStates.Idle);
+            Npc.SetAsIdle();
         }
 
         public override void Update(object owner, GameTime gameTime)
@@ -190,12 +135,6 @@ namespace MazerPlatformer
             // then move
             if (!Npc.IsColliding)
                 Npc.NpcStaticState = Npc.NpcStaticStates.Moving;
-        }
-
-
-        public override void Exit(object owner)
-        {
-            base.Exit(owner);
         }
     }
 }

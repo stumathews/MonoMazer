@@ -19,7 +19,6 @@ namespace MazerPlatformer
     public class GameWorld : PerFrame
     {
         private ContentManager ContentManager { get; }
-        private GraphicsDevice GraphicsDevice { get; }
         private SpriteBatch SpriteBatch { get; }
 
         private static int Rows { get; set; } // Rows Of rooms
@@ -35,12 +34,13 @@ namespace MazerPlatformer
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
         public event SongChanged OnSongChanged;
-        public delegate void SongChanged(string filename);
 
-        private static int CellWidth { get; set; }
-        private static int CellHeight { get; set; }
+        public delegate void SongChanged(string filename);
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
+
+        private readonly int _roomWidth;
+        private readonly int _roomHeight;
 
         // Handles level loading/saving and making level game objects for the game world
         private Level _level;
@@ -51,15 +51,15 @@ namespace MazerPlatformer
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
-        // The player is special...
-        internal Player Player;
-
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public GameWorld(ContentManager contentManager, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        public GameWorld(ContentManager contentManager, int roomWidth, int roomHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             ContentManager = contentManager;
-            GraphicsDevice = graphicsDevice;
+            _roomWidth = roomWidth;
+            _roomHeight = roomHeight;
+            Rows = rows;
+            Cols = cols;
             SpriteBatch = spriteBatch;
         }
         
@@ -69,16 +69,11 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        public void LoadContent(int rows, int cols, int levelNumber)
+        internal void LoadContent(int levelNumber)
         {
-            Rows = rows;
-            Cols = cols;
-
-            CellWidth = GraphicsDevice.Viewport.Width / Cols;
-            CellHeight = GraphicsDevice.Viewport.Height / Rows;
 
             // Prepare a new level
-            _level = new Level(Rows, Cols, GraphicsDevice, SpriteBatch, ContentManager, levelNumber);
+            _level = new Level(Rows, Cols, _roomWidth, _roomHeight, SpriteBatch, ContentManager, levelNumber, _random);
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
@@ -88,9 +83,7 @@ namespace MazerPlatformer
             // We use the rooms locations for collisions detection optimizations later
             _rooms = _level.GetRooms();
 
-            // Make the player object for the level
-            Player = _level.MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
-            AddToGameObjects(Player.PlayerId, Player);
+            
 
             _removeWallTimer.Start();
 
@@ -99,9 +92,7 @@ namespace MazerPlatformer
         private void AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
         {
             foreach (var levelGameObject in levelGameObjects)
-            {
                 AddToGameObjects(levelGameObject.Key, levelGameObject.Value);
-            }
         }
 
         /// <summary>
@@ -112,7 +103,7 @@ namespace MazerPlatformer
             _unloading = true;
             _level.Save();
             _gameObjects.Clear();
-            Player = null;
+            _level.UnLoad();
             _unloading = false;
             _removeWallTimer.Stop();
         }
@@ -126,17 +117,16 @@ namespace MazerPlatformer
         public void Initialize()
         {
             // Hook up the Player events to the external world ie game UI
-            Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state); // want to know when the player's state changes
-            Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
-            Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
-            Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) // want to know when the player's components change
-                => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
-            
+            _level.Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state); // want to know when the player's state changes
+            _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
+            _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
+            _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
+
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
                 gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
-                gameObject.Value.OnGameObjectComponentChanged += ValueOnOnGameObjectComponentChanged; // be informed about this objects component updates
+                gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component updates
             }
         }
         
@@ -162,7 +152,6 @@ namespace MazerPlatformer
         /// Inform game object subscribers that they had a collision by raising event
         /// </summary>
         /// <param name="gameTime"></param>
-        /// <param name="gameWorld"></param>
         public void Update(GameTime gameTime)
         {
             if (_unloading) return;
@@ -189,7 +178,7 @@ namespace MazerPlatformer
         }
 
         // The game world wants to know about every component update/change that occurs in the world
-        private void ValueOnOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+        private void ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
         {
             // See if we can hook this up to an event listener in the UI
             // A game object changed!
@@ -219,10 +208,11 @@ namespace MazerPlatformer
 
             OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
             _gameObjects.Remove(id);
+            gameObject.Dispose();
+
         }
 
-        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects,
-            GameTime gameTime)
+        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime)
         {
             // Determine which room the game object is in
             var col = ToRoomColumn(gameObject);
@@ -255,8 +245,8 @@ namespace MazerPlatformer
 
             // local functions
 
-            int ToRoomRow(GameObject o1) => (int)Math.Ceiling((float)o1.Y / CellHeight);
-            int ToRoomColumn(GameObject gameObject1) => (int)Math.Ceiling((float)gameObject1.X / CellWidth);
+            int ToRoomRow(GameObject o1) => (int)Math.Ceiling((float)o1.Y / _roomHeight);
+            int ToRoomColumn(GameObject gameObject1) => (int)Math.Ceiling((float)gameObject1.X / _roomWidth);
 
             void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
             {
@@ -310,21 +300,20 @@ namespace MazerPlatformer
         /// <param name="obj1"></param>
         /// <param name="obj2"></param>
         /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
-        void OnObjectCollision(GameObject obj1, GameObject obj2)
+        private void OnObjectCollision(GameObject obj1, GameObject obj2)
         {
             if (_unloading) return;
-            Console.WriteLine($"Detected a collsion between a {obj1.Type} and a {obj2.Type}");
             
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
-            if (obj1.Id == Player.Id)
+            if (obj1.Id == _level.Player.Id)
                 obj2.Active = obj2.Type == GameObjectType.Room;
         }
 
         // Inform the Game world that the up button was pressed, make the player idle
-        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Player.SetState(Character.CharacterStates.Idle);
+        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _level.Player.SetAsIdle();
 
         public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
-            Player.MoveInDirection(direction, dt);
+            _level.Player.MoveInDirection(direction, dt);
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using GameLib.EventDriven;
+using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,15 +14,16 @@ using static MazerPlatformer.Character;
 
 namespace MazerPlatformer
 {
-
     public class Mazer : Game
     {
-        readonly GraphicsDeviceManager graphics;
-        readonly SpriteBatch _spriteBatch;
+        private readonly GraphicsDeviceManager graphics;
+        private readonly SpriteBatch _spriteBatch;
 
         // The font is used throughout the game
-        public static SpriteFont Font;
-        public Song MenuMusic; // does this really have to be public
+        public static SpriteFont GetGameFont() => _font;
+        
+        private Song _menuMusic; // does this really have to be public
+        private static SpriteFont _font;
 
         // Top level game commands such as start, quit, resume etc
         private readonly CommandManager _gameCommands;
@@ -46,6 +48,8 @@ namespace MazerPlatformer
         // Our game is devided into rooms
         private const int NumCols = 10;
         private const int NumRows = 10;
+        private int _cellHeight;
+        private int _cellWidth;
 
         private int _currentLevel = 1;       // We start with level 1
         private int _playerPoints = 0;      // UI shows player starts off with no points on the screen
@@ -66,7 +70,7 @@ namespace MazerPlatformer
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
         private string _currentSong;
-
+        
         public Mazer()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -79,14 +83,18 @@ namespace MazerPlatformer
 
             graphics.ApplyChanges();
 
-            _gameCommands = CommandManager.GetInstance(); // Setup input
+            _gameCommands = CommandManager.GetNewInstance(); // Setup input
             _gameStateMachine = new FSM(this);  // Setup FSM
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch); // Create our game world
+            _cellWidth = GraphicsDevice.Viewport.Width / NumCols;
+            _cellHeight = GraphicsDevice.Viewport.Height / NumRows;
+            _gameWorld = new GameWorld(Content, _cellWidth, _cellHeight, NumRows, NumCols, _spriteBatch); // Create our game world
             _pauseState = new PauseState(this); // Setup initial state - where is the other states init'd?
 
             IsFixedTimeStep = false;
         }
+
+       
 
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
@@ -94,13 +102,14 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            _playingState = new PlayingGameState(ref _gameWorld); //SMTODO: Should this have access directly on the Game World?
+            _playingState = new PlayingGameState(this);
 
-            Font = Content.Load<SpriteFont>("Sprites/gameFont");
-            MenuMusic = Content.Load<Song>("Music/bgm_menu");
+            // This is the main game font and is static and public so that anyone can read the Game font via GetGameFont()
+            _font = Content.Load<SpriteFont>("Sprites/gameFont");
+            _menuMusic = Content.Load<Song>("Music/bgm_menu");
 
             // Load the game world up - creates the level, characters and other aspects of the game world
-            _gameWorld.LoadContent(rows: NumRows, cols: NumCols, levelNumber: _currentLevel);
+            _gameWorld.LoadContent(levelNumber: _currentLevel);
         }
 
         /// <summary>
@@ -138,7 +147,7 @@ namespace MazerPlatformer
             _gameCommands.AddKeyUpCommand(Keys.N, (time) =>
             {
                 _gameWorld.UnloadContent();
-                _gameWorld.LoadContent(rows: NumRows, cols: NumCols, levelNumber: ++_currentLevel);
+                _gameWorld.LoadContent(levelNumber: ++_currentLevel);
                 _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
 
                 StartOrResumeLevel(isFreshStart: true);
@@ -155,10 +164,12 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerStateChanged += state => _characterState = state;
             _gameWorld.OnPlayerDirectionChanged += direction => _characterDirection = direction;
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
+            // Can we hook these into an event listener for the UI?
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
         }
+
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -183,6 +194,34 @@ namespace MazerPlatformer
             _gameStateMachine.Update(gameTime); // progress current state's logic, note that the game world is updated by PlayingGameState at this point
 
             base.Update(gameTime);
+        }
+
+        private void PlayMenuMusic() => MediaPlayer.Play(_menuMusic);
+
+        private void OnPauseStateOnOnStateChanged(State state, State.StateChangeReason reason)
+        {
+            if (reason == State.StateChangeReason.Enter)
+            {
+                PlayMenuMusic();
+                ShowMenu();
+            }
+        }
+
+        internal void MovePlayerInDirection( CharacterDirection dir, GameTime dt) => _gameWorld.MovePlayer(dir, dt);
+        internal void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _gameWorld.OnKeyUp(sender, keyboardEventArgs);
+        internal void UpdateGameWorld(GameTime dt) => _gameWorld.Update(dt);
+        
+        // Hide the menu and ask the game world to start or continue
+        internal void StartOrResumeLevel(bool isFreshStart)
+        {
+            HideMenu();
+            _currentGameState = GameStates.Playing;
+            _gameWorld.StartOrResumeLevelMusic();
+            if (isFreshStart)
+            {
+                _playerHealth = 100;
+                _playerPoints = 0;
+            }
         }
 
         /// <summary>
@@ -218,19 +257,6 @@ namespace MazerPlatformer
                 case Component.ComponentType.Points:
                     _playerPoints = (int)newValue;
                     break;
-            }
-        }
-
-        // Hide the menu and ask the game world to start or continue
-        internal void StartOrResumeLevel(bool isFreshStart)
-        {
-            HideMenu();
-            _currentGameState = GameStates.Playing;
-            _gameWorld.StartOrResumeLevelMusic();
-            if (isFreshStart)
-            {
-                _playerHealth = 100;
-                _playerPoints = 0;
             }
         }
 
@@ -275,7 +301,6 @@ namespace MazerPlatformer
 
         internal void ShowMenu() => _mainMenu.Visible = true; // used by internal pause state
         private void HideMenu() => _mainMenu.Visible = false;
-        private bool IsMenuVisible() => _mainMenu.Visible;
 
         // Sets up the main game playing states (Playing, Paused) and initialize the state machine for the top level game (Character states are separate and are within the game world)
         private void InitializeGameStateMachine()
@@ -302,6 +327,9 @@ namespace MazerPlatformer
                 }
             }
 
+            // The pause state will inform us when its entered and we can act accordingly 
+            _pauseState.OnStateChanged += OnPauseStateOnOnStateChanged;
+
             // Ready the state machine and put it into the default state of 'idle' state            
             _gameStateMachine.Initialise(_pauseState.Name);
         }
@@ -326,39 +354,39 @@ namespace MazerPlatformer
         private void DrawInGameStats(GameTime gameTime)
         {
             // Consider making GameObjectCount private and getting the info via an event instead
-            _spriteBatch.DrawString(Font, $"Game Object Count: {_numGameObjects}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
                                 GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
                             Color.White);
-            _spriteBatch.DrawString(Font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
+            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"Level: {_currentLevel} Music Track: {_currentSong}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Level: {_currentLevel} Music Track: {_currentSong}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
+            _spriteBatch.DrawString(_font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"Player State: {_characterState}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
                 Color.White);
 
-            _spriteBatch.DrawString(Font, $"Player Direction: {_characterDirection}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 300),
                 Color.White);
-            _spriteBatch.DrawString(Font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
                 Color.White);
-            _spriteBatch.DrawString(Font, $"Player Health: {_playerHealth}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 390),
                 Color.White);
-            _spriteBatch.DrawString(Font, $"Player Points: {_playerPoints}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
                     GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 420),
                 Color.White);
         }

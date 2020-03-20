@@ -16,6 +16,8 @@ using static MazerPlatformer.GameObject;
 
 namespace MazerPlatformer
 {
+    // Consider serializing the specification of each type of NPC ie hit values, points etc..
+
     public class Level
     {
         public class LevelDetails
@@ -30,141 +32,147 @@ namespace MazerPlatformer
             public string SongFileName { get; set; }
         }
 
-        public int Rows { get; }
-        public int Cols { get; }
-        public GraphicsDevice GraphicsDevice { get; }
+
         public SpriteBatch SpriteBatch { get; }
         public ContentManager ContentManager { get; }
-        private CharacterBuilder npcBuilder;
+        
+        // Builder of NPCs
+        private CharacterBuilder _npcBuilder;
+
+        // Level number 1,2,4 etc...
         public int LevelNumber { get; }
         public static readonly Random RandomGenerator = new Random();
+
+        // Each level has a file
         public string LevelFileName { get; set; }
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
 
-        public event OnLoadInfo OnLoad;
-        public delegate void OnLoadInfo(LevelDetails details);
-
-        
-        private readonly Dictionary<string, GameObject> _levelGameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
-
-        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
-
-        private Song _song;
-        private readonly Random _random = new Random();
-
-        // The player is special...
-        internal Player Player;
-
+        // A level is composed of Rooms which contain NPCs and the Player
+        public int Rows { get; }
+        public int Cols { get; }
+        private readonly int _roomWidth;
+        private readonly int _roomHeight;
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
+        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
+        public event LevelLoadInfo OnLoad;
+        public delegate void LevelLoadInfo(LevelDetails details);
+        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
+
+        // Main collection of game objects within the level
+        private readonly Dictionary<string, GameObject> _levelGameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+
+        private Song _levelMusic;
+        private readonly Random _random; // we use this for putting NPCs and the player in random rooms
+
+        // The player is special...
+        public Player Player { get; private set; }
+        
         public void PlaySong()
         {
             MediaPlayer.IsRepeating = true;
-            MediaPlayer.Play(_song);
+            MediaPlayer.Play(_levelMusic);
         }
 
-        public Level(int rows, int cols, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber) 
+        public Level(int rows, int cols, int roomWidth, int roomHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
         {
+            _roomWidth = roomWidth;
+            _roomHeight = roomHeight;
+            this._random = _random;
             Rows = rows;
             Cols = cols;
-            GraphicsDevice = graphicsDevice;
             SpriteBatch = spriteBatch;
             ContentManager = contentManager;
             LevelNumber = levelNumber;
             LevelFileName = $"Level{LevelNumber}.xml";
-            npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols); // should move this into a initialise function
         }        
 
         public List<Room> MakeRooms(bool removeRandomSides = false)
         {
             var mazeGrid = new List<Room>();
-            var cellWidth = GraphicsDevice.Viewport.Width / Cols;
-            var cellHeight = GraphicsDevice.Viewport.Height / Rows;
 
             for (var row = 0; row < Rows; row++)
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols)+col);
+                    var square = new Room(x: col * _roomWidth, y: row * _roomHeight, width: _roomWidth, height: _roomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col);
                     mazeGrid.Add(square);
                 }
             }           
 
             var totalRooms = mazeGrid.Count;
-           
-            if (removeRandomSides)
+            
+            // determine which sides can be removed and then randonly remove a number of them (using only the square objects - no drawing yet)
+            for (var i = 0; i < totalRooms; i++)
             {
-                // determine which sides can be removed and then randonly remove a number of them (using only the square objects - no drawing yet)
-                for (int i = 0; i < totalRooms; i++)
-                {
-                    var nextIndex = i + 1;
-                    var prevIndex = i - 1;
+                var nextIndex = i + 1;
+                var prevIndex = i - 1;
 
-                    if (nextIndex >= totalRooms)
-                        break;
+                if (nextIndex >= totalRooms)
+                    break;
 
-                    var thisRow = Math.Abs(i / Cols);
-                    var lastColumn = (thisRow + 1 * Cols) - 1;
-                    var thisColumn = Cols - (lastColumn - i);
+                var thisRow = Math.Abs(i / Cols);
+                var lastColumn = (thisRow + 1 * Cols) - 1;
+                var thisColumn = Cols - (lastColumn - i);
 
-                    int roomAboveIndex = i - Cols;
-                    int roomBelowIndex = i + Cols;
-                    int roomLeftIndex = i - 1;
-                    int roomRightIndex = i + 1;
+                var roomAboveIndex = i - Cols;
+                var roomBelowIndex = i + Cols;
+                var roomLeftIndex = i - 1;
+                var roomRightIndex = i + 1;
 
-                    bool canRemoveAbove = roomAboveIndex > 0;
-                    bool canRemoveBelow = roomBelowIndex < totalRooms;
-                    bool canRemoveLeft = thisColumn - 1 >= 1;
-                    bool canRemoveRight = thisColumn - 1 <= Cols;
+                var canRemoveAbove = roomAboveIndex > 0;
+                var canRemoveBelow = roomBelowIndex < totalRooms;
+                var canRemoveLeft = thisColumn - 1 >= 1;
+                var canRemoveRight = thisColumn - 1 <= Cols;
 
-                    var removableSides = new List<Room.Side>();
-                    var currentRoom = mazeGrid[i];
-                    var nextRoom = mazeGrid[nextIndex];
+                var removableSides = new List<Room.Side>();
+                var currentRoom = mazeGrid[i];
+                var nextRoom = mazeGrid[nextIndex];
 
-                    currentRoom.RoomAbove = canRemoveAbove ? mazeGrid[roomAboveIndex] : null;
-                    currentRoom.RoomBelow = canRemoveBelow ? mazeGrid[roomBelowIndex] : null;
-                    currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
-                    currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
+                currentRoom.RoomAbove = canRemoveAbove ? mazeGrid[roomAboveIndex] : null;
+                currentRoom.RoomBelow = canRemoveBelow ? mazeGrid[roomBelowIndex] : null;
+                currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
+                currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
                     
-                    if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
-                        removableSides.Add(Room.Side.Top);
+                if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
+                    removableSides.Add(Room.Side.Top);
 
-                    if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
-                        removableSides.Add(Room.Side.Bottom);
+                if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
+                    removableSides.Add(Room.Side.Bottom);
 
-                    if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
-                        removableSides.Add(Room.Side.Left);
+                if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
+                    removableSides.Add(Room.Side.Left);
 
-                    if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) && mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
-                        removableSides.Add(Room.Side.Right);
+                if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) && mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
+                    removableSides.Add(Room.Side.Right);
 
-                    // which of the sides should we remove for this square?
-
-                    var rInt = RandomGenerator.Next(0, removableSides.Count);
-                    var randSideIndex = rInt;
-
-                    switch (removableSides[randSideIndex])
-                    {
-                        case Room.Side.Top:
-                            currentRoom.RemoveSide(Room.Side.Top);
-                            nextRoom.RemoveSide(Room.Side.Bottom);
-                            continue;
-                        case Room.Side.Right:
-                            currentRoom.RemoveSide(Room.Side.Right);
-                            nextRoom.RemoveSide(Room.Side.Left);
-                            continue;
-                        case Room.Side.Bottom:
-                            currentRoom.RemoveSide(Room.Side.Bottom);
-                            nextRoom.RemoveSide(Room.Side.Top);
-                            continue;
-                        case Room.Side.Left:
-                            currentRoom.RemoveSide(Room.Side.Left);
-                            var prev = mazeGrid[prevIndex];
-                            prev.RemoveSide(Room.Side.Right);
-                            continue;
-                    }
+                // which of the sides should we remove for this square?
+                
+                if (!removeRandomSides) continue; // Return quick if you don't want to remove random sides
+                
+                var randomSide = removableSides[RandomGenerator.Next(0, removableSides.Count)];
+                switch (randomSide)
+                {
+                    case Room.Side.Top:
+                        currentRoom.RemoveSide(Room.Side.Top);
+                        nextRoom.RemoveSide(Room.Side.Bottom);
+                        continue;
+                    case Room.Side.Right:
+                        currentRoom.RemoveSide(Room.Side.Right);
+                        nextRoom.RemoveSide(Room.Side.Left);
+                        continue;
+                    case Room.Side.Bottom:
+                        currentRoom.RemoveSide(Room.Side.Bottom);
+                        nextRoom.RemoveSide(Room.Side.Top);
+                        continue;
+                    case Room.Side.Left:
+                        currentRoom.RemoveSide(Room.Side.Left);
+                        var prev = mazeGrid[prevIndex];
+                        prev.RemoveSide(Room.Side.Right);
+                        continue;
+                    default:
+                        throw new ArgumentException($"Unknown side: {randomSide}");
                 }
             }
 
@@ -180,32 +188,28 @@ namespace MazerPlatformer
         public Player MakePlayer(Room playerRoom)
         {
             var playerAnimation = new AnimationInfo(
-               texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile)
-                                                       ? @"Sprites\pirate5" 
-                                                       : LevelFile.PlayerSpriteFile),
-               frameWidth: LevelFile?.SpriteWidth ?? 48,
-               frameHeight: LevelFile?.SpriteHeight ?? 64,
-               frameCount: LevelFile?.SpriteFrameCount ?? 3,
-               color: Color.White,
-               scale: 1.0f,
-               looping: true,
-               frameTime: 150);
+               texture: ContentManager.Load<Texture2D>(string.IsNullOrEmpty(LevelFile.PlayerSpriteFile) ? @"Sprites\pirate5" : LevelFile.PlayerSpriteFile),
+               frameWidth: LevelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+               frameHeight: LevelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+               frameCount: LevelFile?.SpriteFrameCount ?? 3);
 
-            var player = new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, w: 48, h: 64, animationInfo: playerAnimation);
+            var player = new Player(x: (int)playerRoom.GetCentre().X, y: (int)playerRoom.GetCentre().Y, width: AnimationInfo.DefaultFrameWidth, height: AnimationInfo.DefaultFrameHeight, animationInfo: playerAnimation);
             player.AddComponent(ComponentType.Health, 100); // start off with 100 health
             player.AddComponent(ComponentType.Points, 0); // start off with 0 points
-
             return player;
         }
 
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
+
+            // We should consider loading the definition of the enemies into a file.
+
             var npcs = new List<Npc>();
 
             // Add some enemy pirates
             for (int i = 0; i < 10; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\pirate{RandomGenerator.Next(1, 4)}");
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\pirate{RandomGenerator.Next(1, 4)}");
                 npc.AddComponent(ComponentType.HitPoints, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -214,7 +218,7 @@ namespace MazerPlatformer
             // Add some Enemy Dodos - more dangerous!
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -224,7 +228,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 10);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -232,7 +236,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 20);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -240,7 +244,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 30);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -248,7 +252,7 @@ namespace MazerPlatformer
 
             for (var i = 0; i < 5; i++)
             {
-                var npc = npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
+                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 40);
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -256,30 +260,25 @@ namespace MazerPlatformer
 
             return npcs;
         }
-
         
-
-        public void Save()
-        {
-            GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
-        }
-
         public Dictionary<string, GameObject> Load()
         {
-            if (File.Exists(LevelFileName))
-            {
+            if (File.Exists(LevelFileName)) 
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
-            }
 
             if (!string.IsNullOrEmpty(LevelFile.SongFileName))
-            {
-                _song = ContentManager.Load<Song>(LevelFile.SongFileName);
-            }
+                _levelMusic = ContentManager.Load<Song>(LevelFile.SongFileName);
+
+            _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
 
             // Make the room objects in the level
             _rooms = MakeRooms(removeRandomSides: Diganostics.RandomSides);
             foreach (var room in _rooms)
                 AddToLevelGameObjects(room.Id, room);
+
+            // Make Player
+            Player = MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
+                AddToLevelGameObjects(Player.PlayerId, Player);
 
             // Make the NPCs for the level
             foreach (var npc in MakeNpCs(_rooms))
@@ -288,6 +287,15 @@ namespace MazerPlatformer
             OnLoad?.Invoke(LevelFile);
             return _levelGameObjects;
         }
+
+
+
+        public void Save()
+        {
+            GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
+        }
+
+        
 
         private void AddToLevelGameObjects(string id, GameObject gameObject)
         {
@@ -299,9 +307,11 @@ namespace MazerPlatformer
         /// Get the room objects in the level
         /// </summary>
         /// <returns>list of rooms created in the level</returns>
-        public List<Room> GetRooms()
+        public List<Room> GetRooms() => _rooms;
+
+        public void UnLoad()
         {
-            return _rooms;
+            Player.Dispose();
         }
     }
 }
