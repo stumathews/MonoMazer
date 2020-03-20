@@ -8,6 +8,7 @@ using System.Xml;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
@@ -64,6 +65,8 @@ namespace MazerPlatformer
         private readonly Dictionary<string, GameObject> _levelGameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
         private Song _levelMusic;
+        private SoundEffect _jingleSoundEffect;
+        private Song _postiveSound2;
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
         // The player is special...
@@ -73,6 +76,11 @@ namespace MazerPlatformer
         {
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Play(_levelMusic);
+        }
+
+        public void PlaySound1()
+        {
+            _jingleSoundEffect.CreateInstance().Play();
         }
 
         public Level(int rows, int cols, int roomWidth, int roomHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
@@ -201,7 +209,6 @@ namespace MazerPlatformer
 
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
-
             // We should consider loading the definition of the enemies into a file.
 
             var npcs = new List<Npc>();
@@ -268,6 +275,8 @@ namespace MazerPlatformer
 
             if (!string.IsNullOrEmpty(LevelFile.SongFileName))
                 _levelMusic = ContentManager.Load<Song>(LevelFile.SongFileName);
+
+            _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
 
             _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
 

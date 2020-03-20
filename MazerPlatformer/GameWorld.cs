@@ -308,6 +308,9 @@ namespace MazerPlatformer
 
             if (obj1.Id == _level.Player.Id)
                 obj2.Active = obj2.Type == GameObjectType.Room;
+            
+            if(obj1.Id == _level.Player.Id || obj2.Id == _level.Player.Id)
+                _level.PlaySound1();
         }
 
         // Inform the Game world that the up button was pressed, make the player idle
