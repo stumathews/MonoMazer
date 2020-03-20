@@ -22,10 +22,10 @@ namespace MazerPlatformer
 
         public override void Enter(object owner)
         {
-            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Up ,time));
-            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Down, time));
-            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Left, time));
-            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.Player.MoveInDirection(Character.CharacterDirection.Right, time));
+            _playingCommands.AddKeyDownCommand(Keys.Up, time => _gameWorld.MovePlayer(Character.CharacterDirection.Up ,time));
+            _playingCommands.AddKeyDownCommand(Keys.Down, time => _gameWorld.MovePlayer(Character.CharacterDirection.Down, time));
+            _playingCommands.AddKeyDownCommand(Keys.Left, time => _gameWorld.MovePlayer(Character.CharacterDirection.Left, time));
+            _playingCommands.AddKeyDownCommand(Keys.Right, time => _gameWorld.MovePlayer(Character.CharacterDirection.Right, time));
             _playingCommands.OnKeyUp += (sender, e) => _gameWorld.OnKeyUp(sender, e);
 
             base.Enter(owner);

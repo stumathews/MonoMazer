@@ -323,5 +323,8 @@ namespace MazerPlatformer
 
         // Inform the Game world that the up button was pressed, make the player idle
         public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Player.SetState(Character.CharacterStates.Idle);
+
+        public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
+            Player.MoveInDirection(direction, dt);
     }
 }

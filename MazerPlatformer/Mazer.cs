@@ -59,7 +59,7 @@ namespace MazerPlatformer
         private Panel _mainMenu;
         private Button _startGameButton;
         private Button _quitButton;
-        
+
         /* We track players state, direction, current collision direction - obtained from the game world */
         private CharacterStates _characterState;
         private CharacterDirection _characterDirection;
@@ -81,11 +81,11 @@ namespace MazerPlatformer
 
             _gameCommands = CommandManager.GetInstance(); // Setup input
             _gameStateMachine = new FSM(this);  // Setup FSM
-            _spriteBatch = new SpriteBatch(GraphicsDevice); 
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
             _gameWorld = new GameWorld(Content, GraphicsDevice, _spriteBatch); // Create our game world
             _pauseState = new PauseState(this); // Setup initial state - where is the other states init'd?
 
-            IsFixedTimeStep = false;            
+            IsFixedTimeStep = false;
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace MazerPlatformer
 
             Font = Content.Load<SpriteFont>("Sprites/gameFont");
             MenuMusic = Content.Load<Song>("Music/bgm_menu");
-            
+
             // Load the game world up - creates the level, characters and other aspects of the game world
             _gameWorld.LoadContent(rows: NumRows, cols: NumCols, levelNumber: _currentLevel);
         }
@@ -138,7 +138,7 @@ namespace MazerPlatformer
             _gameCommands.AddKeyUpCommand(Keys.N, (time) =>
             {
                 _gameWorld.UnloadContent();
-                _gameWorld.LoadContent(rows: NumRows, cols: NumCols, levelNumber: ++_currentLevel); 
+                _gameWorld.LoadContent(rows: NumRows, cols: NumCols, levelNumber: ++_currentLevel);
                 _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
 
                 StartOrResumeLevel(isFreshStart: true);
@@ -157,7 +157,7 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerCollisionDirectionChanged += direction => _characterCollisionDirection = direction;
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            _gameWorld.OnSongChanged += filename => _currentSong = filename;
+            _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
         }
 
         /// <summary>
@@ -177,8 +177,8 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            UserInterface.Active.Update(gameTime);                       
-            
+            UserInterface.Active.Update(gameTime);
+
             _gameCommands.Update(gameTime); // get input
             _gameStateMachine.Update(gameTime); // progress current state's logic, note that the game world is updated by PlayingGameState at this point
 
@@ -194,8 +194,8 @@ namespace MazerPlatformer
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             _spriteBatch.Begin();
-                _gameWorld.Draw(_spriteBatch);  // Main drawing is done here                      
-                DrawInGameStats(gameTime);
+            _gameWorld.Draw(_spriteBatch);  // Main drawing is done here                      
+            DrawInGameStats(gameTime);
             _spriteBatch.End();
 
             // Draw user interface last, so it covers everything
