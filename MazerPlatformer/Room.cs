@@ -16,6 +16,7 @@ namespace MazerPlatformer
     {
         public enum Side { Bottom, Right, Top, Left }
 
+
         public const float WallThickness = 3.0f;
 
         // Keeps track of which sides have been removed
@@ -25,7 +26,11 @@ namespace MazerPlatformer
             /*Right*/ true,
             /*Bottom*/ true,
             /*Left*/ true
-        }; 
+        };
+
+        public delegate void WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
+
+        public event WallInfo OnWallCollision;
 
         private readonly Dictionary<Side, SideCharacteristic> _wallProperties = new Dictionary<Side, SideCharacteristic>();
 
@@ -38,6 +43,8 @@ namespace MazerPlatformer
 
         private SpriteBatch SpriteBatch { get; }
         public int RoomNumber { get; }
+        public int Col { get; }
+        public int Row { get; }
 
         /// <summary>
         /// Conceptual model of a room, which is based on a square with potentially removable walls
@@ -49,11 +56,13 @@ namespace MazerPlatformer
         /// <param name="spriteBatch"></param>
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
-        public Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber) 
+        public Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col) 
             : base(x:x, y: y, id: Guid.NewGuid().ToString(), width: width, height: height, type: GameObjectType.Room)
         {
             SpriteBatch = spriteBatch;
             RoomNumber = roomNumber;
+            Col = col;
+            Row = row;
 
             // This allows for reasoning about rectangles in terms of points A, B, C, D
             _rectDetails = new RectDetails(X, Y, Width, Height);
@@ -199,6 +208,7 @@ namespace MazerPlatformer
                     Console.WriteLine($"{side} collided with object {otherObject.Id}");
                     thisWallProperty.Color = Color.White;
                     collision = true;
+                    OnWallCollision?.Invoke(this, otherObject, side, thisWallProperty);
                     //RemoveSide(side);
                 }
             }
@@ -227,7 +237,7 @@ namespace MazerPlatformer
         }
 
         /* A room has sides which can be destroyed or collided with - they also have individual behaviors, including collision detection */
-        private class SideCharacteristic
+        public class SideCharacteristic
         {
             public Color Color;
             public readonly Rectangle Bounds;

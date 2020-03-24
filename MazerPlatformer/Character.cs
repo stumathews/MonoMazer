@@ -202,6 +202,9 @@ namespace MazerPlatformer
             }
         }
 
+        public void ChangeDirection(CharacterDirection dir) => SetCharacterDirection(dir);
+
+
         public override void Draw(SpriteBatch spriteBatch)
         {
             base.Draw(spriteBatch);

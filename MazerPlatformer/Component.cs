@@ -19,6 +19,8 @@
             State, // state
             Name, // name
             Direction, //direction
+            Player,
+            GameWorld
         }
 
         public ComponentType Type { get; set; }

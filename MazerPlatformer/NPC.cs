@@ -54,10 +54,7 @@ namespace MazerPlatformer
     {
         protected float WaitTime;
         protected Npc Npc { get; set; }
-        public NpcState(string name, Npc Npc) : base(name)
-        {
-            this.Npc = Npc;
-        }
+        public NpcState(string name, Npc Npc) : base(name) => this.Npc = Npc;
 
         protected bool IsWithin(int milli, GameTime dt)
         {
@@ -83,11 +80,42 @@ namespace MazerPlatformer
         {
             base.Enter(owner);
             Npc.InfoText = "M";
+
+            
         }
 
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
+
+            var player = (Player)Npc.FindComponentByType(Component.ComponentType.Player).Value;
+            var gameWorld = (GameWorld)Npc.FindComponentByType(Component.ComponentType.GameWorld).Value;
+            var npcRoom = gameWorld.GetRoomIn(Npc);
+            var myRow = gameWorld.ToRoomRow(Npc);
+            var myCol = gameWorld.ToRoomColumn(Npc);
+            var playerRow = gameWorld.ToRoomRow(player);
+            var playerCol = gameWorld.ToRoomColumn(player);
+            var sameRow = playerRow == myRow;
+            var sameCol = playerCol == myCol;
+            Npc.SubInfoText = $"R={myRow} C={myCol}";
+            player.SubInfoText = $"R={playerRow}C={playerCol}";
+
+            if (Npc.BoundingSphere.Intersects(npcRoom.BoundingSphere))
+            {
+                Character.CharacterDirection newDir;
+                if (sameCol && gameWorld.IsPathFromAccessible(player, Npc))
+                {
+                    newDir = myRow < playerRow ? Character.CharacterDirection.Down : Character.CharacterDirection.Up;
+                    Npc.ChangeDirection(newDir);
+
+                }
+                else if (sameRow && gameWorld.IsPathFromAccessible(player, Npc))
+                {
+                    newDir = myCol < playerCol ? Character.CharacterDirection.Right : Character.CharacterDirection.Left;
+                    Npc.ChangeDirection(newDir);
+                }
+            }
+            
             Npc.MoveInDirection(Npc.CurrentDirection, gameTime);
         }
     }
@@ -114,9 +142,9 @@ namespace MazerPlatformer
     public class DecisionState : NpcState
     {
         public DecisionState(string name, Npc npc) : base(name, npc) {}
-
         public override void Enter(object owner)
         {
+            
             Npc.InfoText = "D";
             Npc.CanMove = false;
             Npc.SetAsIdle();
@@ -130,7 +158,9 @@ namespace MazerPlatformer
             if (IsWithin(100, gameTime))
                 return;
 
+           
             Npc.SwapDirection();
+            
 
             // then move
             if (!Npc.IsColliding)

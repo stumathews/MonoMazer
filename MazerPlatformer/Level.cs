@@ -66,7 +66,6 @@ namespace MazerPlatformer
 
         private Song _levelMusic;
         private SoundEffect _jingleSoundEffect;
-        private Song _postiveSound2;
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
         // The player is special...
@@ -78,10 +77,7 @@ namespace MazerPlatformer
             MediaPlayer.Play(_levelMusic);
         }
 
-        public void PlaySound1()
-        {
-            _jingleSoundEffect.CreateInstance().Play();
-        }
+        public void PlaySound1() => _jingleSoundEffect.CreateInstance().Play();
 
         public Level(int rows, int cols, int roomWidth, int roomHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
         {
@@ -104,7 +100,7 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * _roomWidth, y: row * _roomHeight, width: _roomWidth, height: _roomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col);
+                    var square = new Room(x: col * _roomWidth, y: row * _roomHeight, width: _roomWidth, height: _roomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col, row: row, col: col);
                     mazeGrid.Add(square);
                 }
             }           
@@ -120,9 +116,8 @@ namespace MazerPlatformer
                 if (nextIndex >= totalRooms)
                     break;
 
-                var thisRow = Math.Abs(i / Cols);
-                var lastColumn = (thisRow + 1 * Cols) - 1;
-                var thisColumn = Cols - (lastColumn - i);
+                var thisRow = mazeGrid[i].Row;
+                var thisColumn = mazeGrid[i].Col;
 
                 var roomAboveIndex = i - Cols;
                 var roomBelowIndex = i + Cols;
@@ -207,14 +202,14 @@ namespace MazerPlatformer
             return player;
         }
 
-        public List<Npc> MakeNpCs(List<Room> rooms)
+        public List<Npc> MakeNpCs(List<Room> rooms, int numPirates=10, int numDodos=5, int numPickups=5)
         {
             // We should consider loading the definition of the enemies into a file.
 
             var npcs = new List<Npc>();
 
             // Add some enemy pirates
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < numPirates; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\pirate{RandomGenerator.Next(1, 4)}");
                 npc.AddComponent(ComponentType.HitPoints, 40);
@@ -223,7 +218,7 @@ namespace MazerPlatformer
             }
 
             // Add some Enemy Dodos - more dangerous!
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < numDodos; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
                 npc.AddComponent(ComponentType.HitPoints, 40);
@@ -233,7 +228,7 @@ namespace MazerPlatformer
 
             // Lets add some pick ups in increasing order of value
 
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < numPickups; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 10);
@@ -241,7 +236,7 @@ namespace MazerPlatformer
                 npcs.Add(npc);
             }
 
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < numPickups; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 20);
@@ -249,7 +244,7 @@ namespace MazerPlatformer
                 npcs.Add(npc);
             }
 
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < numPickups; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 30);
@@ -257,7 +252,7 @@ namespace MazerPlatformer
                 npcs.Add(npc);
             }
 
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < numPickups; i++)
             {
                 var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(ComponentType.Points, 40);
@@ -290,7 +285,7 @@ namespace MazerPlatformer
                 AddToLevelGameObjects(Player.PlayerId, Player);
 
             // Make the NPCs for the level
-            foreach (var npc in MakeNpCs(_rooms))
+            foreach (var npc in MakeNpCs(_rooms, 5, 5,10))
                 AddToLevelGameObjects(npc.Id, npc);
 
             OnLoad?.Invoke(LevelFile);

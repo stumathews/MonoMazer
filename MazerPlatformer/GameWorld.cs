@@ -7,9 +7,11 @@ using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
 using System.Net;
+using System.Runtime.Remoting.Messaging;
 using System.Timers;
 using GameLib.EventDriven;
 using Microsoft.Xna.Framework.Media;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -35,6 +37,7 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event SongChanged OnSongChanged;
+        public event EventHandler OnPlayerDied;
 
         public delegate void SongChanged(string filename);
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
@@ -83,8 +86,6 @@ namespace MazerPlatformer
             // We use the rooms locations for collisions detection optimizations later
             _rooms = _level.GetRooms();
 
-            
-
             _removeWallTimer.Start();
 
         }
@@ -121,15 +122,29 @@ namespace MazerPlatformer
             _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
             _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
+            _level.Player.OnDisposing += OnPlayerDisposing;
+            // Let us know when a room registers a collision
+            _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
 
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
                 gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
-                gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component updates
+                gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component update
+                
+                // Every object will have access to the player
+                gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, _level.Player));
+                // every object will have access to the game world
+                gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
         }
-        
+
+        private void OnPlayerDisposing(GameObject theobject)
+        {
+            // Player is disposed of, die die die!
+            OnPlayerDied?.Invoke(theobject, null);
+        }
+
         /// <summary>
         /// We ask each game object within the game world to draw itself
         /// </summary>
@@ -206,6 +221,8 @@ namespace MazerPlatformer
             if (gameObject == null)
                 return;
 
+            gameObject.Active = false;
+
             OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
             _gameObjects.Remove(id);
             gameObject.Dispose();
@@ -222,7 +239,7 @@ namespace MazerPlatformer
             // Only check for collisions with adjacent rooms or current room
             if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
             {
-                var roomIn = _rooms[roomNumber];
+                var roomIn = GetRoom(roomNumber);
                 var adjacentRooms = new List<Room> {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
                 var collisionRooms = new List<Room>();
 
@@ -242,11 +259,13 @@ namespace MazerPlatformer
                 //RemoveRandomWall(roomIn, _removeWallTimer);
 
             }
+            else
+            {
+                // object has no room - must have wondered off the screen - remove it
+                RemoveFromGameObjects(gameObject.Id);
+            }
 
             // local functions
-
-            int ToRoomRow(GameObject o1) => (int)Math.Ceiling((float)o1.Y / _roomHeight);
-            int ToRoomColumn(GameObject gameObject1) => (int)Math.Ceiling((float)gameObject1.X / _roomWidth);
 
             void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
             {
@@ -266,11 +285,28 @@ namespace MazerPlatformer
             }
         }
 
+        public Room GetRoomIn(GameObject gameObject)
+        {
+            var col = ToRoomColumn(gameObject);
+            var row = ToRoomRow(gameObject);
+            var roomNumber = ((row - 1) * Cols) + col - 1;
+            return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : null;
+        }
+
+        private Room GetRoom(int roomNumber)
+        {
+            return _rooms[roomNumber];
+        }
+
+        public int ToRoomColumn(GameObject gameObject1) => (int) Math.Ceiling((float) gameObject1.X / _roomWidth);
+
+        public int ToRoomRow(GameObject o1) => (int) Math.Ceiling((float) o1.Y / _roomHeight);
+
         private static void RemoveRandomWall(Room roomIn, SimpleGameTimeTimer timer)
         {
             if (!timer.IsTimedOut()) return;
 
-            var randomSide = Statics.GetRandomEnumValue<Room.Side>();
+            var randomSide = GetRandomEnumValue<Room.Side>();
             switch (randomSide)
             {
                 case Room.Side.Bottom:
@@ -308,15 +344,90 @@ namespace MazerPlatformer
 
             if (obj1.Id == _level.Player.Id)
                 obj2.Active = obj2.Type == GameObjectType.Room;
-            
-            if(obj1.Id == _level.Player.Id || obj2.Id == _level.Player.Id)
-                _level.PlaySound1();
         }
+
+        // What to do specifically when a room registers a collision
+        private void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, Room.SideCharacteristic sideCharacteristics)
+        {
+            if(otherObject.Type == GameObjectType.Player)
+                room.RemoveSide(side);
+        }
+
 
         // Inform the Game world that the up button was pressed, make the player idle
         public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _level.Player.SetAsIdle();
 
         public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
             _level.Player.MoveInDirection(direction, dt);
+
+        public bool IsPathFromAccessible(GameObject obj1, GameObject obj2)
+        {
+            var obj1Row = ToRoomRow(obj1);
+            var obj1Col = ToRoomColumn(obj1);
+            var obj2Row = ToRoomRow(obj2);
+            var obj2Col = ToRoomColumn(obj2);
+
+            var isSameRow = obj1Row == obj2Row;
+            var isSameCol = obj1Col == obj2Col;
+            var isAccessible = false;
+
+
+            if (isSameRow)
+            {
+                GetMaxMinRange(obj2Col, obj1Col, out var greaterCol, out var smallerCol);
+
+                var roomsInThisRow = _rooms.Where(o => o.Row+1 == obj1Row);
+                    var cropped = roomsInThisRow.Where(o=>
+                                                       o.Col >= smallerCol-1 && 
+                                                       o.Col <= greaterCol-1).OrderBy(o=>o.X).ToList();
+                
+                for (var i = 0; i < cropped.Count-1; i++)
+                {
+                    var hasARightSide = cropped[i].HasSide(Room.Side.Right);
+                    if (hasARightSide) return false;
+                    var rightRoomExists = cropped[i].RoomRight != null;
+                    if (!rightRoomExists) return false;
+                    var rightHasLeft = cropped[i].RoomRight.HasSide(Room.Side.Left);
+                    if (rightHasLeft) return false;
+                }
+                return true;
+            }
+
+            if (isSameCol)
+            {
+                GetMaxMinRange(obj2Row, obj1Row, out var greaterRow, out var smallerRow);
+                var roomsInThisCol = _rooms.Where(o => o.Col + 1 == obj1Col);
+                var cropped = roomsInThisCol.Where(o =>
+                    o.Row >= smallerRow - 1 &&
+                    o.Row <= greaterRow - 1).OrderBy(o => o.Y).ToList();
+                for (var i = 0; i < cropped.Count - 1; i++)
+                {
+                    var hasABottom = cropped[i].HasSide(Room.Side.Bottom);
+                    if (hasABottom) return false;
+                    var bottomRoomExists = cropped[i].RoomBelow != null;
+                    if (!bottomRoomExists) return false;
+                    var bottomHasATop = cropped[i].RoomBelow.HasSide(Room.Side.Top);
+                    if (bottomHasATop) return false;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void GetMaxMinRange(int obj1Col, int obj2Col, out int greaterCol, out int smallerCol)
+        {
+            if (obj1Col > obj2Col)
+            {
+                greaterCol = obj1Col;
+                smallerCol = obj2Col;
+            }
+            else
+            {
+                smallerCol = obj1Col;
+                greaterCol = obj2Col;
+            }
+        }
     }
 }

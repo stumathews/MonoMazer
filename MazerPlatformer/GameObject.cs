@@ -38,6 +38,7 @@ namespace MazerPlatformer
 
         // Can have some text associated with game object, useful for indicating information about object visually on screen
         public string InfoText { get; set; }
+        public string SubInfoText { get; set; }
 
         // Tracks if an object is active or not 
         public bool Active { get; set; }
@@ -58,8 +59,13 @@ namespace MazerPlatformer
 
         public event GameObjectComponentChanged OnGameObjectComponentChanged;
         public event CollisionArgs OnCollision;
+        
         public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
         public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
+
+        public delegate void DisposingInfo(GameObject theObject);
+
+        public event DisposingInfo OnDisposing;
 
         protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
         {
@@ -196,7 +202,11 @@ namespace MazerPlatformer
         {
             // All game objects can ask to draw some text over it if it wants
             // dependency on Mazer for game font ok.
-            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () => spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White));
+            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
+            {
+                spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
+                spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
+            });
 
             DrawObjectDiagnostics(spriteBatch);
         }
@@ -218,6 +228,8 @@ namespace MazerPlatformer
         protected virtual void Dispose(bool disposing)
         {
             if (!disposing) return;
+
+            OnDisposing?.Invoke(this);
 
             // Cleanup objects we know we wont need or that other objects should not need.
             Components.Clear();

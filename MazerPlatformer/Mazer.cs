@@ -168,6 +168,12 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
+            _gameWorld.OnPlayerDied += GameWorldOnOnPlayerDied;
+        }
+
+        private void GameWorldOnOnPlayerDied(object sender, EventArgs e)
+        {
+            // This should happen when the player object is disposed, ie he died
         }
 
 
@@ -266,7 +272,7 @@ namespace MazerPlatformer
             _mainMenu = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
             _startGameButton = new Button("Start/re-start Game");
             _quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-
+            
             HideMenu();
 
             var header = new Header("Mazer main Menu");
@@ -289,6 +295,23 @@ namespace MazerPlatformer
             resumeGameButton.OnClick = (Entity entity) => StartOrResumeLevel(isFreshStart: false);
             _mainMenu.AddChild(resumeGameButton);
 
+            var controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+            var closeControlsPanelButton = new Button("Back");
+            var controlsPanelHeader = new Header("Controls");
+            var controlsPanelInstructions = new RichParagraph(
+                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{GREEN}} collect{{DEFAULT}} all the balloons before the timer {{BOLD}} expires{{DEFAULT}}, while avoiding the enemies!\n\n" +
+                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" + 
+                "To destroy a wall press the {{BOLD}} space {{DEFAULT}} button but {{RED}}beware{{DEFAULT}} enemies can hear you!");
+            closeControlsPanelButton.OnClick += (entity) => controlsPanel.Visible = false;
+            controlsPanel.Visible = false;
+            controlsPanel.AddChild(controlsPanelHeader);
+            controlsPanel.AddChild(controlsPanelInstructions);
+            controlsPanel.AddChild(closeControlsPanelButton);
+            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
+            controlsButton.OnClick += (entity) => controlsPanel.Visible = true;
+            
+            _mainMenu.AddChild(controlsButton);
+
             Button diagnostics = new Button("Diagnostics On/Off");
             diagnostics.OnClick += (Entity entity) => EnableAllDiganostics();
             _mainMenu.AddChild(diagnostics);
@@ -297,6 +320,7 @@ namespace MazerPlatformer
             _mainMenu.AddChild(_quitButton);
 
             UserInterface.Active.AddEntity(_mainMenu);
+            UserInterface.Active.AddEntity(controlsPanel);
         }
 
         internal void ShowMenu() => _mainMenu.Visible = true; // used by internal pause state

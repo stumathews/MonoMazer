@@ -41,7 +41,7 @@ namespace MazerPlatformer
         {
             NudgeOutOfCollision();
 
-            // Change my health component to be affected by the hitpoints of the other object
+            // Change my health component to be affected by the hit points of the other object
             if (otherObject.Type != GameObjectType.Npc) return;
 
             var npcTypeComponent = otherObject.FindComponentByType(ComponentType.NpcType);
