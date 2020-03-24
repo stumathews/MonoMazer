@@ -45,6 +45,7 @@
     <Compile Include="CharacterBuilder.cs" />
     <Compile Include="Component.cs" />
     <Compile Include="GameObject.cs" />
+    <Compile Include="GameOverState.cs" />
     <Compile Include="GameWorld.cs" />
     <Compile Include="PauseState.cs" />
     <Compile Include="Level.cs" />

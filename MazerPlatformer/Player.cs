@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using C3.XNA;
 using GameLib.EventDriven;
 using GameLibFramework.Animation;
@@ -16,6 +17,10 @@ namespace MazerPlatformer
     public class Player : Character
     {
         public const string PlayerId = "Player";
+
+        public delegate void DealthInfo(List<Component> playersComponents);
+
+        public event DealthInfo OnDeath;
 
         public Player(int x, int y, int width, int height, AnimationInfo animationInfo) : base(x, y, PlayerId, width, height, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
@@ -51,7 +56,11 @@ namespace MazerPlatformer
             {
                 var hitPoints = otherObject.FindComponentByType(ComponentType.HitPoints).Value;
                 var myHealth = FindComponentByType(ComponentType.Health).Value;
-                UpdateComponentByType(ComponentType.Health, (int) myHealth - (int) hitPoints);
+                var newHealth = (int) myHealth - (int) hitPoints;
+                UpdateComponentByType(ComponentType.Health, newHealth);
+
+                if (newHealth < 0)
+                    OnDeath?.Invoke(Components);
             }
 
             if (npcType == Npc.NpcTypes.Pickup)

@@ -21,7 +21,7 @@ namespace Tests
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: null, roomNumber: row + col);
+                    var square = new Room(x: col * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight, spriteBatch: null, roomNumber: row + col, row: row, col: col);
                     mazeGrid.Add(square);
                 }
             }

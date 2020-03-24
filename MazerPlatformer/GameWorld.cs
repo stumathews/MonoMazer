@@ -37,7 +37,7 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event SongChanged OnSongChanged;
-        public event EventHandler OnPlayerDied;
+        public event Player.DealthInfo OnPlayerDied;
 
         public delegate void SongChanged(string filename);
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
@@ -122,7 +122,7 @@ namespace MazerPlatformer
             _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
             _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
-            _level.Player.OnDisposing += OnPlayerDisposing;
+            _level.Player.OnDeath += components => OnPlayerDied?.Invoke(components);
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
 
@@ -139,11 +139,7 @@ namespace MazerPlatformer
             }
         }
 
-        private void OnPlayerDisposing(GameObject theobject)
-        {
-            // Player is disposed of, die die die!
-            OnPlayerDied?.Invoke(theobject, null);
-        }
+        
 
         /// <summary>
         /// We ask each game object within the game world to draw itself
@@ -257,7 +253,7 @@ namespace MazerPlatformer
 
                 // Wait!, while we're in this room is it time to randomly removes some walls?
                 //RemoveRandomWall(roomIn, _removeWallTimer);
-
+                
             }
             else
             {
@@ -344,6 +340,11 @@ namespace MazerPlatformer
 
             if (obj1.Id == _level.Player.Id)
                 obj2.Active = obj2.Type == GameObjectType.Room;
+
+            // Make a celebratory sound on getting a pickup!
+            IfEither(obj1, obj2, obj => obj.IsPlayer(), then: (player) 
+                => IfEither(obj1, obj2, o => o.IsNpcType(Npc.NpcTypes.Pickup), 
+                    then: (pickup) => _level.PlaySound1()));
         }
 
         // What to do specifically when a room registers a collision

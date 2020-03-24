@@ -36,10 +36,11 @@ namespace MazerPlatformer
 
         private readonly PauseState _pauseState;
         private PlayingGameState _playingState;
+        private GameOverState _gameOverState;
 
         private enum GameStates
         {
-            Paused, Playing
+            Paused, Playing, GameOver
         }
 
         // The current state the overall game is in
@@ -103,6 +104,7 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             _playingState = new PlayingGameState(this);
+            _gameOverState = new GameOverState(this);
 
             // This is the main game font and is static and public so that anyone can read the Game font via GetGameFont()
             _font = Content.Load<SpriteFont>("Sprites/gameFont");
@@ -168,12 +170,7 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
-            _gameWorld.OnPlayerDied += GameWorldOnOnPlayerDied;
-        }
-
-        private void GameWorldOnOnPlayerDied(object sender, EventArgs e)
-        {
-            // This should happen when the player object is disposed, ie he died
+            _gameWorld.OnPlayerDied += components => _currentGameState = GameStates.GameOver; // not using player components
         }
 
 
@@ -331,6 +328,7 @@ namespace MazerPlatformer
         {
             var toPausedTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
             var toPlayingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
+            var toGameOverTransition = new Transition(_gameOverState, ()=> _currentGameState == GameStates.GameOver);
 
             var states = new State[] { _pauseState, _playingState };
             var transitions = new[] { toPausedTransition, toPlayingTransition };

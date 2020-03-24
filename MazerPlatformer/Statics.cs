@@ -28,6 +28,13 @@ namespace MazerPlatformer
         }
 
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
+        public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
+        {
+            if (gameObject.Type != GameObject.GameObjectType.Npc) return false;
+            var component = gameObject.FindComponentByType(Component.ComponentType.NpcType);
+            if (component?.Value == null) return false;
+            return (Npc.NpcTypes)component.Value == type;
+        }
 
         public static T GetRandomEnumValue<T>()
         {
