@@ -38,7 +38,9 @@ namespace MazerPlatformer
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event SongChanged OnSongChanged;
         public event Player.DealthInfo OnPlayerDied;
+        public event LevelClearedInfo OnLevelCleared;
 
+        public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
 
@@ -217,15 +219,19 @@ namespace MazerPlatformer
             if (gameObject == null)
                 return;
 
+            // Remove number of known pickups...this is an indicator of level clearance
+            if (gameObject.IsNpcType(Npc.NpcTypes.Pickup))
+                _level.NumPickups--;
+
             gameObject.Active = false;
 
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
             _gameObjects.Remove(id);
             gameObject.Dispose();
 
-            // This might be a bit expensive:
-            if (_gameObjects.Values.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)) == 0)
-                throw new NotImplementedException("Level passed");
+            if(_level.NumPickups == 0)
+                OnLevelCleared?.Invoke(_level);
+
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
 
         }
 

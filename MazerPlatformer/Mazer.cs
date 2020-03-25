@@ -146,14 +146,7 @@ namespace MazerPlatformer
             });
 
             // Cheat: start the next level
-            _gameCommands.AddKeyUpCommand(Keys.N, (time) =>
-            {
-                _gameWorld.UnloadContent();
-                _gameWorld.LoadContent(levelNumber: ++_currentLevel);
-                _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
-
-                StartOrResumeLevel(isFreshStart: true);
-            });
+            _gameCommands.AddKeyUpCommand(Keys.N, (time) => LoadNextLevel());
 
             SetupMenuUi();
 
@@ -171,6 +164,16 @@ namespace MazerPlatformer
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
             _gameWorld.OnPlayerDied += components => _currentGameState = GameStates.GameOver; // not using player components
+            _gameWorld.OnLevelCleared += level => LoadNextLevel();
+        }
+
+        private void LoadNextLevel()
+        {
+            _gameWorld.UnloadContent();
+            _gameWorld.LoadContent(levelNumber: ++_currentLevel);
+            _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
+
+            StartOrResumeLevel(isFreshStart: true);
         }
 
 

@@ -68,7 +68,7 @@ namespace MazerPlatformer
         private SoundEffect _jingleSoundEffect;
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
-        public int NumPickups { get; private set; }
+        public int NumPickups { get; set; }
         // The player is special...
         public Player Player { get; private set; }
         
@@ -289,7 +289,7 @@ namespace MazerPlatformer
                 AddToLevelGameObjects(Player.PlayerId, Player);
 
             // Make the NPCs for the level
-            foreach (var npc in MakeNpCs(_rooms, 5, 5,10))
+            foreach (var npc in MakeNpCs(_rooms, 5, 5,1))
                 AddToLevelGameObjects(npc.Id, npc);
 
             OnLoad?.Invoke(LevelFile);
