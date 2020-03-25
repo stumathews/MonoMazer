@@ -19,8 +19,9 @@ namespace MazerPlatformer
         public const string PlayerId = "Player";
 
         public delegate void DealthInfo(List<Component> playersComponents);
-
+        
         public event DealthInfo OnDeath;
+        public event EventHandler PlayerSpotted;
 
         public Player(int x, int y, int width, int height, AnimationInfo animationInfo) : base(x, y, PlayerId, width, height, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
@@ -71,5 +72,7 @@ namespace MazerPlatformer
                 UpdateComponentByType(ComponentType.Points, levelPoints);
             }
         }
+
+        public void Seen() => PlayerSpotted?.Invoke(this, null);
     }
 }

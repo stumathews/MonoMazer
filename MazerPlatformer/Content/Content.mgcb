@@ -4793,11 +4793,29 @@
 /processor:PassThroughProcessor
 /build:GeonBit.UI/themes/lowres/ThemeData.xml
 
+#begin Music/24_levelclear.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Music/24_levelclear.wav
+
 #begin Music/28_jingle.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Music/28_jingle.wav
+
+#begin Music/29_noise.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Music/29_noise.wav
+
+#begin Music/64_lose2.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Music/64_lose2.wav
 
 #begin Music/bgm_action_1.mp3
 /importer:Mp3Importer

@@ -76,10 +76,12 @@ namespace MazerPlatformer
     {
         public MovingState(string name, Npc npc) : base(name, npc) {}
 
+        private SimpleGameTimeTimer spottedPlayerTimeout = new SimpleGameTimeTimer(5000);
         public override void Enter(object owner)
         {
             base.Enter(owner);
             Npc.InfoText = "M";
+            spottedPlayerTimeout.Start();
 
             
         }
@@ -87,7 +89,7 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
-
+            spottedPlayerTimeout.Update(gameTime);
             var player = (Player)Npc.FindComponentByType(Component.ComponentType.Player).Value;
             var gameWorld = (GameWorld)Npc.FindComponentByType(Component.ComponentType.GameWorld).Value;
             var npcRoom = gameWorld.GetRoomIn(Npc);
@@ -100,6 +102,7 @@ namespace MazerPlatformer
             Npc.SubInfoText = $"R={myRow} C={myCol}";
             player.SubInfoText = $"R={playerRow}C={playerCol}";
 
+            var playerSeen = false;
             if (Npc.BoundingSphere.Intersects(npcRoom.BoundingSphere))
             {
                 Character.CharacterDirection newDir;
@@ -107,13 +110,21 @@ namespace MazerPlatformer
                 {
                     newDir = myRow < playerRow ? Character.CharacterDirection.Down : Character.CharacterDirection.Up;
                     Npc.ChangeDirection(newDir);
+                    playerSeen = true;
 
                 }
                 else if (sameRow && gameWorld.IsPathFromAccessible(player, Npc))
                 {
                     newDir = myCol < playerCol ? Character.CharacterDirection.Right : Character.CharacterDirection.Left;
                     Npc.ChangeDirection(newDir);
+                    playerSeen = true;
                 }
+            }
+
+            if (playerSeen && spottedPlayerTimeout.IsTimedOut())
+            {
+                player.Seen();
+                spottedPlayerTimeout.Reset();
             }
             
             Npc.MoveInDirection(Npc.CurrentDirection, gameTime);

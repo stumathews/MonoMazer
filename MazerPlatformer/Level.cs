@@ -66,6 +66,8 @@ namespace MazerPlatformer
 
         private Song _levelMusic;
         private SoundEffect _jingleSoundEffect;
+        private SoundEffect _playerSpottedSound;
+        private SoundEffect _loseSound;
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
         public int NumPickups { get; set; }
@@ -79,6 +81,9 @@ namespace MazerPlatformer
         }
 
         public void PlaySound1() => _jingleSoundEffect.CreateInstance().Play();
+        public void PlayPlayerSpottedSound() => _playerSpottedSound.CreateInstance().Play();
+        public void PlayLoseSound() => _loseSound.CreateInstance().Play();
+
 
         public Level(int rows, int cols, int roomWidth, int roomHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
         {
@@ -276,6 +281,8 @@ namespace MazerPlatformer
                 _levelMusic = ContentManager.Load<Song>(LevelFile.SongFileName);
 
             _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
+            _playerSpottedSound = ContentManager.Load<SoundEffect>("Music/29_noise");
+            _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
 
             _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
 

@@ -124,10 +124,15 @@ namespace MazerPlatformer
             _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
             _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
-            _level.Player.OnDeath += components => OnPlayerDied?.Invoke(components);
+            _level.Player.OnDeath += components =>
+            {
+                _level.PlayLoseSound();
+                OnPlayerDied?.Invoke(components);
+            };
+            _level.Player.PlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
-
+            
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
