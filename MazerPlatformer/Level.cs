@@ -68,6 +68,7 @@ namespace MazerPlatformer
         private SoundEffect _jingleSoundEffect;
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
+        public int NumPickups { get; private set; }
         // The player is special...
         public Player Player { get; private set; }
         
@@ -259,6 +260,9 @@ namespace MazerPlatformer
                 npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
+
+            // Tally up number on Npcs for latter use
+            NumPickups = npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup));
 
             return npcs;
         }

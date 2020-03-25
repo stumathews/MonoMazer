@@ -223,6 +223,10 @@ namespace MazerPlatformer
             _gameObjects.Remove(id);
             gameObject.Dispose();
 
+            // This might be a bit expensive:
+            if (_gameObjects.Values.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)) == 0)
+                throw new NotImplementedException("Level passed");
+
         }
 
         private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime)
