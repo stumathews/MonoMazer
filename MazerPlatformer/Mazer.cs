@@ -53,7 +53,7 @@ namespace MazerPlatformer
         private int _numGameCollisionsEvents;
         private int _numCollisionsWithPlayerAndNpCs;
 
-        /* UI */
+        /* UI provided by Geon.UI */
         private Panel _mainMenuPanel;
         private Panel _gameOverPanel;
         private Panel _controlsPanel;
@@ -183,13 +183,29 @@ namespace MazerPlatformer
             _spriteBatch.Begin();
 
             _gameWorld.Draw(_spriteBatch);
+            DrawPlayerStats(_spriteBatch);
             DrawInGameStats(gameTime);
 
             _spriteBatch.End();
             UserInterface.Active.Draw(_spriteBatch);
         }
 
-        
+        private void DrawPlayerStats(SpriteBatch spriteBatch)
+        {
+            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+            _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                Color.White);
+
+            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
+                Color.White);
+        }
+
+
         private void ProgressToLevel(int level) => StartLevel(level, isFreshStart: false /*Retains players score and health*/);
 
         private void StartLevel(int level, bool isFreshStart = true)
@@ -287,10 +303,11 @@ namespace MazerPlatformer
                 _controlsPanel.AdjustHeightAutomatically = true;
                 _controlsPanel.AddChild(new Header("Mazer's Controls"));
                 _controlsPanel.AddChild(new RichParagraph(
-                    "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons before the timer {{BOLD}} expires{{DEFAULT}}, while avoiding the enemies!\n\n" +
+                    "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
+                    "A level is cleared when all the baloons are collected.\n\n" +
                     "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
-                    "You can destroy walls by moving through them, however enemies can't but any walls you do remove will allow enemies to see and follow you!\n" +
-                    ""));
+                    "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
+                    "{{BOLD}}Good Luck!"));
                 _controlsPanel.AddChild(closeControlsPanelButton);
 
 
@@ -381,43 +398,33 @@ namespace MazerPlatformer
         /// <param name="gameTime"></param>
         private void DrawInGameStats(GameTime gameTime)
         {
-            if (_currentGameState != GameStates.Playing) return;
+            if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats) return;
 
             var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
             // Consider making GameObjectCount private and getting the info via an event instead
             _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
                             Color.White);
             _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Level: {_currentLevel} Music Track: {_currentSong}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
+            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
+
+            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+
+            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
                 Color.White);
-            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
                 Color.White);
         }
@@ -429,6 +436,7 @@ namespace MazerPlatformer
             Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
             Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
             Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
+            Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
         }
 
         private void OnEscapeKeyReleased(GameTime time)

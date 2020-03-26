@@ -80,5 +80,6 @@ namespace MazerPlatformer
         public static bool RandomSides = true;
         public static bool DrawPlayerRectangle = false;
         public static bool DrawObjectInfoText = false;
+        public static bool ShowPlayerStats = false;
     }
 }
