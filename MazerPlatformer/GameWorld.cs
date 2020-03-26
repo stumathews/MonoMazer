@@ -36,7 +36,7 @@ namespace MazerPlatformer
         public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public event SongChanged OnSongChanged;
+        public event Level.LevelLoadInfo OnLoadLevel;
         public event Player.DealthInfo OnPlayerDied;
         public event LevelClearedInfo OnLevelCleared;
 
@@ -205,7 +205,7 @@ namespace MazerPlatformer
             Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
         }
 
-        private void OnLevelLoad(Level.LevelDetails details) => OnSongChanged?.Invoke(details.SongFileName);
+        private void OnLevelLoad(Level.LevelDetails details) => OnLoadLevel?.Invoke(details);
 
         public void StartOrResumeLevelMusic()
         {
@@ -226,6 +226,9 @@ namespace MazerPlatformer
             if (gameObject == null)
                 return;
 
+            // We want subscribers to inspect the object before we dispose of it below
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
+
             // Remove number of known pickups...this is an indicator of level clearance
             if (gameObject.IsNpcType(Npc.NpcTypes.Pickup))
                 _level.NumPickups--;
@@ -237,8 +240,6 @@ namespace MazerPlatformer
 
             if(_level.NumPickups == 0)
                 OnLevelCleared?.Invoke(_level);
-
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
 
         }
 

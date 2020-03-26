@@ -42,6 +42,14 @@ namespace MazerPlatformer
             return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
 
+
+
+
+        public static bool ToggleSetting(ref bool setting)
+        {
+            return setting = !setting;
+        }
+
         public static void DoIf(bool condition, Action action)
         {
             if (condition) action?.Invoke();

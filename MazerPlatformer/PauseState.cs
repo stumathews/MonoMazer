@@ -18,12 +18,6 @@ namespace MazerPlatformer
             Name = "Idle";
         }
 
-        public override void Initialize()
-        {
-            base.Initialize();
-            //_pauseCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Escape, (dt) => _game.StartOrResumeLevel(isFreshStart: false));
-        }
-
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);

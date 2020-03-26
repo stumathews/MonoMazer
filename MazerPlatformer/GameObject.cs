@@ -146,7 +146,7 @@ namespace MazerPlatformer
         /// Find a component, assuming there is only one of this type otherwise throws
         /// </summary>
         /// <remarks>This should throw an exception if more than one of the same component type is found ie programmer error</remarks>
-        public Component FindComponentByType(Component.ComponentType type) => Components.Single(o => o.Type == type);
+        public Component FindComponentByType(Component.ComponentType type) => Components.SingleOrDefault(o => o.Type == type);
         
         /// <summary>
         /// Updates by type, throws if more than one type of this component exists in the game object

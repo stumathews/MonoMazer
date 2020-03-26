@@ -274,6 +274,7 @@ namespace MazerPlatformer
         
         public Dictionary<string, GameObject> Load()
         {
+            // TODO: Consider making the game more difficult on each level - speed of NPC, damage given, increase your own speed
             if (File.Exists(LevelFileName)) 
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
 
@@ -296,7 +297,7 @@ namespace MazerPlatformer
                 AddToLevelGameObjects(Player.PlayerId, Player);
 
             // Make the NPCs for the level
-            foreach (var npc in MakeNpCs(_rooms, 5, 5,1))
+            foreach (var npc in MakeNpCs(_rooms))
                 AddToLevelGameObjects(npc.Id, npc);
 
             OnLoad?.Invoke(LevelFile);
