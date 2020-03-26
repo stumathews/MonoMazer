@@ -21,7 +21,7 @@ namespace MazerPlatformer
         public override void Initialize()
         {
             base.Initialize();
-            _pauseCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Escape, (dt) => _game.StartOrResumeLevel(isFreshStart: false));
+            //_pauseCommands.AddKeyUpCommand(Microsoft.Xna.Framework.Input.Keys.Escape, (dt) => _game.StartOrResumeLevel(isFreshStart: false));
         }
 
         public override void Update(object owner, GameTime gameTime)

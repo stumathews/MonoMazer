@@ -52,6 +52,7 @@ namespace MazerPlatformer
 
         // We can unload and reload the game world to change levels
         private bool _unloading;
+        private bool _playerDied = false;
 
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
@@ -127,6 +128,7 @@ namespace MazerPlatformer
             _level.Player.OnDeath += components =>
             {
                 _level.PlayLoseSound();
+                _playerDied = true;
                 OnPlayerDied?.Invoke(components);
             };
             _level.Player.PlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
@@ -385,8 +387,6 @@ namespace MazerPlatformer
 
             var isSameRow = obj1Row == obj2Row;
             var isSameCol = obj1Col == obj2Col;
-            var isAccessible = false;
-
 
             if (isSameRow)
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using GameLib.EventDriven;
 using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
@@ -38,6 +39,8 @@ namespace MazerPlatformer
         private PlayingGameState _playingState;
         private GameOverState _gameOverState;
 
+        public event EventHandler OnGamePaused;
+
         private enum GameStates
         {
             Paused, Playing, GameOver
@@ -64,6 +67,7 @@ namespace MazerPlatformer
         private Panel _mainMenu;
         private Button _startGameButton;
         private Button _quitButton;
+        private Panel _gameOverPanel;
 
         /* We track players state, direction, current collision direction - obtained from the game world */
         private CharacterStates _characterState;
@@ -71,6 +75,7 @@ namespace MazerPlatformer
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
         private string _currentSong;
+        private bool playerDied = false;
         
         public Mazer()
         {
@@ -142,11 +147,12 @@ namespace MazerPlatformer
             _gameCommands.AddKeyUpCommand(Keys.Escape, (time) =>
             {
                 _currentGameState = GameStates.Paused;
+                OnGamePaused?.Invoke(this, null);
                 ShowMenu();
             });
 
             // Cheat: start the next level
-            _gameCommands.AddKeyUpCommand(Keys.N, (time) => LoadNextLevel());
+            _gameCommands.AddKeyUpCommand(Keys.N, (time) => StartLevel(++_currentLevel));
 
             SetupMenuUi();
 
@@ -163,17 +169,22 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged; // If the inventory of the player changed (received pickup, received damage etc.)
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnSongChanged += filename => _currentSong = filename; // Consider subscribing to the Level Loaded event instead 
-            _gameWorld.OnPlayerDied += components => _currentGameState = GameStates.GameOver; // not using player components
-            _gameWorld.OnLevelCleared += level => LoadNextLevel();
+            _gameWorld.OnPlayerDied += components =>
+            {
+                playerDied = true;
+                _currentGameState = GameStates.GameOver;
+            };
+            _gameWorld.OnLevelCleared += level => StartLevel(++_currentLevel, isFreshStart: true);
         }
 
-        private void LoadNextLevel()
+        private void StartLevel(int level, bool isFreshStart = true)
         {
+            playerDied = false;
             _gameWorld.UnloadContent();
-            _gameWorld.LoadContent(levelNumber: ++_currentLevel);
+            _gameWorld.LoadContent(levelNumber: level) ;
             _gameWorld.Initialize(); // this is a bit wonky - this appears that it needs to come before loadCOntent 
 
-            StartOrResumeLevel(isFreshStart: true);
+            StartOrResumeLevel(isFreshStart: isFreshStart);
         }
 
 
@@ -236,16 +247,24 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear( _currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver);
 
             _spriteBatch.Begin();
-            _gameWorld.Draw(_spriteBatch);  // Main drawing is done here                      
+            if (playerDied)
+                DrawGameOverScreen();
+            else
+                _gameWorld.Draw(_spriteBatch);  // Main drawing is done here                      
             DrawInGameStats(gameTime);
             _spriteBatch.End();
 
             // Draw user interface last, so it covers everything
             UserInterface.Active.Draw(_spriteBatch);
             base.Draw(gameTime);
+        }
+
+        private void DrawGameOverScreen()
+        {
+            _gameOverPanel.Visible = true;
         }
 
         // Inform the UI that game objects have been removed or added
@@ -270,57 +289,77 @@ namespace MazerPlatformer
         private void SetupMenuUi()
         {
             _mainMenu = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-            _startGameButton = new Button("Start/re-start Game");
+            _mainMenu.AdjustHeightAutomatically = true;
+            _startGameButton = new Button("Start Game");
             _quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-            
+            _gameOverPanel = new Panel();
+            var controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+            var closeControlsPanelButton = new Button("Back");
+            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
+            Button diagnostics = new Button("Diagnostics On/Off");
+
             HideMenu();
 
-            var header = new Header("Mazer main Menu");
-            _mainMenu.AddChild(header);
 
-            var hz = new HorizontalLine();
-            _mainMenu.AddChild(hz);
-
-            var paragraph = new Paragraph("What do you want to do?");
-            _mainMenu.AddChild(paragraph);
+            // Main Menu
+            _mainMenu.AddChild(new Header("Main Menu"));
+            _mainMenu.AddChild(new HorizontalLine());
+            _mainMenu.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
+            _mainMenu.AddChild(_startGameButton);
+            _mainMenu.AddChild(controlsButton);
+            _mainMenu.AddChild(diagnostics);
+            _mainMenu.AddChild(_quitButton);
 
             _startGameButton.OnClick += (Entity entity) =>
             {
                 _currentLevel = 1;
-                StartOrResumeLevel(isFreshStart: true);
+                StartLevel(_currentLevel, true);
             };
-            _mainMenu.AddChild(_startGameButton);
-
-            Button resumeGameButton = new Button("Resume game");
-            resumeGameButton.OnClick = (Entity entity) => StartOrResumeLevel(isFreshStart: false);
-            _mainMenu.AddChild(resumeGameButton);
-
-            var controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-            var closeControlsPanelButton = new Button("Back");
-            var controlsPanelHeader = new Header("Controls");
-            var controlsPanelInstructions = new RichParagraph(
-                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{GREEN}} collect{{DEFAULT}} all the balloons before the timer {{BOLD}} expires{{DEFAULT}}, while avoiding the enemies!\n\n" +
-                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" + 
-                "To destroy a wall press the {{BOLD}} space {{DEFAULT}} button but {{RED}}beware{{DEFAULT}} enemies can hear you!");
-            closeControlsPanelButton.OnClick += (entity) => controlsPanel.Visible = false;
-            controlsPanel.Visible = false;
-            controlsPanel.AddChild(controlsPanelHeader);
-            controlsPanel.AddChild(controlsPanelInstructions);
-            controlsPanel.AddChild(closeControlsPanelButton);
-            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
-            controlsButton.OnClick += (entity) => controlsPanel.Visible = true;
-            
-            _mainMenu.AddChild(controlsButton);
-
-            Button diagnostics = new Button("Diagnostics On/Off");
             diagnostics.OnClick += (Entity entity) => EnableAllDiganostics();
-            _mainMenu.AddChild(diagnostics);
-
             _quitButton.OnClick += (Entity entity) => Exit();
-            _mainMenu.AddChild(_quitButton);
+
+            // Instructions
+            controlsPanel.Visible = false;
+            controlsPanel.AdjustHeightAutomatically = true;
+            controlsPanel.AddChild(new Header("Controls"));
+            controlsPanel.AddChild(new RichParagraph(
+                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons before the timer {{BOLD}} expires{{DEFAULT}}, while avoiding the enemies!\n\n" +
+                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
+                "You can destroy walls by moving through them, however enemies can't but any walls you do remove will allow enemies to see and follow you!\n" +
+                ""));
+            controlsPanel.AddChild(closeControlsPanelButton);
+
+            controlsButton.OnClick += (entity) => controlsPanel.Visible = true;
+            closeControlsPanelButton.OnClick += (entity) => controlsPanel.Visible = false;
+
+            // Game Over Menu Setup
+            Button closeButton = new Button("Return to main menu");
+            Button restartLevel = new Button("Restart level");
+
+            _gameOverPanel.AddChild(new Header("You died!"));
+            _gameOverPanel.AddChild(new Paragraph("You can return to main menu or restart level"));
+            _gameOverPanel.AddChild(closeButton);
+            _gameOverPanel.AddChild(restartLevel);
+            _gameOverPanel.Visible = false;
+
+            closeButton.OnClick += (button) =>
+            {
+                playerDied = false;
+                _gameOverPanel.Visible = false;
+                _currentGameState = GameStates.Paused;
+            };
+
+            restartLevel.OnClick += (Entity) =>
+            {
+                playerDied = false;
+                _gameOverPanel.Visible = false;
+                StartLevel(_currentLevel, isFreshStart: true);
+            };
+            
 
             UserInterface.Active.AddEntity(_mainMenu);
             UserInterface.Active.AddEntity(controlsPanel);
+            UserInterface.Active.AddEntity(_gameOverPanel);
         }
 
         internal void ShowMenu() => _mainMenu.Visible = true; // used by internal pause state
@@ -378,41 +417,44 @@ namespace MazerPlatformer
         /// <param name="gameTime"></param>
         private void DrawInGameStats(GameTime gameTime)
         {
+            if (_currentGameState != GameStates.Playing) return;
+
+            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
             // Consider making GameObjectCount private and getting the info via an event instead
             _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
-                                GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
                             Color.White);
             _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
                 Color.White);
 
             _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
 
             _spriteBatch.DrawString(_font, $"Level: {_currentLevel} Music Track: {_currentSong}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
                 Color.White);
 
-            _spriteBatch.DrawString(_font, $"Frame rate: {gameTime.ElapsedGameTime.TotalSeconds}ms", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
+            _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
                 Color.White);
 
             _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
                 Color.White);
 
             _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 300),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
                 Color.White);
             _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 360),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
                 Color.White);
             _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 390),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
                 Color.White);
             _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
-                    GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 420),
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
                 Color.White);
         }
 
