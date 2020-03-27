@@ -20,6 +20,8 @@ namespace MazerPlatformer
     /// </summary>
     public class GameWorld : PerFrame
     {
+        private readonly int _viewPortWidth;
+        private readonly int _viewPortHeight;
         private ContentManager ContentManager { get; }
         private SpriteBatch SpriteBatch { get; }
 
@@ -44,8 +46,8 @@ namespace MazerPlatformer
         public delegate void SongChanged(string filename);
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
 
-        private readonly int _roomWidth;
-        private readonly int _roomHeight;
+        private int _roomWidth;
+        private int _roomHeight;
 
         // Handles level loading/saving and making level game objects for the game world
         private Level _level;
@@ -59,11 +61,13 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public GameWorld(ContentManager contentManager, int roomWidth, int roomHeight, int rows, int cols, SpriteBatch spriteBatch)
+        public GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
+            _viewPortWidth = viewPortWidth;
+            _viewPortHeight = viewPortHeight;
             ContentManager = contentManager;
-            _roomWidth = roomWidth;
-            _roomHeight = roomHeight;
+            _roomWidth = viewPortWidth / cols;
+            _roomHeight = viewPortHeight / rows;
             Rows = rows;
             Cols = cols;
             SpriteBatch = spriteBatch;
@@ -79,7 +83,7 @@ namespace MazerPlatformer
         {
 
             // Prepare a new level
-            _level = new Level(Rows, Cols, _roomWidth, _roomHeight, SpriteBatch, ContentManager, levelNumber, _random);
+            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, _random);
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
@@ -205,7 +209,18 @@ namespace MazerPlatformer
             Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
         }
 
-        private void OnLevelLoad(Level.LevelDetails details) => OnLoadLevel?.Invoke(details);
+        /// <summary>
+        /// Overwrite any defaults that are now in the level file
+        /// </summary>
+        /// <param name="details"></param>
+        private void OnLevelLoad(Level.LevelDetails details)
+        {
+            Cols = _level.Cols;
+            Rows = _level.Rows;
+            _roomWidth = _level.RoomWidth;
+            _roomHeight = _level.RoomHeight;
+            OnLoadLevel?.Invoke(details);
+        }
 
         public void StartOrResumeLevelMusic()
         {

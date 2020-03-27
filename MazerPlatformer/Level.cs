@@ -32,10 +32,7 @@ namespace MazerPlatformer
             public LevelPlayerDetails Player { get; set; }
             public List<LevelNpcDetails> Npcs { get; set; }
 
-            public LevelDetails()
-            {
-                
-            }
+            public LevelDetails() { /* Needed for serialization */ }
 
         }
 
@@ -50,29 +47,20 @@ namespace MazerPlatformer
             public List<Component> Components { get; set; }
             public int? Count { get; set; }
 
-            public LevelCharacterDetails()
-            {
-                
-            }
+            public LevelCharacterDetails() {/* Needed for serialization */  }
 
         }
 
         public class LevelPlayerDetails : LevelCharacterDetails
         {
-            public LevelPlayerDetails()
-            {
-                
-            }
+            public LevelPlayerDetails() { /* Needed for serialization */ }
         }
 
         public class LevelNpcDetails : LevelCharacterDetails
         {
             public Npc.NpcTypes NpcType { get; set; }
 
-            public LevelNpcDetails()
-            {
-                
-            }
+            public LevelNpcDetails() { /* Needed for serialization */ }
         }
 
         
@@ -93,10 +81,12 @@ namespace MazerPlatformer
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
 
         // A level is composed of Rooms which contain NPCs and the Player
-        public int Rows { get; }
-        public int Cols { get; }
-        private readonly int _roomWidth;
-        private readonly int _roomHeight;
+        public int Rows { get; private set; }
+        public int Cols { get; private set; }
+        public int RoomWidth { get; private set; }
+
+        public int RoomHeight { get; private set; }
+
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
@@ -112,6 +102,8 @@ namespace MazerPlatformer
         private SoundEffect _jingleSoundEffect;
         private SoundEffect _playerSpottedSound;
         private SoundEffect _loseSound;
+        public int ViewPortWidth { get; }
+        public int ViewPortHeight { get; }
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
 
         public int NumPickups { get; set; }
@@ -130,10 +122,12 @@ namespace MazerPlatformer
         public void PlayLoseSound() => _loseSound.CreateInstance().Play();
 
 
-        public Level(int rows, int cols, int roomWidth, int roomHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
+        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
         {
-            _roomWidth = roomWidth;
-            _roomHeight = roomHeight;
+            RoomWidth = viewPortWidth / cols;
+            RoomHeight = viewPortHeight / rows;
+            ViewPortWidth = viewPortWidth;
+            ViewPortHeight = viewPortHeight;
             this._random = _random;
             Rows = rows;
             Cols = cols;
@@ -151,7 +145,7 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * _roomWidth, y: row * _roomHeight, width: _roomWidth, height: _roomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col, row: row, col: col);
+                    var square = new Room(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col, row: row, col: col);
                     mazeGrid.Add(square);
                 }
             }           
@@ -308,72 +302,24 @@ namespace MazerPlatformer
             else
             {
                 // Make default set of NPCs if we don't have a level definition file
-                GenerateDefaultNpcSet(rooms, numPirates, numDodos, numPickups, characters);
+                _npcBuilder.GenerateDefaultNpcSet(rooms, numPirates, numDodos, numPickups, characters, this);
             }
 
             return characters;
         }
 
-        private void GenerateDefaultNpcSet(List<Room> rooms, int numPirates, int numDodos, int numPickups, List<Npc> npcs)
-        {
-            // Add some enemy pirates
-            for (int i = 0; i < numPirates; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\pirate{RandomGenerator.Next(1, 4)}");
-                npc.AddComponent(ComponentType.HitPoints, 40);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
-                npcs.Add(npc);
-            }
-
-            // Add some Enemy Dodos - more dangerous!
-            for (var i = 0; i < numDodos; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
-                npc.AddComponent(ComponentType.HitPoints, 40);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Enemy);
-                npcs.Add(npc);
-            }
-
-            // Lets add some pick ups in increasing order of value
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(ComponentType.Points, 10);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(ComponentType.Points, 20);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(ComponentType.Points, 30);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = _npcBuilder.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(ComponentType.Points, 40);
-                npc.AddComponent(ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-        }
-
         public Dictionary<string, GameObject> Load()
         {
             // TODO: Consider making the game more difficult on each level - speed of NPC, damage given, increase your own speed
-            if (File.Exists(LevelFileName)) 
+            if (File.Exists(LevelFileName))
+            {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
+                // override the default col x row size if we've got it in the load file
+                Rows = LevelFile.Rows ?? Rows;
+                Cols = LevelFile.Cols ?? Cols;
+                RoomWidth = ViewPortWidth / Cols;
+                RoomHeight = ViewPortHeight / Rows;
+            }
             else
             {
                 LevelFile = new LevelDetails

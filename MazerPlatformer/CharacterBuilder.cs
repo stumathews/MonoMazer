@@ -16,6 +16,7 @@ namespace MazerPlatformer
         public ContentManager ContentManager { get; }
         public int Rows { get; }
         public int Cols { get; }
+        private Random _random = new Random();
 
         public CharacterBuilder(ContentManager contentManager, int rows, int cols)
         {
@@ -51,6 +52,61 @@ namespace MazerPlatformer
             npc.AddState(decisionState);
 
             return npc;
+        }
+
+        public void GenerateDefaultNpcSet(List<Room> rooms, int numPirates, int numDodos, int numPickups, List<Npc> npcs, Level level)
+        {
+            // Add some enemy pirates
+            for (int i = 0; i < numPirates; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\pirate{_random.Next(1, 4)}");
+                npc.AddComponent(Component.ComponentType.HitPoints, 40);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
+                npcs.Add(npc);
+            }
+
+            // Add some Enemy Dodos - more dangerous!
+            for (var i = 0; i < numDodos; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
+                npc.AddComponent(Component.ComponentType.HitPoints, 40);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
+                npcs.Add(npc);
+            }
+
+            // Lets add some pick ups in increasing order of value
+
+            for (var i = 0; i < numPickups; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
+                npc.AddComponent(Component.ComponentType.Points, 10);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                npcs.Add(npc);
+            }
+
+            for (var i = 0; i < numPickups; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
+                npc.AddComponent(Component.ComponentType.Points, 20);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                npcs.Add(npc);
+            }
+
+            for (var i = 0; i < numPickups; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
+                npc.AddComponent(Component.ComponentType.Points, 30);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                npcs.Add(npc);
+            }
+
+            for (var i = 0; i < numPickups; i++)
+            {
+                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
+                npc.AddComponent(Component.ComponentType.Points, 40);
+                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
+                npcs.Add(npc);
+            }
         }
     }
 }
