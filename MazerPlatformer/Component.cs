@@ -33,5 +33,10 @@
             Type = type;
             Value = value;
         }
+
+        public Component()
+        {
+            /*Used for serialization only*/    
+        }
     }
 }

@@ -140,7 +140,7 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => _characterCollisionDirection = direction;
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            _gameWorld.OnLoadLevel += (levelDetails) => _currentSong = levelDetails.SongFileName;
+            _gameWorld.OnLoadLevel += (levelDetails) => _currentSong = levelDetails.Music;
             _gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
             _gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
         }

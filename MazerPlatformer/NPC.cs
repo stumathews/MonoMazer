@@ -16,11 +16,12 @@ namespace MazerPlatformer
     {
         public enum NpcTypes
         {
+            Unknown,
             Pickup,
             Enemy
         };
 
-        public enum NpcStaticStates
+        public enum NpcStates
         {
             Moving,
             Deciding,
@@ -28,7 +29,7 @@ namespace MazerPlatformer
         };
 
         // By default the NPC start off  in the Deciding state
-        public NpcStaticStates NpcStaticState { get; set; } = NpcStaticStates.Deciding;
+        public NpcStates NpcState { get; set; } = NpcStates.Deciding;
         
         public Npc(int x, int y, string id, int width, int height, GameObjectType type, AnimationInfo animationInfo) : base(x, y, id, width, height, type) 
             => AnimationInfo = animationInfo;
@@ -45,7 +46,7 @@ namespace MazerPlatformer
         
         private void HandleCollision(GameObject thisObject, GameObject otherObject)
         {
-            NpcStaticState = NpcStaticStates.Colliding;
+            NpcState = NpcStates.Colliding;
             NudgeOutOfCollision();
         }
     }
@@ -146,7 +147,7 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
-            Npc.NpcStaticState = Npc.NpcStaticStates.Deciding;
+            Npc.NpcState = Npc.NpcStates.Deciding;
         }
     }
 
@@ -175,7 +176,7 @@ namespace MazerPlatformer
 
             // then move
             if (!Npc.IsColliding)
-                Npc.NpcStaticState = Npc.NpcStaticStates.Moving;
+                Npc.NpcState = Npc.NpcStates.Moving;
         }
     }
 }

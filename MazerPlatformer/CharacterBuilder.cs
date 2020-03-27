@@ -30,7 +30,7 @@ namespace MazerPlatformer
             int frameCount = AnimationInfo.DefaultFrameCount, 
             Npc.NpcTypes type = Npc.NpcTypes.Enemy)
         {
-            var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
+            var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
 
             var randomRoom = rooms[ Level.RandomGenerator.Next(0, Rows * Cols)];
             var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 
@@ -42,9 +42,9 @@ namespace MazerPlatformer
             var movingState = new MovingState("moving", npc);
             var collidingState = new CollidingState("colliding", npc);
 
-            decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Moving));
-            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcStaticState == Npc.NpcStaticStates.Colliding));
-            collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcStaticState == Npc.NpcStaticStates.Deciding));
+            decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcState == Npc.NpcStates.Moving));
+            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcState == Npc.NpcStates.Colliding));
+            collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcState == Npc.NpcStates.Deciding));
             
             npc.AddState(movingState);
             npc.AddState(collidingState);

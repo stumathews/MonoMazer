@@ -14,7 +14,7 @@ namespace MazerPlatformer
 
         // Every character has associated with them, an animation that this class manages
         internal Animation Animation;
-        protected AnimationInfo AnimationInfo { get; set; }
+        public AnimationInfo AnimationInfo { get; set; }
 
         // These are the base states that any character can be in
         public enum CharacterStates { Idle, Moving };

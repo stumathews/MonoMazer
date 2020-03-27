@@ -209,7 +209,7 @@ namespace MazerPlatformer
 
         public void StartOrResumeLevelMusic()
         {
-            if (string.IsNullOrEmpty(_level.LevelFile.SongFileName)) return;
+            if (string.IsNullOrEmpty(_level.LevelFile.Music)) return;
 
             _level.PlaySong();
         }

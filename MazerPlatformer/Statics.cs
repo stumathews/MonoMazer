@@ -42,6 +42,15 @@ namespace MazerPlatformer
             return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
 
+        public static Npc.NpcTypes? GetNpcType(this GameObject npc)
+        {
+            if (npc.Type != GameObject.GameObjectType.Npc) return null;
+            var type = npc.FindComponentByType(Component.ComponentType.NpcType);
+            var valueString = type?.Value.ToString();
+            if (string.IsNullOrEmpty(valueString)) return null;
+            return ParseEnum<Npc.NpcTypes>(valueString);
+        }
+
 
 
 
