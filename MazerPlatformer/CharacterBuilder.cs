@@ -29,13 +29,14 @@ namespace MazerPlatformer
             int frameWidth = AnimationInfo.DefaultFrameWidth, 
             int frameHeight = AnimationInfo.DefaultFrameHeight,
             int frameCount = AnimationInfo.DefaultFrameCount, 
-            Npc.NpcTypes type = Npc.NpcTypes.Enemy)
+            Npc.NpcTypes type = Npc.NpcTypes.Enemy,
+            int moveStep = 3)
         {
             var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
 
             var randomRoom = rooms[ Level.RandomGenerator.Next(0, Rows * Cols)];
             var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 
-                AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, animationInfo);
+                AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, animationInfo, moveStep);
 
             if (type != Npc.NpcTypes.Enemy) return npc;
 

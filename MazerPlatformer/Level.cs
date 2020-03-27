@@ -276,7 +276,7 @@ namespace MazerPlatformer
         /// <param name="numDodos"></param>
         /// <param name="numPickups"></param>
         /// <returns></returns>
-        public List<Npc> MakeNpCs(List<Room> rooms, int numPirates=10, int numDodos=5, int numPickups=5)
+        public List<Npc> MakeNpCs(List<Room> rooms)
         {
             var characters = new List<Npc>();
 
@@ -285,24 +285,27 @@ namespace MazerPlatformer
             {
                 foreach (var levelNpc in LevelFile.Npcs)
                 {
-                    var npc = _npcBuilder.CreateNpc(rooms, levelNpc.SpriteFile,
-                        levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                        levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                        levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                        levelNpc.NpcType);
-
-                    foreach (var component in levelNpc.Components)
+                    for (var i = 0; i < levelNpc.Count; i++)
                     {
-                        npc.AddComponent(component.Type, component.Value);
-                    }
+                        var npc = _npcBuilder.CreateNpc(rooms, levelNpc.SpriteFile,
+                            levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                            levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                            levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
+                            levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep);
 
-                    characters.Add(npc);
+                        foreach (var component in levelNpc.Components)
+                        {
+                            npc.AddComponent(component.Type, component.Value);
+                        }
+
+                        characters.Add(npc);
+                    }
                 }
             }
             else
             {
                 // Make default set of NPCs if we don't have a level definition file
-                _npcBuilder.GenerateDefaultNpcSet(rooms, numPirates, numDodos, numPickups, characters, this);
+                _npcBuilder.GenerateDefaultNpcSet(rooms, 10, 5, 5, characters, this);
             }
 
             return characters;

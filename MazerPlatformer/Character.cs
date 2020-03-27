@@ -10,7 +10,8 @@ namespace MazerPlatformer
     public abstract class Character : GameObject
     {
         // All characters move 3 Pixels at a time
-        private const int MoveStep = 3;
+        private readonly int _moveStep;
+        public const int DefaultMoveStep = 3;
 
         // Every character has associated with them, an animation that this class manages
         internal Animation Animation;
@@ -47,7 +48,11 @@ namespace MazerPlatformer
         public delegate void CollisionDirectionChanged(CharacterDirection direction);
         public delegate void StateChanged(CharacterStates state);
 
-        protected Character(int x, int y, string id, int width, int height, GameObjectType type) : base(x, y, id, width, height, type) { }
+        protected Character(int x, int y, string id, int width, int height, GameObjectType type, int moveStepIncrement = 3) :
+            base(x, y, id, width, height, type)
+        {
+            _moveStep = moveStepIncrement;
+        }
 
         public override void Initialize()
         {
@@ -156,7 +161,7 @@ namespace MazerPlatformer
             OnCollisionDirectionChanged?.Invoke(direction);
         }
 
-        private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? MoveStep;
+        private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? _moveStep;
 
         protected void NudgeOutOfCollision()
         {
