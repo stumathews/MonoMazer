@@ -122,13 +122,13 @@ namespace MazerPlatformer
         public void PlayLoseSound() => _loseSound.CreateInstance().Play();
 
 
-        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random _random) 
+        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random random) 
         {
-            RoomWidth = viewPortWidth / cols;
-            RoomHeight = viewPortHeight / rows;
+            _random = random;
             ViewPortWidth = viewPortWidth;
             ViewPortHeight = viewPortHeight;
-            this._random = _random;
+            RoomWidth = viewPortWidth / cols;
+            RoomHeight = viewPortHeight / rows;
             Rows = rows;
             Cols = cols;
             SpriteBatch = spriteBatch;
@@ -254,15 +254,14 @@ namespace MazerPlatformer
             player.AddComponent(ComponentType.Health, 100); // start off with 100 health
             player.AddComponent(ComponentType.Points, 0); // start off with 0 points
 
-            // Load any additional components from the level
-            if (LevelFile?.Player?.Components != null && LevelFile.Player.Components.Count > 0)
+            // Load any additional components from the level file
+            if (LevelFile?.Player?.Components == null || LevelFile.Player.Components.Count <= 0) return player;
+
+            foreach (var component in LevelFile.Player.Components)
             {
-                foreach (var component in LevelFile.Player.Components)
-                {
-                    if (component.Type == ComponentType.Health || component.Type == ComponentType.Points)
-                        continue; // we always add these already 
-                    player.AddComponent(component.Type, component.Value);
-                }
+                if (component.Type == ComponentType.Health || component.Type == ComponentType.Points)
+                    continue; // we always have these two already 
+                player.AddComponent(component.Type, component.Value);
             }
 
             return player;
@@ -271,10 +270,7 @@ namespace MazerPlatformer
         /// <summary>
         /// loading the definition of the enemies into a file.
         /// </summary>
-        /// <param name="rooms"></param>
-        /// <param name="numPirates"></param>
-        /// <param name="numDodos"></param>
-        /// <param name="numPickups"></param>
+        /// <param name="rooms"></param>S
         /// <returns></returns>
         public List<Npc> MakeNpCs(List<Room> rooms)
         {
@@ -293,10 +289,9 @@ namespace MazerPlatformer
                             levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
                             levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep);
 
+                        // Attach components onto the NPC
                         foreach (var component in levelNpc.Components)
-                        {
                             npc.AddComponent(component.Type, component.Value);
-                        }
 
                         characters.Add(npc);
                     }
@@ -305,15 +300,18 @@ namespace MazerPlatformer
             else
             {
                 // Make default set of NPCs if we don't have a level definition file
-                _npcBuilder.GenerateDefaultNpcSet(rooms, 10, 5, 5, characters, this);
+                _npcBuilder.GenerateDefaultNpcSet(rooms, characters, this);
             }
 
             return characters;
         }
 
+        /// <summary>
+        /// Load the level
+        /// </summary>
+        /// <returns></returns>
         public Dictionary<string, GameObject> Load()
         {
-            // TODO: Consider making the game more difficult on each level - speed of NPC, damage given, increase your own speed
             if (File.Exists(LevelFileName))
             {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
@@ -325,6 +323,7 @@ namespace MazerPlatformer
             }
             else
             {
+                // Initialize a default level file if one did not exist. This represents an auto generated level
                 LevelFile = new LevelDetails
                 {
                     Npcs = new List<LevelNpcDetails>(), 
@@ -337,21 +336,24 @@ namespace MazerPlatformer
                     MoveStep = 3,
                     SpriteFrameCount = AnimationInfo.DefaultFrameCount,
                     SpriteFrameTime = AnimationInfo.DefaultFrameTime,
-                    Music = @"Music\bgm_action_1",
-                    Sound1 = @"Music/28_jingle",
-                    Sound2 = "Music/29_noise",
-                    Sound3 = "Music/64_lose2",
+                    Music = @"Music\bgm_action_1", // Level Music
+                    Sound1 = @"Music\28_jingle",  // Pickup sound
+                    Sound2 = @"Music\29_noise",  // Enemy seen player
+                    Sound3 = @"Music\64_lose2",  // Player died
                     SpriteFile = @"Sprites\dark_soldier-sword" // Default Sprite file for any character not found
                 };
             }
 
+            // Load up the level music
             if (!string.IsNullOrEmpty(LevelFile.Music))
                 _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
 
+            // Load up the sound effects
             _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
             _playerSpottedSound = ContentManager.Load<SoundEffect>("Music/29_noise");
             _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
 
+            // NPC builder....
             _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
 
             // Make the room objects in the level
@@ -363,13 +365,12 @@ namespace MazerPlatformer
             Player = MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)]);
                 AddToLevelGameObjects(Player.PlayerId, Player);
 
+            // Make the NPCs for the level
             Npcs = MakeNpCs(_rooms);
             
             // Tally up number on Npcs for latter use
             NumPickups = Npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup));
 
-
-            // Make the NPCs for the level
             foreach (var npc in Npcs)
                 AddToLevelGameObjects(npc.Id, npc);
 
@@ -377,60 +378,6 @@ namespace MazerPlatformer
             return _levelGameObjects;
         }
 
-
-        // Save the level information including NPcs and Player info
-        public void Save(bool shouldSave = true)
-        {
-            if (!shouldSave)
-                return;
-
-            // If we have no NPC info in our level file, save auto generated NPCs into save save file
-            if (LevelFile.Npcs.Count == 0)
-            {
-                var seenAssets = new HashSet<string>();
-                foreach (var item in Npcs.GroupBy(o => o.AnimationInfo.AssetFile))
-                {
-                    foreach (var npc in item)
-                    {
-                        if (seenAssets.Contains(item.Key)) break;
-
-                        var npcDetail = new LevelNpcDetails();
-                        npcDetail.NpcType = npc.GetNpcType() ?? Npc.NpcTypes.Unknown;
-
-                        CopyAnimationInfo(npc, npcDetail);
-
-                        LevelFile.Npcs.Add(npcDetail);
-                        seenAssets.Add(item.Key);
-                    }
-                }
-            }
-            
-            // Save Player info into level file
-            if(LevelFile?.Player == null)
-                CopyAnimationInfo(Player, LevelFile?.Player ?? new LevelPlayerDetails());
-
-            GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
-
-            /* Local funcs */
-            void CopyAnimationInfo(Character @from, LevelCharacterDetails to)
-            {
-                to.SpriteHeight = from.AnimationInfo.FrameHeight;
-                to.SpriteWidth = from.AnimationInfo.FrameWidth;
-                to.SpriteFile = from.AnimationInfo.AssetFile;
-                to.SpriteFrameCount = from.AnimationInfo.FrameCount;
-                to.SpriteFrameTime = from.AnimationInfo.FrameTime;
-                to.Components = new List<Component>();
-                foreach (var component in from.Components)
-                {
-                    if (component.Type != ComponentType.GameWorld && component.Type != ComponentType.Player)
-                        to.Components.Add(component);
-                }
-                to.MoveStep = 3;
-                return;
-            }
-        }
-
-        
 
         private void AddToLevelGameObjects(string id, GameObject gameObject)
         {
@@ -447,6 +394,69 @@ namespace MazerPlatformer
         public void UnLoad()
         {
             Player.Dispose();
+            foreach (var npc in Npcs) npc.Dispose();
+            foreach (var room in _rooms) room.Dispose();
+        }
+
+        // Save the level information including NPcs and Player info
+        public void Save(bool shouldSave = true)
+        {
+            if (!shouldSave)
+                return;
+
+            // If we have no NPC info in our level file, save auto generated NPCs into save file (Allows us to modify it later too)
+            if (LevelFile.Npcs.Count == 0)
+            {
+                var seenAssets = new HashSet<string>();
+                foreach (var item in Npcs.GroupBy(o => o.AnimationInfo.AssetFile))
+                {
+                    foreach (var npc in item)
+                    {
+                        if (seenAssets.Contains(item.Key)) break;
+
+                        var npcDetail = new LevelNpcDetails
+                        {
+                            NpcType = npc.GetNpcType() ?? Npc.NpcTypes.Unknown,
+                            Count = _npcBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
+                        };
+                        CopyAnimationInfo(npc, npcDetail);
+
+                        LevelFile.Npcs.Add(npcDetail);
+                        seenAssets.Add(item.Key);
+                    }
+                }
+            }
+            
+            // Save Player info into level file
+            if(LevelFile?.Player == null)
+                CopyAnimationInfo(Player, LevelFile?.Player ?? new LevelPlayerDetails());
+
+            GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
+
+            /* Local functions */
+            void CopyAnimationInfo(Character @from, LevelCharacterDetails to)
+            {
+                to.SpriteHeight = from.AnimationInfo.FrameHeight;
+                to.SpriteWidth = from.AnimationInfo.FrameWidth;
+                to.SpriteFile = from.AnimationInfo.AssetFile;
+                to.SpriteFrameCount = from.AnimationInfo.FrameCount;
+                to.SpriteFrameTime = from.AnimationInfo.FrameTime;
+                to.MoveStep = 3;
+                CopyComponents(@from, to);
+            }
+
+            void CopyComponents(Character @from, LevelCharacterDetails to)
+            {
+                if(to.Components == null)
+                    to.Components = new List<Component>();
+
+                foreach (var component in @from.Components)
+                {
+                    // We dont want to serialize any GameWorld References or Player references that a NPC might have
+                    if (component.Type != ComponentType.GameWorld && component.Type != ComponentType.Player)
+                        to.Components.Add(component);
+                }
+            }
         }
     }
 }

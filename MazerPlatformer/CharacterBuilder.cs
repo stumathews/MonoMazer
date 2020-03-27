@@ -13,6 +13,9 @@ namespace MazerPlatformer
 {
     public class CharacterBuilder
     {
+        public int DefaultNumPirates = 10;
+        public const int DefaultNumDodos = 5;
+        public const int DefaultNumPickups = 5;
         public ContentManager ContentManager { get; }
         public int Rows { get; }
         public int Cols { get; }
@@ -55,8 +58,11 @@ namespace MazerPlatformer
             return npc;
         }
 
-        public void GenerateDefaultNpcSet(List<Room> rooms, int numPirates, int numDodos, int numPickups, List<Npc> npcs, Level level)
+        public void GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level)
         {
+            int numPirates = DefaultNumPirates;
+            int numDodos = DefaultNumDodos;
+            int numPickups = DefaultNumPickups;
             // Add some enemy pirates
             for (int i = 0; i < numPirates; i++)
             {
