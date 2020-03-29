@@ -47,6 +47,7 @@ namespace MazerPlatformer
         private void HandleCollision(GameObject thisObject, GameObject otherObject)
         {
             NpcState = NpcStates.Colliding;
+            if (otherObject.IsPlayer()) return;
             NudgeOutOfCollision();
         }
     }
@@ -77,20 +78,18 @@ namespace MazerPlatformer
     {
         public MovingState(string name, Npc npc) : base(name, npc) {}
 
-        private SimpleGameTimeTimer spottedPlayerTimeout = new SimpleGameTimeTimer(5000);
+        private readonly SimpleGameTimeTimer _spottedPlayerTimeout = new SimpleGameTimeTimer(5000);
         public override void Enter(object owner)
         {
             base.Enter(owner);
             Npc.InfoText = "M";
-            spottedPlayerTimeout.Start();
-
-            
+            _spottedPlayerTimeout.Start();
         }
 
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
-            spottedPlayerTimeout.Update(gameTime);
+            _spottedPlayerTimeout.Update(gameTime);
             var player = (Player)Npc.FindComponentByType(Component.ComponentType.Player).Value;
             var gameWorld = (GameWorld)Npc.FindComponentByType(Component.ComponentType.GameWorld).Value;
             var npcRoom = gameWorld.GetRoomIn(Npc);
@@ -107,25 +106,28 @@ namespace MazerPlatformer
             if (Npc.BoundingSphere.Intersects(npcRoom.BoundingSphere))
             {
                 Character.CharacterDirection newDir;
-                if (sameCol && gameWorld.IsPathFromAccessible(player, Npc))
+                var changeDirection = !sameCol || !sameRow;
+                if (sameCol && gameWorld.IsPathAccessibleBetween(player, Npc))
                 {
                     newDir = myRow < playerRow ? Character.CharacterDirection.Down : Character.CharacterDirection.Up;
-                    Npc.ChangeDirection(newDir);
+                    if(changeDirection)
+                        Npc.ChangeDirection(newDir);
                     playerSeen = true;
 
                 }
-                else if (sameRow && gameWorld.IsPathFromAccessible(player, Npc))
+                else if (sameRow && gameWorld.IsPathAccessibleBetween(player, Npc))
                 {
                     newDir = myCol < playerCol ? Character.CharacterDirection.Right : Character.CharacterDirection.Left;
-                    Npc.ChangeDirection(newDir);
+                    if (changeDirection)
+                        Npc.ChangeDirection(newDir);
                     playerSeen = true;
                 }
             }
 
-            if (playerSeen && spottedPlayerTimeout.IsTimedOut())
+            if (playerSeen && _spottedPlayerTimeout.IsTimedOut())
             {
                 player.Seen();
-                spottedPlayerTimeout.Reset();
+                _spottedPlayerTimeout.Reset();
             }
             
             Npc.MoveInDirection(Npc.CurrentDirection, gameTime);

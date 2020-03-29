@@ -423,7 +423,7 @@ namespace MazerPlatformer
         public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
             _level.Player.MoveInDirection(direction, dt);
 
-        public bool IsPathFromAccessible(GameObject obj1, GameObject obj2)
+        public bool IsPathAccessibleBetween(GameObject obj1, GameObject obj2)
         {
             var obj1Row = ToRoomRow(obj1);
             var obj1Col = ToRoomColumn(obj1);
