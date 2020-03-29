@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Policy;
 using System.Xml;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
@@ -250,19 +252,21 @@ namespace MazerPlatformer
                 width: LevelFile.SpriteWidth ?? AnimationInfo.DefaultFrameWidth, 
                 height: LevelFile.SpriteHeight ?? AnimationInfo.DefaultFrameHeight, 
                 animationInfo: playerAnimation);
-
-            player.AddComponent(ComponentType.Health, 100); // start off with 100 health
-            player.AddComponent(ComponentType.Points, 0); // start off with 0 points
-
+            
+            if(LevelFile.Player.Components == null)
+                LevelFile.Player.Components = new List<Component>();
             // Load any additional components from the level file
-            if (LevelFile?.Player?.Components == null || LevelFile.Player.Components.Count <= 0) return player;
-
-            foreach (var component in LevelFile.Player.Components)
-            {
-                if (component.Type == ComponentType.Health || component.Type == ComponentType.Points)
-                    continue; // we always have these two already 
+            foreach (var component in LevelFile.Player.Components) 
                 player.AddComponent(component.Type, component.Value);
-            }
+
+            // Make sure we actually have health or points for the player
+            var playerHealth = player.FindComponentByType(ComponentType.Health);
+            var playerPoints = player.FindComponentByType(ComponentType.Points);
+
+            if(playerHealth == null)
+                player.Components.Add(new Component(ComponentType.Health, 100));
+            if(playerPoints == null)
+                player.Components.Add(new Component(ComponentType.Points, 0));
 
             return player;
         }
@@ -310,16 +314,23 @@ namespace MazerPlatformer
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Dictionary<string, GameObject> Load()
+        public Dictionary<string, GameObject> Load(int? playerHealth = null, int? playerScore = null)
         {
             if (File.Exists(LevelFileName))
             {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
+
                 // override the default col x row size if we've got it in the load file
                 Rows = LevelFile.Rows ?? Rows;
                 Cols = LevelFile.Cols ?? Cols;
                 RoomWidth = ViewPortWidth / Cols;
                 RoomHeight = ViewPortHeight / Rows;
+                if (playerHealth.HasValue && playerScore.HasValue)
+                {
+                    // If we're continuing on, then dont load the players vitals from file - use provided:
+                    Statics.SetPlayerVitalComponents(LevelFile.Player.Components, playerHealth.Value,
+                        playerScore.Value);
+                }
             }
             else
             {
@@ -393,6 +404,8 @@ namespace MazerPlatformer
 
         public void UnLoad()
         {
+            if(!File.Exists(LevelFileName))
+                Save();
             Player.Dispose();
             foreach (var npc in Npcs) npc.Dispose();
             foreach (var room in _rooms) room.Dispose();
@@ -428,8 +441,7 @@ namespace MazerPlatformer
             }
             
             // Save Player info into level file
-            if(LevelFile?.Player == null)
-                CopyAnimationInfo(Player, LevelFile?.Player ?? new LevelPlayerDetails());
+            CopyAnimationInfo(Player, LevelFile?.Player ?? new LevelPlayerDetails());
 
             GameLib.Files.Xml.SerializeObject(LevelFileName, LevelFile);
 
@@ -442,10 +454,10 @@ namespace MazerPlatformer
                 to.SpriteFrameCount = from.AnimationInfo.FrameCount;
                 to.SpriteFrameTime = from.AnimationInfo.FrameTime;
                 to.MoveStep = 3;
-                CopyComponents(@from, to);
+                CopyOrUpdateComponents(@from, to);
             }
 
-            void CopyComponents(Character @from, LevelCharacterDetails to)
+            void CopyOrUpdateComponents(Character @from, LevelCharacterDetails to)
             {
                 if(to.Components == null)
                     to.Components = new List<Component>();
@@ -454,9 +466,27 @@ namespace MazerPlatformer
                 {
                     // We dont want to serialize any GameWorld References or Player references that a NPC might have
                     if (component.Type != ComponentType.GameWorld && component.Type != ComponentType.Player)
-                        to.Components.Add(component);
+                    {
+                        var found = to.Components.SingleOrDefault(x => x.Type == component.Type);
+                        if (found == null)
+                        {
+                            to.Components.Add(component);
+                        }
+                        else
+                        {
+                            //update
+                            found.Value = component.Value;
+                        }
+                    }
                 }
             }
         }
+
+        public void ResetPlayer(int health = 100, int points = 0)
+        {
+            Player.SetPlayerVitals(health, points);
+        }
+
+        
     }
 }

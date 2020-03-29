@@ -79,7 +79,7 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal void LoadContent(int levelNumber)
+        internal void LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
         {
 
             // Prepare a new level
@@ -87,7 +87,7 @@ namespace MazerPlatformer
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
-            var levelGameObjects = _level.Load();
+            var levelGameObjects = _level.Load(overridePlayerHealth, overridePlayerScore);
             AddToGameObjects(levelGameObjects);
 
             // We use the rooms locations for collisions detection optimizations later
@@ -109,11 +109,15 @@ namespace MazerPlatformer
         public void UnloadContent()
         {
             _unloading = true;
-            _level.Save();
             _gameObjects.Clear();
             _level.UnLoad();
             _unloading = false;
             _removeWallTimer.Stop();
+        }
+
+        public void SaveLevel()
+        {
+            _level.Save();
         }
 
         /// <summary>
@@ -489,6 +493,11 @@ namespace MazerPlatformer
                 smallerCol = obj1Col;
                 greaterCol = obj2Col;
             }
+        }
+
+        public void SetPlayerStatistics(int health = 100, int points = 0)
+        {
+            _level.ResetPlayer(health, points);
         }
     }
 }

@@ -51,7 +51,19 @@ namespace MazerPlatformer
             return ParseEnum<Npc.NpcTypes>(valueString);
         }
 
+       
 
+        public static void SetPlayerVitals(this Player player,int health, int points) 
+            => SetPlayerVitalComponents(player.Components, health, points);
+
+        public static void SetPlayerVitalComponents(List<Component> components, int health, int points)
+        {
+            var compHealth = components.SingleOrDefault(o => o.Type == Component.ComponentType.Health);
+            if (compHealth != null) compHealth.Value = health;
+
+            var comPoints = components.SingleOrDefault(o => o.Type == Component.ComponentType.Points);
+            if (comPoints != null) comPoints.Value = points;
+        }
 
 
         public static bool ToggleSetting(ref bool setting)

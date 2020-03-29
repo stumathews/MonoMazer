@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using GameLib.EventDriven;
 using GameLibFramework.EventDriven;
@@ -46,7 +47,7 @@ namespace MazerPlatformer
         private const int NumRows = 10;
         private int _currentLevel = 1;       // We start with level 1
         private int _playerPoints = 0;      // UI shows player starts off with no points on the screen
-        private int _playerHealth = 100;    // UI shows player has 100 health on screen initially
+        private int _playerHealth = 0;    // UI shows player has 100 health on screen initially
         private int _playerPickups = 0;     // number of pickups the player as recieved
 
         /* In game statistics that we get from the game world, we show for testing purposes in the UI */
@@ -94,7 +95,7 @@ namespace MazerPlatformer
             _menuMusic = Content.Load<Song>("Music/bgm_menu");
 
             // Load the game world up - creates the level, characters and other aspects of the game world
-            _gameWorld.LoadContent(levelNumber: _currentLevel);
+            _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0);
         }
 
         /// <summary>
@@ -140,12 +141,21 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => _characterCollisionDirection = direction;
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            _gameWorld.OnLoadLevel += (levelDetails) => _currentSong = levelDetails.Music;
+            _gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
             _gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
             _gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
         }
 
-        
+        private void OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
+        {
+            var playerPoints = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Points)?.Value;
+            var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
+            _playerHealth = playerHealth ?? _playerHealth;
+            _playerPoints = playerPoints ?? _playerPoints;
+            _currentSong = levelDetails.Music;
+        }
+
+
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
         /// game-specific content.
@@ -206,13 +216,13 @@ namespace MazerPlatformer
         }
 
 
-        private void ProgressToLevel(int level) => StartLevel(level, isFreshStart: false /*Retains players score and health*/);
+        private void ProgressToLevel(int level) => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
 
-        private void StartLevel(int level, bool isFreshStart = true)
+        private void StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
         {
             _playerDied = false;
             _gameWorld.UnloadContent();
-            _gameWorld.LoadContent(levelNumber: level);
+            _gameWorld.LoadContent(levelNumber: level, overridePlayerHealth, overridePlayerScore);
             _gameWorld.Initialize(); // We need to reinitialize things once we've reload content
             StartOrContinueLevel(isFreshStart: isFreshStart);
         }
@@ -236,7 +246,8 @@ namespace MazerPlatformer
             _gameWorld.StartOrResumeLevelMusic();
 
             // If we're continuing then we want to keep whatever the player's current health/points are, otherwise reset them
-            if (!isFreshStart) return;
+            if (!isFreshStart)
+                return;
             ResetPlayerStatistics();
         }
 
@@ -245,6 +256,7 @@ namespace MazerPlatformer
             _playerHealth = 100;
             _playerPoints = 0;
             _playerPickups = 0;
+            _gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints);
         }
 
         private void ShowGameOverScreen()
@@ -271,7 +283,9 @@ namespace MazerPlatformer
                 var diagnostics = new Button("Diagnostics On/Off");
                 var controlsButton = new Button("Controls", ButtonSkin.Fancy);
                 var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-                var startGameButton = new Button("Start Game");
+                var startGameButton = new Button("New");
+                var saveGameButton = new Button("Save");
+                var loadGameButton = new Button("Load");
 
                 HideMenu();
 
@@ -280,6 +294,8 @@ namespace MazerPlatformer
                 _mainMenuPanel.AddChild(new HorizontalLine());
                 _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
                 _mainMenuPanel.AddChild(startGameButton);
+                _mainMenuPanel.AddChild(saveGameButton);
+                _mainMenuPanel.AddChild(loadGameButton);
                 _mainMenuPanel.AddChild(controlsButton);
                 _mainMenuPanel.AddChild(diagnostics);
                 _mainMenuPanel.AddChild(quitButton);
@@ -289,6 +305,12 @@ namespace MazerPlatformer
                     _currentLevel = 1;
                     StartLevel(_currentLevel);
                 };
+                saveGameButton.OnClick += (e) =>
+                {
+                    _gameWorld.SaveLevel();
+                    StartOrContinueLevel(isFreshStart: false);
+                };
+                loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
                 diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
                 quitButton.OnClick += (Entity entity) => QuitGame();
                 controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
