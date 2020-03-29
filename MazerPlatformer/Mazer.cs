@@ -214,7 +214,6 @@ namespace MazerPlatformer
             _gameWorld.UnloadContent();
             _gameWorld.LoadContent(levelNumber: level);
             _gameWorld.Initialize(); // We need to reinitialize things once we've reload content
-
             StartOrContinueLevel(isFreshStart: isFreshStart);
         }
 
@@ -441,8 +440,17 @@ namespace MazerPlatformer
 
         private void OnEscapeKeyReleased(GameTime time)
         {
-            _currentGameState = GameStates.Paused;
-            ShowMenu();
+            if (_currentGameState == GameStates.Playing)
+            {
+                _currentGameState = GameStates.Paused;
+                ShowMenu();
+            }
+            else
+            {
+                // resume
+                HideMenu();
+                StartOrContinueLevel(isFreshStart: false);
+            }
         }
 
         private void OnGameWorldOnOnPlayerDied(List<Component> components)
