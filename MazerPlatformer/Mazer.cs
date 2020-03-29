@@ -114,7 +114,7 @@ namespace MazerPlatformer
             _gameWorld.Initialize();
 
             _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-            _gameCommands.AddKeyUpCommand(Keys.P, (time) => _currentGameState = GameStates.Paused);
+            _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
             _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
             _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
             _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
