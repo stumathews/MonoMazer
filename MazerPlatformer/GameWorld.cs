@@ -39,7 +39,7 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnPlayerComponentChanged;
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event Level.LevelLoadInfo OnLoadLevel;
-        public event Player.DealthInfo OnPlayerDied;
+        public event Player.DeathInfo OnPlayerDied;
         public event LevelClearedInfo OnLevelCleared;
 
         public delegate void LevelClearedInfo(Level level);
@@ -130,13 +130,7 @@ namespace MazerPlatformer
             _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
             _level.Player.OnCollision += PlayerOnOnCollision;
-            _level.Player.OnDeath += components =>
-            {
-                _level.PlayLoseSound();
-                _playerDied = true;
-                OnPlayerDied?.Invoke(components);
-            };
-            _level.Player.PlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
+            _level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
             
@@ -152,7 +146,7 @@ namespace MazerPlatformer
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
         }
-
+        
         private void PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
         {
 
@@ -172,6 +166,8 @@ namespace MazerPlatformer
 
                 if (newHealth <= 0)
                 {
+                    _level.PlayLoseSound();
+                    _playerDied = true;
                     OnPlayerDied?.Invoke(thePlayer.Components);
                 }
             }
