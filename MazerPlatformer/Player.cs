@@ -47,30 +47,6 @@ namespace MazerPlatformer
         {
             NudgeOutOfCollision();
 
-            // Change my health component to be affected by the hit points of the other object
-            if (otherObject.Type != GameObjectType.Npc) return;
-
-            var npcTypeComponent = otherObject.FindComponentByType(ComponentType.NpcType);
-            var npcType = (Npc.NpcTypes)npcTypeComponent.Value;
-
-            if (npcType == Npc.NpcTypes.Enemy)
-            {
-                var hitPoints = otherObject.FindComponentByType(ComponentType.HitPoints).Value;
-                var myHealth = FindComponentByType(ComponentType.Health).Value;
-                var newHealth = (int) myHealth - (int) hitPoints;
-                UpdateComponentByType(ComponentType.Health, newHealth);
-
-                if (newHealth < 0)
-                    OnDeath?.Invoke(Components);
-            }
-
-            if (npcType == Npc.NpcTypes.Pickup)
-            {
-                var pickupPoints = (int) otherObject.FindComponentByType(ComponentType.Points).Value;
-                var myPoints = (int)FindComponentByType(ComponentType.Points).Value;
-                var levelPoints = myPoints + pickupPoints;
-                UpdateComponentByType(ComponentType.Points, levelPoints);
-            }
         }
 
         public void Seen() => PlayerSpotted?.Invoke(this, null);

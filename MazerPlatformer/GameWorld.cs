@@ -129,6 +129,7 @@ namespace MazerPlatformer
             _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
             _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
             _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
+            _level.Player.OnCollision += PlayerOnOnCollision;
             _level.Player.OnDeath += components =>
             {
                 _level.PlayLoseSound();
@@ -152,7 +153,39 @@ namespace MazerPlatformer
             }
         }
 
-        
+        private void PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
+        {
+
+            // Change my health component to be affected by the hit points of the other object
+            if (otherObject.Type != GameObjectType.Npc) return;
+
+            var npcTypeComponent = otherObject.FindComponentByType(Component.ComponentType.NpcType);
+            var npcType = (Npc.NpcTypes)npcTypeComponent.Value;
+
+            if (npcType == Npc.NpcTypes.Enemy)
+            {
+                // deal damage
+                var hitPoints = otherObject.FindComponentByType(Component.ComponentType.HitPoints).Value;
+                var myHealth = thePlayer.FindComponentByType(Component.ComponentType.Health).Value;
+                var newHealth = (int)myHealth - (int)hitPoints;
+                thePlayer.UpdateComponentByType(Component.ComponentType.Health, newHealth);
+
+                if (newHealth <= 0)
+                {
+                    OnPlayerDied?.Invoke(thePlayer.Components);
+                }
+            }
+
+            if (npcType == Npc.NpcTypes.Pickup)
+            {
+                // pickup points
+                var pickupPoints = (int)otherObject.FindComponentByType(Component.ComponentType.Points).Value;
+                var myPoints = (int)thePlayer.FindComponentByType(Component.ComponentType.Points).Value;
+                var levelPoints = myPoints + pickupPoints;
+                thePlayer.UpdateComponentByType(Component.ComponentType.Points, levelPoints);
+            }
+        }
+
 
         /// <summary>
         /// We ask each game object within the game world to draw itself
