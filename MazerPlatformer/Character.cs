@@ -108,8 +108,6 @@ namespace MazerPlatformer
             SetCharacterDirection(direction);
         }
 
-        
-
         private void SetState(CharacterStates state)
         {
             CurrentState = state;

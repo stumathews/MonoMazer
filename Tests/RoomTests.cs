@@ -27,13 +27,4 @@ namespace Tests
             }
         }
     }
-
-    [TestClass]
-    public class GameWorldTests
-    {
-        [TestMethod]
-        public void TestMethod1()
-        {
-        }
-    }
 }

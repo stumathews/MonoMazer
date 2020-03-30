@@ -23,6 +23,7 @@ namespace MazerPlatformer
 
     public class Level
     {
+        /* These classes represent the Level File contents that is used to define each level */
         public class LevelDetails : LevelCharacterDetails
         {
             public int? Rows { get; set; }

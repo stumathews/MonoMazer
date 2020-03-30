@@ -47,7 +47,7 @@ namespace MazerPlatformer
         private const int NumRows = 10;
         private int _currentLevel = 1;       // We start with level 1
         private int _playerPoints = 0;      // UI shows player starts off with no points on the screen
-        private int _playerHealth = 0;    // UI shows player has 100 health on screen initially
+        private int _playerHealth = 0;    // UI shows player has 100 health on screen initially - this can be loaded from a level file later
         private int _playerPickups = 0;     // number of pickups the player as recieved
 
         /* In game statistics that we get from the game world, we show for testing purposes in the UI */
@@ -64,7 +64,6 @@ namespace MazerPlatformer
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
-        private string _currentSong;
         private bool _playerDied = false;
         
         public Mazer()
@@ -117,7 +116,6 @@ namespace MazerPlatformer
             _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
             _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
             _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-            _gameCommands.AddKeyUpCommand(Keys.D9, (time) => StartLevel(9)); //debug level
             _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
             _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
             _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
@@ -152,7 +150,6 @@ namespace MazerPlatformer
             var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
             _playerHealth = playerHealth ?? _playerHealth;
             _playerPoints = playerPoints ?? _playerPoints;
-            _currentSong = levelDetails.Music;
         }
 
 
@@ -216,8 +213,16 @@ namespace MazerPlatformer
         }
 
 
-        private void ProgressToLevel(int level) => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
+        private void ProgressToLevel(int level) 
+            => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
 
+        /// <summary>
+        /// Start a new levl
+        /// </summary>
+        /// <param name="level"></param>
+        /// <param name="isFreshStart"></param>
+        /// <param name="overridePlayerHealth">player health from previous level, overrides any within level file</param>
+        /// <param name="overridePlayerScore">player score from previous level, overrides any within level file</param>
         private void StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
         {
             _playerDied = false;
@@ -256,6 +261,8 @@ namespace MazerPlatformer
             _playerHealth = 100;
             _playerPoints = 0;
             _playerPickups = 0;
+
+            // Inform the game world that we're intending to reset the players state(vitals) 
             _gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints);
         }
 
@@ -330,8 +337,6 @@ namespace MazerPlatformer
                     "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
                     "{{BOLD}}Good Luck!"));
                 _controlsPanel.AddChild(closeControlsPanelButton);
-
-
                 closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
             }
 
@@ -342,9 +347,7 @@ namespace MazerPlatformer
         }
 
         private void QuitGame()
-        {
-            Exit();
-        }
+            => Exit();
 
         private void SetupGameOverMenu()
         {
@@ -411,7 +414,6 @@ namespace MazerPlatformer
             // Ready the state machine and put it into the default state of 'idle' state            
             _gameStateMachine.Initialise(_pauseState.Name);
         }
-
 
         /// <summary>
         /// Draw current level, score, number of collisions etc
@@ -530,6 +532,5 @@ namespace MazerPlatformer
 
             _numGameCollisionsEvents++;
         }
-
     }
 }
