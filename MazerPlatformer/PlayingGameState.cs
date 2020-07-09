@@ -10,7 +10,7 @@ namespace MazerPlatformer
     public class PlayingGameState : State
     {
         private readonly Mazer _game;
-        private readonly CommandManager _playingCommands = CommandManager.GetNewInstance();
+        private readonly CommandManager _playingCommands = new CommandManager();
         public PlayingGameState(Mazer game) : base("PlayingGame") => _game = game;
 
         public override void Enter(object owner)

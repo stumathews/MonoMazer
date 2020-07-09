@@ -73,8 +73,8 @@ namespace MazerPlatformer
             graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
             graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
             graphics.ApplyChanges();
-            
-            _gameCommands = CommandManager.GetNewInstance();
+
+            _gameCommands = new CommandManager();
             _gameStateMachine = new FSM(this);
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
