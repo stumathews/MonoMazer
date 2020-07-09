@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using LanguageExt;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
@@ -12,7 +13,7 @@ namespace MazerPlatformer
         /// Called each frame to draw itself
         /// </summary>
         /// <param name="spriteBatch"></param>
-        void Draw(SpriteBatch spriteBatch);
+        Either<IFailure, Unit> Draw(SpriteBatch spriteBatch);
 
         /// <summary>
         /// Called each frame to update itself

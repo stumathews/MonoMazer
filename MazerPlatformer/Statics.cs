@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LanguageExt;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
@@ -31,9 +33,11 @@ namespace MazerPlatformer
         public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
         {
             if (gameObject.Type != GameObject.GameObjectType.Npc) return false;
-            var component = gameObject.FindComponentByType(Component.ComponentType.NpcType);
-            if (component?.Value == null) return false;
-            return (Npc.NpcTypes)component.Value == type;
+            return gameObject.FindComponentByType(Component.ComponentType.NpcType)
+                .Match(
+                    Some: component => (Npc.NpcTypes) component.Value == type, 
+                    None: () => false);
+
         }
 
         public static T GetRandomEnumValue<T>()
@@ -42,17 +46,20 @@ namespace MazerPlatformer
             return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
 
-        public static Npc.NpcTypes? GetNpcType(this GameObject npc)
+        public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc)
         {
-            if (npc.Type != GameObject.GameObjectType.Npc) return null;
-            var type = npc.FindComponentByType(Component.ComponentType.NpcType);
-            var valueString = type?.Value.ToString();
-            if (string.IsNullOrEmpty(valueString)) return null;
-            return ParseEnum<Npc.NpcTypes>(valueString);
+            if (npc.Type != GameObject.GameObjectType.Npc) 
+                return Option<Npc.NpcTypes>.None;
+
+            return  npc.FindComponentByType(Component.ComponentType.NpcType)
+                .Bind(component => string.IsNullOrEmpty(component.Value.ToString())
+                    ? Option<string>.None
+                    : component.Value.ToString())
+                .Map(ParseEnum<Npc.NpcTypes>);
         }
 
-       
-
+        public static IFailure AsFailure(this Exception e) => new ExceptionFailure(e);
+        
         public static void SetPlayerVitals(this Player player,int health, int points) 
             => SetPlayerVitalComponents(player.Components, health, points);
 
@@ -65,6 +72,58 @@ namespace MazerPlatformer
             if (comPoints != null) comPoints.Value = points;
         }
 
+        /// <summary>
+        /// Make Either<IFailure, T> in right state
+        /// </summary>
+        public static Either<IFailure, T> ToSuccess<T>(this T value)
+            => Prelude.Right<IFailure, T>(value);
+
+        // Make an IAmFailure to a Either<IAmFailure, T> ie convert a failure to a either that represents that failure ie an either in the left state
+        public static Either<IFailure, T> ToFailure<T>(this IFailure failure)
+            => Prelude.Left<IFailure, T>(failure);
+
+        public static Either<IFailure, Unit> Ensure(Action action) =>
+            action.TryThis();
+        public static Either<IFailure, T> EnsureWithReturn<T>(Func<T> action) => action.TryThis();
+
+        public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action) 
+            => either.IfLeft(action);
+
+        public static void IfFailedAnd<R>(this Either<IFailure, R> either, bool condition, Action<IFailure> action)
+        {
+            if(condition)
+                either.IfFailed(action);
+        }
+
+        public static Option<bool> ToOption(this bool thing)
+        {
+            return thing ? Option<bool>.Some(true) : Option<bool>.None;
+        }
+
+        public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
+            either.IfLeft(failure => Console.WriteLine($"Draw failed because '{failure.Reason}'"));
+
+        /// <summary>
+        /// Captures exceptions and returns a failure
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> TryThis(this Action action)
+        {
+            return new Try<Unit>(() => { action(); return new Unit(); })
+                            .Match(unit => unit.ToSuccess(), exception => new ExternalLibraryFailure(exception));
+        }
+
+        public static Either<IFailure, T> TryThis<T>(this Func<T> action)
+            => new Try<T>(() => action())
+                .Match(
+                    unit => unit == null 
+                        ? new NotTypeException(typeof(T)) 
+                        : unit.ToSuccess(), 
+                    exception => new ExternalLibraryFailure(exception));
+
+        public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either) where TLeft : IFailure
+            => either.IfLeft(failure => throw new UnexpectedFailureException(failure));
 
         public static bool ToggleSetting(ref bool setting)
         {
@@ -76,6 +135,16 @@ namespace MazerPlatformer
             if (condition) action?.Invoke();
         }
 
+        public static Either<IFailure, Unit> DoIff(bool condition, Action action)
+        {
+            return condition ? Nothing.ToSuccess() : new ConditionNotSatisfied();
+        }
+        public static Either<IFailure, T> DoIfReturn<T>(bool condition, Func<T> action)
+        {
+            return condition ? (Either<IFailure, T>) action.Invoke() : new ConditionNotSatisfied();
+        }
+
+        public static Unit Nothing => new Unit(); 
 
         public static List<T> IfEither<T>(T one, T two, Func<T, bool> matches, Action<T> then)
         {
@@ -84,6 +153,16 @@ namespace MazerPlatformer
             if (found.Count > 0) then(found.First());
             return found;
         }
+    }
+
+    public class NotTypeException : IFailure
+    {
+        public NotTypeException(Type type)
+        {
+            Reason = $"Function did not return expected type of '{type}'";
+        }
+
+        public string Reason { get; set; }
     }
 
     public static class Diganostics
@@ -102,5 +181,6 @@ namespace MazerPlatformer
         public static bool DrawPlayerRectangle = false;
         public static bool DrawObjectInfoText = false;
         public static bool ShowPlayerStats = false;
+        public static bool LogDiagnostics = false;
     }
 }

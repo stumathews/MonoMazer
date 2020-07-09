@@ -428,15 +428,19 @@ namespace MazerPlatformer
                     {
                         if (seenAssets.Contains(item.Key)) break;
 
-                        var npcDetail = new LevelNpcDetails
+                        npc.GetNpcType().Iter(type =>
                         {
-                            NpcType = npc.GetNpcType() ?? Npc.NpcTypes.Unknown,
-                            Count = _npcBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
-                        };
-                        CopyAnimationInfo(npc, npcDetail);
+                            var details = new LevelNpcDetails
+                            {
+                                NpcType = type,
+                                Count = _npcBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
+                            };
+                            CopyAnimationInfo(npc, details);
 
-                        LevelFile.Npcs.Add(npcDetail);
-                        seenAssets.Add(item.Key);
+                            LevelFile.Npcs.Add(details);
+                            seenAssets.Add(item.Key);
+                        });
+
                     }
                 }
             }

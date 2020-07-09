@@ -5,8 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Assets;
 using C3.XNA;
+using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -96,13 +98,14 @@ namespace MazerPlatformer
             _wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
         }
 
-        public override void Draw(SpriteBatch spriteBatch)
+        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
         {
             base.Draw(spriteBatch);
             DrawSide(Side.Top);
             DrawSide(Side.Right);
             DrawSide(Side.Bottom);
             DrawSide(Side.Left);
+            return Nothing;
         }
 
         private void DrawSide(Side side)

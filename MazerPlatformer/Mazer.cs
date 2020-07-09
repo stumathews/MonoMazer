@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using GeonBit.UI;
 using GeonBit.UI.Entities;
+using LanguageExt;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
 using static MazerPlatformer.Statics;
@@ -184,20 +185,18 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            base.Draw(gameTime);
-
-            GraphicsDevice.Clear( _currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver);
-            _spriteBatch.Begin();
-
-            _gameWorld.Draw(_spriteBatch);
-            DrawPlayerStats(_spriteBatch);
-            DrawInGameStats(gameTime);
-
-            _spriteBatch.End();
-            UserInterface.Active.Draw(_spriteBatch);
+            Ensure(() => base.Draw(gameTime))
+                .Bind(unit => Ensure(() => GraphicsDevice.Clear(_currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver)))
+                .Bind(unit => Ensure(() => _spriteBatch.Begin()))
+                .Bind(unit => _gameWorld.Draw(_spriteBatch))
+                .Bind(unit => DrawPlayerStats(_spriteBatch))
+                .Bind(unit => DrawInGameStats(gameTime))
+                .Bind(unit => Ensure(() => _spriteBatch.End()))
+                .Bind(unit => Ensure(() => UserInterface.Active.Draw(_spriteBatch)))
+            .ThrowIfFailed();
         }
 
-        private void DrawPlayerStats(SpriteBatch spriteBatch)
+        private Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch)
         {
             var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
             _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
@@ -210,6 +209,7 @@ namespace MazerPlatformer
             _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
                 Color.White);
+            return new Unit();
         }
 
 
@@ -419,9 +419,9 @@ namespace MazerPlatformer
         /// Draw current level, score, number of collisions etc
         /// </summary>
         /// <param name="gameTime"></param>
-        private void DrawInGameStats(GameTime gameTime)
+        private Either<IFailure, Unit> DrawInGameStats(GameTime gameTime)
         {
-            if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats) return;
+            if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats) return Nothing;
 
             var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
             // Consider making GameObjectCount private and getting the info via an event instead
@@ -450,6 +450,8 @@ namespace MazerPlatformer
             _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
                     leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
                 Color.White);
+
+            return Nothing;
         }
 
         private static void EnableAllDiagnostics()
@@ -525,12 +527,13 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="object1">object involved in collision</param>
         /// <param name="object2">other object involved in collisions</param>
-        private void _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
+        private Either<IFailure, Unit> _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
         {
             if (object1.Type == GameObject.GameObjectType.Npc)
                 _numCollisionsWithPlayerAndNpCs++;
 
             _numGameCollisionsEvents++;
+            return Nothing;
         }
     }
 }

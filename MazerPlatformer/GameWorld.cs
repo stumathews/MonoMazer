@@ -10,6 +10,7 @@ using System.Net;
 using System.Runtime.Remoting.Messaging;
 using System.Timers;
 using GameLib.EventDriven;
+using LanguageExt;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Statics;
 
@@ -151,39 +152,53 @@ namespace MazerPlatformer
             }
         }
         
-        private void PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
+        private Either<IFailure, Unit> PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
         {
 
             // Change my health component to be affected by the hit points of the other object
-            if (otherObject.Type != GameObjectType.Npc) return;
+            if (otherObject.Type != GameObjectType.Npc) return Nothing;
 
-            var npcTypeComponent = otherObject.FindComponentByType(Component.ComponentType.NpcType);
-            var npcType = (Npc.NpcTypes)npcTypeComponent.Value;
-
-            if (npcType == Npc.NpcTypes.Enemy)
-            {
-                // deal damage
-                var hitPoints = otherObject.FindComponentByType(Component.ComponentType.HitPoints).Value;
-                var myHealth = thePlayer.FindComponentByType(Component.ComponentType.Health).Value;
-                var newHealth = (int)myHealth - (int)hitPoints;
-                thePlayer.UpdateComponentByType(Component.ComponentType.Health, newHealth);
-
-                if (newHealth <= 0)
+            return otherObject.FindComponentByType(Component.ComponentType.NpcType)
+                .Map(component => (Npc.NpcTypes) component.Value)
+                .Iter(type =>
                 {
-                    _level.PlayLoseSound();
-                    _playerDied = true;
-                    OnPlayerDied?.Invoke(thePlayer.Components);
-                }
-            }
+                    if (type == Npc.NpcTypes.Enemy)
+                    {
+                        // deal damage
+                        var newHealth =
+                            from hitPointsComponent in otherObject.FindComponentByType(Component.ComponentType.HitPoints)
+                            from healthComponent in thePlayer.FindComponentByType(Component.ComponentType.Health)
+                            let myHealth = (int) healthComponent.Value
+                            let hitPoints = (int) hitPointsComponent.Value
+                            select myHealth - hitPoints;
 
-            if (npcType == Npc.NpcTypes.Pickup)
-            {
-                // pickup points
-                var pickupPoints = (int)otherObject.FindComponentByType(Component.ComponentType.Points).Value;
-                var myPoints = (int)thePlayer.FindComponentByType(Component.ComponentType.Points).Value;
-                var levelPoints = myPoints + pickupPoints;
-                thePlayer.UpdateComponentByType(Component.ComponentType.Points, levelPoints);
-            }
+                        newHealth.Iter(health =>
+                        {
+                            if (health <= 0)
+                            {
+                                _level.PlayLoseSound();
+                                _playerDied = true;
+                                OnPlayerDied?.Invoke(thePlayer.Components);
+                            }
+
+                            thePlayer.UpdateComponentByType(Component.ComponentType.Health, health);
+                        });
+                    }
+
+                    if (type == Npc.NpcTypes.Pickup)
+                    {
+                        // pickup points
+                        var levelPoints = 
+                            from pickupPointsComponent in otherObject.FindComponentByType(Component.ComponentType.Points)
+                            from myPointsComponent in thePlayer.FindComponentByType(Component.ComponentType.Points)
+                            let myPoints = (int) myPointsComponent.Value
+                            let pickupPoints = (int) pickupPointsComponent.Value
+                            select myPoints + pickupPoints;
+
+                        levelPoints.Iter(points =>
+                            thePlayer.UpdateComponentByType(Component.ComponentType.Points, points));
+                    }
+                });
         }
 
 
@@ -191,14 +206,17 @@ namespace MazerPlatformer
         /// We ask each game object within the game world to draw itself
         /// </summary>
         /// <param name="spriteBatch"></param>
-        public void Draw(SpriteBatch spriteBatch)
+        public Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
         {
-            if (_unloading) return;
+            if (_unloading) return Nothing;
+
             foreach (var gameObject in _gameObjects.Values.Where(obj => obj.Active))
             {
-                if (gameObject.Active)
-                    gameObject.Draw(spriteBatch);
+                gameObject.Draw(spriteBatch)
+                    .IfFailedLogFailure();
             }
+
+            return Nothing;
         }
 
         /// <summary>
@@ -398,9 +416,9 @@ namespace MazerPlatformer
         /// <param name="obj1"></param>
         /// <param name="obj2"></param>
         /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
-        private void OnObjectCollision(GameObject obj1, GameObject obj2)
+        private Either<IFailure, Unit> OnObjectCollision(GameObject obj1, GameObject obj2)
         {
-            if (_unloading) return;
+            if (_unloading) return Nothing;
             
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
@@ -411,6 +429,8 @@ namespace MazerPlatformer
             IfEither(obj1, obj2, obj => obj.IsPlayer(), then: (player) 
                 => IfEither(obj1, obj2, o => o.IsNpcType(Npc.NpcTypes.Pickup), 
                     then: (pickup) => _level.PlaySound1()));
+
+            return Nothing; // TODO
         }
 
         // What to do specifically when a room registers a collision

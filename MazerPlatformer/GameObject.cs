@@ -4,6 +4,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using C3.XNA;
 using GameLibFramework.FSM;
+using LanguageExt;
+using LanguageExt.SomeHelp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using static System.String;
@@ -61,7 +63,7 @@ namespace MazerPlatformer
         public event CollisionArgs OnCollision;
         
         public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
-        public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
+        public delegate Either<IFailure, Unit> CollisionArgs(GameObject thisObject, GameObject otherObject);
 
         public delegate void DisposingInfo(GameObject theObject);
 
@@ -146,8 +148,11 @@ namespace MazerPlatformer
         /// Find a component, assuming there is only one of this type otherwise throws
         /// </summary>
         /// <remarks>This should throw an exception if more than one of the same component type is found ie programmer error</remarks>
-        public Component FindComponentByType(Component.ComponentType type) => Components.SingleOrDefault(o => o.Type == type);
-        
+        public Option<Component> FindComponentByType(Component.ComponentType type)
+            => EnsureWithReturn(() => Components.SingleOrDefault(o => o.Type == type))
+                .Map(component => component ?? Option<Component>.None)
+                .IfLeft(Option<Component>.None);
+
         /// <summary>
         /// Updates by type, throws if more than one type of this component exists in the game object
         /// </summary>
@@ -177,38 +182,41 @@ namespace MazerPlatformer
         #region Diganostics
 
         // Draw the centre point of the object
-        protected void DrawCentrePoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawCentrePoint, ()=> spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f));
-        
+        protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch) => DoIff(Diganostics.DrawCentrePoint, () => Ensure(() => spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f)));
+
         // Draw the max point (lower right point)
-        protected void DrawMaxPoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawMaxPoint, ()=> spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f));
+        protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) => DoIff(Diganostics.DrawMaxPoint, () => Ensure(() => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f)));
 
         // Draw the bounding box
-        protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, ()=> spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f));
+        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) => DoIff(Diganostics.DrawGameObjectBounds, () => Ensure(() => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f)));
 
         // Draw the bounding sphere
-        protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua));
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => DoIff(Diganostics.DrawGameObjectBounds, () => Ensure(() => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua)));
 
         // Draw all the diagnostics together
-        protected void DrawObjectDiagnostics(SpriteBatch spriteBatch)
-        {
-            DrawCentrePoint(spriteBatch);
-            DrawMaxPoint(spriteBatch);
-            DrawGameObjectBoundingBox(spriteBatch);
-            DrawGameObjectBoundingSphere(spriteBatch);
-        }
+        protected Either<IFailure, Unit> DrawObjectDiagnostics(SpriteBatch spriteBatch) =>
+            DrawCentrePoint(spriteBatch)
+                .Bind(unit => DrawMaxPoint(spriteBatch))
+                .Bind(unit => DrawGameObjectBoundingBox(spriteBatch))
+                .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatch));
 
         // Specific game objects need to initialize
-        public virtual void Draw(SpriteBatch spriteBatch)
+        public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
         {
             // All game objects can ask to draw some text over it if it wants
             // dependency on Mazer for game font ok.
-            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
+
+            DoIfReturn(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
             {
-                spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
-                spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
+                return Ensure(() =>
+                {
+                    spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
+                    spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty,
+                        new Vector2(X + 10, Y + Height), Color.White);
+                });
             });
 
-            DrawObjectDiagnostics(spriteBatch);
+            return Ensure(()=> DrawObjectDiagnostics(spriteBatch));
         }
 
         // Specific game objects need to initialize themselves

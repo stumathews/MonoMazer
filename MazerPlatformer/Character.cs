@@ -2,8 +2,11 @@
 using GameLib.EventDriven;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -77,13 +80,11 @@ namespace MazerPlatformer
 
         public void SetAsIdle() => SetState(CharacterStates.Idle);
 
-        private void HandleCharacterCollision(GameObject object1, GameObject object2)
-        {
-            SetCollisionDirection(CurrentDirection);
-        }
+        private Either<IFailure, Unit> HandleCharacterCollision(GameObject object1, GameObject object2) 
+            => SetCollisionDirection(CurrentDirection);
 
         // Move ie change the character's position
-        public void MoveInDirection(CharacterDirection direction, GameTime dt)
+        public Either<IFailure, Unit> MoveInDirection(CharacterDirection direction, GameTime dt)
         {
             switch (direction)
             {
@@ -103,9 +104,9 @@ namespace MazerPlatformer
                     X += MoveByStep();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+                    return new InvalidDirectionFailure(direction);
             }
-            SetCharacterDirection(direction);
+            return SetCharacterDirection(direction);
         }
 
         private void SetState(CharacterStates state)
@@ -114,19 +115,19 @@ namespace MazerPlatformer
             OnStateChanged?.Invoke(state);
         }
 
-        private void SetCharacterDirection(CharacterDirection direction)
-        {
-            CurrentDirection = direction;
+        private Either<IFailure, Unit> SetCharacterDirection(CharacterDirection direction) 
+            => SetAnimationDirection(direction)
+                .Iter(unit => 
+            {
+                CurrentDirection = direction;
+                OnDirectionChanged?.Invoke(direction);
+                SetState(CharacterStates.Moving);
 
-            SetAnimationDirection(direction);
-            OnDirectionChanged?.Invoke(direction);
-            SetState(CharacterStates.Moving);
+                Animation.Idle = false;
+                CanMove = true;
+            });
 
-            Animation.Idle = false;
-            CanMove = true;
-        }
-
-        private void SetAnimationDirection(CharacterDirection direction)
+        private Either<IFailure, Unit> SetAnimationDirection(CharacterDirection direction)
         {
             switch (direction)
             {
@@ -143,8 +144,10 @@ namespace MazerPlatformer
                     Animation.CurrentAnimationDirection = Animation.AnimationDirection.Left;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+                    return new InvalidDirectionFailure(direction);
             }
+
+            return Nothing;
         }
 
         // I can do unique things when my state changes
@@ -153,15 +156,16 @@ namespace MazerPlatformer
             if (state == CharacterStates.Idle) Animation.Idle = true;
         }
 
-        private void SetCollisionDirection(CharacterDirection direction)
+        private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction)
         {
             LastCollisionDirection = direction;
             OnCollisionDirectionChanged?.Invoke(direction);
+            return Nothing;
         }
 
         private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? _moveStep;
 
-        protected void NudgeOutOfCollision()
+        protected Either<IFailure, Unit> NudgeOutOfCollision()
         {
             CanMove = false;
             // Artificially nudge the player out of the collision
@@ -180,8 +184,10 @@ namespace MazerPlatformer
                     X -= 1;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return new InvalidDirectionFailure(LastCollisionDirection);
             }
+
+            return Nothing;
         }
 
         public void SwapDirection()
@@ -208,11 +214,10 @@ namespace MazerPlatformer
         public void ChangeDirection(CharacterDirection dir) => SetCharacterDirection(dir);
 
 
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            base.Draw(spriteBatch);
-            Animation.Draw(spriteBatch);
-        }
+        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
+            => base.Draw(spriteBatch)
+                .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
+
 
         public override void Update(GameTime gameTime)
         {

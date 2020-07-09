@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MazerPlatformer", "MazerPla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLibFramework", "..\GameLib\GameLibFramework\GameLibFramework.csproj", "{A5656886-5F78-40B2-97EF-D6C22BD8FF23}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
