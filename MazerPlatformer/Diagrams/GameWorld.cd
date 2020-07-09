@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MazerPlatformer.GameWorld">
+    <Position X="3.75" Y="3.25" Width="2.75" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Delegate Name="MazerPlatformer.GameWorld.SongChanged" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameWorld.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.GameWorld.GameObjectAddedOrRemoved" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameWorld.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.GameWorld.LevelClearedInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameWorld.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <AssociationLine Name="_level" Type="MazerPlatformer.Level">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="6.645" Y="2.204" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAQgMAAJAEiAK8AAIAIAAYgEDEAASghGQEBACAAACBU=</HashCode>
+      <FileName>GameWorld.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_level" />
+    </ShowAsAssociation>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="MazerPlatformer.Player">
+    <Position X="7" Y="3.25" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Delegate Name="MazerPlatformer.Player.DealthInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Player.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAAQAAAAAAAAAwAAAAAAAIAAAAAAAAAAAAAIAAAAAAA=</HashCode>
+      <FileName>Player.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MazerPlatformer.Level">
+    <Position X="3.75" Y="8" Width="2.75" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+      <Compartment Name="Properties" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Class Name="MazerPlatformer.Level.LevelDetails" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Level.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Class>
+      <Delegate Name="MazerPlatformer.Level.LevelLoadInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Level.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.Level.GameObjectAddedOrRemoved" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Level.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>ABAggYCAAJAAAEAAABSAAIACAAAgCghAYABQCQAAiAE=</HashCode>
+      <FileName>Level.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MazerPlatformer.Mazer" Collapsed="true">
+    <Position X="1.75" Y="4" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="_gameWorld" Type="MazerPlatformer.GameWorld">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="3.021" Y="2.15" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>BEQAEyQEAASEA0gIAgIIAIDgAAGACWgARKEQACjBCKQ=</HashCode>
+      <FileName>Mazer.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_gameWorld" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MazerPlatformer.Character">
+    <Position X="9" Y="3.25" Width="2.25" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+      <Compartment Name="Properties" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Enum Name="MazerPlatformer.Character.CharacterStates" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Character.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+      <Enum Name="MazerPlatformer.Character.CharacterDirection" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Character.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+      <Delegate Name="MazerPlatformer.Character.DirectionChanged" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Character.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.Character.CollisionDirectionChanged" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Character.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.Character.StateChanged" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Character.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>QAQQBCAABSAACwACgAAAACAEAAAAACIAAAWgAAAAECA=</HashCode>
+      <FileName>Character.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MazerPlatformer.GameObject">
+    <Position X="11.5" Y="3.25" Width="2.75" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <NestedTypes>
+      <Enum Name="MazerPlatformer.GameObject.GameObjectType" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameObject.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+      <Delegate Name="MazerPlatformer.GameObject.GameObjectComponentChanged" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameObject.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.GameObject.CollisionArgs" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameObject.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+      <Delegate Name="MazerPlatformer.GameObject.DisposingInfo" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>GameObject.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>ABQGAIAADCQIA4ARBAAAAkWAEAAAAiQsJUFgBAIAaAI=</HashCode>
+      <FileName>GameObject.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="MazerPlatformer.Npc" Collapsed="true">
+    <Position X="7" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAAAAAAAAQAAAAAAAAABAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>NPC.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

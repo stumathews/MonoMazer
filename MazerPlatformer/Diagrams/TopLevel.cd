@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Comment CommentText="Updates game world">
+    <Position X="1.804" Y="4.01" Height="0.291" Width="1.435" />
+  </Comment>
+  <Comment CommentText="Subscribes to game world events&#xD;&#xA;">
+    <Position X="3.25" Y="1.75" Height="0.586" Width="1.435" />
+  </Comment>
+  <Comment CommentText="Get Playing commands&#xD;&#xA;">
+    <Position X="3.365" Y="4.515" Height="0.461" Width="1" />
+  </Comment>
+  <Comment CommentText="Get Game commands&#xD;&#xA;">
+    <Position X="4.39" Y="2.694" Height="0.506" Width="0.865" />
+  </Comment>
+  <Comment CommentText="Get menu&#xD;&#xA;commands">
+    <Position X="4.731" Y="4.49" Height="0.481" Width="1.095" />
+  </Comment>
+  <Comment CommentText="Put in Playing state&#xD;&#xA;">
+    <Position X="6.111" Y="6.176" Height="0.291" Width="1.435" />
+  </Comment>
+  <Comment CommentText="Put in Pause State">
+    <Position X="6.236" Y="5.535" Height="0.291" Width="1.19" />
+  </Comment>
+  <Comment CommentText="Start-Stop Menu music&#xD;&#xA;">
+    <Position X="6.171" Y="4.49" Height="0.481" Width="0.89" />
+  </Comment>
+  <Comment CommentText="Main Game Class, UI and Game loop">
+    <Position X="5.761" Y="1.485" Height="0.431" Width="1.305" />
+  </Comment>
+  <Class Name="MazerPlatformer.Mazer" Collapsed="true">
+    <Position X="5.75" Y="2" Width="1.25" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="_gameCommands" Type="GameLibFramework.EventDriven.CommandManager">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-6.239" Y="1.551" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="_gameWorld" Type="MazerPlatformer.GameWorld" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="5.75" Y="2.25" />
+        <Point X="2.875" Y="2.25" />
+        <Point X="2.875" Y="3" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-7.539" Y="-0.53" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="_pauseState" Type="MazerPlatformer.PauseState" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="7" Y="2.562" />
+        <Point X="7.525" Y="2.562" />
+        <Point X="7.525" Y="5.625" />
+        <Point X="6" Y="5.625" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-0.19" Y="-4.403" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="_playingState" Type="MazerPlatformer.PlayingGameState" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="7" Y="2.437" />
+        <Point X="7.886" Y="2.437" />
+        <Point X="7.886" Y="6.307" />
+        <Point X="3.812" Y="6.307" />
+        <Point X="3.812" Y="5.941" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-8.01" Y="-0.841" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AFQQkyBEAASGA0goIAIIAICgAAGACWAAHIEQACjhAIQ=</HashCode>
+      <FileName>Mazer.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_gameCommands" />
+      <Field Name="_gameWorld" />
+      <Field Name="_pauseState" />
+      <Field Name="_playingState" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MazerPlatformer.PauseState" Collapsed="true">
+    <Position X="4.75" Y="5.25" Width="1.25" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="_game" Type="MazerPlatformer.Mazer" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="6" Y="5.438" />
+        <Point X="6.5" Y="5.438" />
+        <Point X="6.5" Y="2.691" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-4.247" Y="1.406" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAQAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ=</HashCode>
+      <FileName>PauseState.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_game" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MazerPlatformer.PlayingGameState" Collapsed="true">
+    <Position X="2.75" Y="5.25" Width="1.75" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="_game" Type="MazerPlatformer.Mazer">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-6.824" Y="0.355" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAAAAAAAAAAAAAAQAEAAAAIAAAAAAAAAQ=</HashCode>
+      <FileName>PlayingGameState.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_game" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MazerPlatformer.GameWorld" Collapsed="true">
+    <Position X="1.5" Y="3" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>IAQgMAAJAEiAK8AAIAIAAYgEDAEASghGQEBACAAACBU=</HashCode>
+      <FileName>GameWorld.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="GameLibFramework.EventDriven.CommandManager" Collapsed="true">
+    <Position X="9" Y="2" Width="1.5" />
+    <TypeIdentifier />
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
