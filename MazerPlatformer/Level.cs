@@ -114,11 +114,12 @@ namespace MazerPlatformer
         public static Player Player { get; private set; }
         public static List<Npc> Npcs { get; private set; }
         
-        public void PlaySong()
-        {
-            MediaPlayer.IsRepeating = true;
-            MediaPlayer.Play(_levelMusic);
-        }
+        public Either<IFailure, Unit> PlaySong() 
+            => Ensure(() =>
+            {
+                MediaPlayer.IsRepeating = true;
+                MediaPlayer.Play(_levelMusic);
+            });
 
         public void PlaySound1() => _jingleSoundEffect.CreateInstance().Play();
         public void PlayPlayerSpottedSound() => _playerSpottedSound.CreateInstance().Play();

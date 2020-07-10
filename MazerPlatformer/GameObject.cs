@@ -62,7 +62,7 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnGameObjectComponentChanged;
         public event CollisionArgs OnCollision;
         
-        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
+        public delegate Either<IFailure, Unit> GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
         public delegate Either<IFailure, Unit> CollisionArgs(GameObject thisObject, GameObject otherObject);
 
         public delegate void DisposingInfo(GameObject theObject);

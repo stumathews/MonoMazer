@@ -45,7 +45,7 @@ namespace MazerPlatformer
 
         public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
+        public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
 
         private int _roomWidth;
         private int _roomHeight;
@@ -108,14 +108,14 @@ namespace MazerPlatformer
         /// Unload the game world, and save it
         /// </summary>
         public Either<IFailure, Unit> UnloadContent()
-        {
-            _unloading = true;
-            _gameObjects.Clear();
-            _level.UnLoad();
-            _unloading = false;
-            _removeWallTimer.Stop();
-            return Nothing;
-        }
+            => Ensure(() =>
+            {
+                _unloading = true;
+                _gameObjects.Clear();
+                _level.UnLoad(); // TODO: I/O
+                _unloading = false;
+                _removeWallTimer.Stop();
+            });
 
         public void SaveLevel()
         {
@@ -134,7 +134,7 @@ namespace MazerPlatformer
             Level.Player.OnStateChanged += state => Ensure(()=> OnPlayerStateChanged?.Invoke(state)); // want to know when the player's state changes
             Level.Player.OnDirectionChanged += direction => Ensure(()=> OnPlayerDirectionChanged?.Invoke(direction)); // want to know when the player's direction changes
             Level.Player.OnCollisionDirectionChanged += direction => Ensure(()=> OnPlayerCollisionDirectionChanged?.Invoke(direction)); // want to know when player collides
-            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
+            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => Ensure(()=> OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue)); // want to know when the player's components change
             Level.Player.OnCollision += PlayerOnOnCollision;
             Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
             
@@ -264,12 +264,14 @@ namespace MazerPlatformer
         }
 
         // The game world wants to know about every component update/change that occurs in the world
-        private void ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
-        {
-            // See if we can hook this up to an event listener in the UI
-            // A game object changed!
-            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
-        }
+        private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
+            Ensure(() =>
+            {
+                // See if we can hook this up to an event listener in the UI
+                // A game object changed!
+                Console.WriteLine(
+                    $"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
+            });
 
         /// <summary>
         /// Overwrite any defaults that are now in the level file
@@ -285,12 +287,10 @@ namespace MazerPlatformer
                 OnLoadLevel?.Invoke(details);
             });
 
-        public void StartOrResumeLevelMusic()
-        {
-            if (string.IsNullOrEmpty(_level.LevelFile.Music)) return;
-
-            _level.PlaySong();
-        }
+        public Either<IFailure, Unit> StartOrResumeLevelMusic() 
+            => string.IsNullOrEmpty(_level.LevelFile.Music) 
+                ? Nothing 
+                : _level.PlaySong();
 
         private Either<IFailure, Unit> AddToGameObjects(string id, GameObject gameObject) 
             => Ensure(()=>

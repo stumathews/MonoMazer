@@ -421,8 +421,7 @@ namespace MazerPlatformer
             }
 
             // The pause state will inform us when its entered and we can act accordingly 
-            _pauseState.OnStateChanged += OnPauseStateChanged;
-
+            _pauseState.OnStateChanged += (state, reason) => { OnPauseStateChanged(state, reason); }; // Cant use Either here
             // Ready the state machine and put it into the default state of 'idle' state            
             _gameStateMachine.Initialise(_pauseState.Name);
         }
@@ -491,47 +490,42 @@ namespace MazerPlatformer
             }
         }
 
-        private void OnGameWorldOnOnPlayerDied(List<Component> components)
-        {
-            // We don't have a game over state, as we use the pause state and then show a game over screen
-            _playerDied = true;
-            ShowGameOverScreen();
-            _currentGameState = GameStates.Paused;
-        }
-
-        private void OnPauseStateChanged(State state, State.StateChangeReason reason)
-        {
-            if (reason == State.StateChangeReason.Enter)
+        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied(List<Component> components)
+            =>
+            Ensure(() =>
             {
-                PlayMenuMusic();
-                ShowMenu();
-            }
-        }
+                // We don't have a game over state, as we use the pause state and then show a game over screen
+                _playerDied = true;
+                ShowGameOverScreen();
+                _currentGameState = GameStates.Paused;
+            });
+
+        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason)
+            => reason == State.StateChangeReason.Enter 
+                ? PlayMenuMusic().Bind(unit => Ensure(ShowMenu)) 
+                : Nothing;
 
         // Inform the UI that game objects have been removed or added
-        private void OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed, int runningTotalCount)
-        {
-            _numGameObjects = runningTotalCount;
+        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed, int runningTotalCount)
+            => Ensure(() =>
+            {
+                _numGameObjects = runningTotalCount;
 
-            // We'll keep track of how many pickups the player picks up over time
-            if (gameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
-                _playerPickups++;
-        }
+                // We'll keep track of how many pickups the player picks up over time
+                if (gameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
+                    _playerPickups++;
+            });
 
         // Update the UI when something interesting about the player's inventory changes (health, damage)
-        private void OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
-        {
-            switch (componentType)
-            {
-                // Player changed somehow
-                case Component.ComponentType.Health:
-                    _playerHealth = (int)newValue;
-                    break;
-                case Component.ComponentType.Points:
-                    _playerPoints = (int)newValue;
-                    break;
-            }
-        }
+        private Either<IFailure, Unit> OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+            => EnsureWithReturn(() => (int) newValue, InvalidCastFailure.Default())
+                .Iter(value =>
+                {
+                    if (componentType == Component.ComponentType.Health)
+                        _playerHealth = value;
+                    else if (componentType == Component.ComponentType.Points) 
+                        _playerPoints = value;
+                });
 
 
         /// <summary>
@@ -540,12 +534,12 @@ namespace MazerPlatformer
         /// <param name="object1">object involved in collision</param>
         /// <param name="object2">other object involved in collisions</param>
         private Either<IFailure, Unit> _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
-        {
-            if (object1.Type == GameObject.GameObjectType.Npc)
-                _numCollisionsWithPlayerAndNpCs++;
+            => Ensure(() =>
+            {
+                if (object1.Type == GameObject.GameObjectType.Npc)
+                    _numCollisionsWithPlayerAndNpCs++;
 
-            _numGameCollisionsEvents++;
-            return Nothing;
-        }
+                _numGameCollisionsEvents++;
+            });
     }
 }

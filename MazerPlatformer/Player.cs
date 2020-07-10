@@ -19,7 +19,7 @@ namespace MazerPlatformer
     {
         public const string PlayerId = "Player";
 
-        public delegate void DeathInfo(List<Component> playersComponents);
+        public delegate Either<IFailure, Unit> DeathInfo(List<Component> playersComponents);
 
         public event EventHandler OnPlayerSpotted;
 

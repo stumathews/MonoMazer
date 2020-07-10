@@ -96,13 +96,29 @@ namespace MazerPlatformer
         public static Either<IFailure, T> ToSuccess<T>(this T value)
             => Prelude.Right<IFailure, T>(value);
 
-        // Make an IAmFailure to a Either<IAmFailure, T> ie convert a failure to a either that represents that failure ie an either in the left state
+        public static Either<L, T> ToSuccess<L, T>(this T value)
+            => Prelude.Right<L, T>(value);
+
+        /// <summary>
+        /// Make an IAmFailure to a Either&lt;IAmFailure, T&gt; ie convert a failure to a either that represents that failure ie an either in the left state
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="failure"></param>
+        /// <returns></returns>
         public static Either<IFailure, T> ToFailure<T>(this IFailure failure)
             => Prelude.Left<IFailure, T>(failure);
 
-        public static Either<IFailure, Unit> Ensure(Action action) =>
-            action.TryThis();
-        public static Either<IFailure, T> EnsureWithReturn<T>(Func<T> action) => action.TryThis();
+        public static Either<L, R> ToFailure<L,R>(this L left)
+            => Prelude.Left<L, R>(left);
+
+        public static Either<IFailure, Unit> Ensure(Action action) 
+            => action.TryThis();
+
+        public static Either<IFailure, T> EnsureWithReturn<T>(Func<T> action) 
+            => action.TryThis();
+
+        public static Either<L, T> EnsureWithReturn<L, T>(Func<T> action, L left)
+            => action.TryThis<L,T>(left);
 
         public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action) 
             => either.IfLeft(action);
@@ -139,6 +155,14 @@ namespace MazerPlatformer
                         ? new NotTypeException(typeof(T)) 
                         : unit.ToSuccess(), 
                     exception => new ExternalLibraryFailure(exception));
+
+        public static Either<L, T> TryThis<L, T>(this Func<T> action, L failure)
+            => new Try<T>(() => action())
+                .Match(
+                    unit => unit == null
+                        ? failure.ToFailure<L,T>()
+                        : unit.ToSuccess<L, T>(),
+                    exception => failure);
 
         public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either) where TLeft : IFailure
             => either.IfLeft(failure => throw new UnexpectedFailureException(failure));
@@ -197,6 +221,8 @@ namespace MazerPlatformer
         }
 
         public string Reason { get; set; }
+
+        public static IFailure Create(Type type) => new NotTypeException(type);
     }
 
     public static class Diganostics
