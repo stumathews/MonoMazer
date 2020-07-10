@@ -91,6 +91,16 @@ namespace MazerPlatformer
                 .IfLeft(Option<T>.None);
         }
 
+        public static Either<IFailure, T> SingleOrFailure<T>(this List<T> list, Func<T, bool> predicate, string name = "no name provided")
+        {
+            return EnsureWithReturn(() => list.SingleOrDefault(predicate))
+                .Map(item => item != null ? item : Option<T>.None)
+                .IfLeft(Option<T>.None)
+                .ToEither(NotFound.Create($"Could not find item: ${name}"));
+        }
+
+        //
+
         /// <summary>
         /// Make Either<IFailure, T> in right state
         /// </summary>

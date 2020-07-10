@@ -196,25 +196,14 @@ namespace MazerPlatformer
             }
         }
 
-        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
-        {
-            var pointsComponent =
-                levelDetails.Player.Components
-                    .SingleOrNone(o => o.Type == Component.ComponentType.Points)
-                    .ToEither(NotFound.Create("Could not find points component on player"))
-                    .Map(component => _playerPoints = (int) component.Value);
-
-            var healthComponent = levelDetails.Player.Components
-                .SingleOrNone(o => o.Type == Component.ComponentType.Health)
-                .ToEither(NotFound.Create("could not find the health component on the player"))
-                .Map(component => _playerHealth = (int) component.Value);
-
-            // Return a Unit if both points and health were obtained successfully
-            return from points in pointsComponent
-                   from health in healthComponent
-                   select Nothing;
-        }
-
+        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
+            from points in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
+                .Map(component => _playerPoints = (int)component.Value)
+            from health in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
+                .Map(component => _playerHealth = (int)component.Value)
+            select Nothing;
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -307,18 +296,13 @@ namespace MazerPlatformer
         internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _gameWorld.OnKeyUp(sender, keyboardEventArgs);
 
         // Hide the menu and ask the game world to start or continue
-        internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart)
-        {
-            HideMenu();
-            _currentGameState = GameStates.Playing;
-            _gameWorld.StartOrResumeLevelMusic();
-
-            // If we're continuing then we want to keep whatever the player's current health/points are, otherwise reset them
-            if (!isFreshStart)
-                return Nothing;
-            ResetPlayerStatistics();
-            return Nothing;
-        }
+        internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart) =>
+            HideMenu()
+                .Map(unit => _currentGameState = GameStates.Playing)
+                .Bind(unit => _gameWorld.StartOrResumeLevelMusic())
+                .Bind(unit => !isFreshStart 
+                    ? ShortCircuit.Create("Not Fresh Start").ToFailure<Unit>() 
+                    : ResetPlayerStatistics());
 
         private Either<IFailure, Unit> ResetPlayerStatistics() =>
             Ensure(() =>
@@ -337,6 +321,7 @@ namespace MazerPlatformer
         // Creates the UI elements that the menu will use
         private Either<IFailure, Unit> SetupMenuUi()
         {
+            // Ensure Me...
             _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
             _gameOverPanel = new Panel();
             _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
@@ -410,8 +395,8 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        private void QuitGame()
-            => Exit();
+        private Either<IFailure, Unit> QuitGame()
+            => Ensure(Exit);
 
         private Either<IFailure, Unit> SetupGameOverMenu() =>
             Ensure(() =>
@@ -491,40 +476,41 @@ namespace MazerPlatformer
         /// Draw current level, score, number of collisions etc
         /// </summary>
         /// <param name="gameTime"></param>
-        private Either<IFailure, Unit> DrawInGameStats(GameTime gameTime)
-        {
-            if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats) return Nothing;
+        private Either<IFailure, Unit> DrawInGameStats(GameTime gameTime) =>
+            _currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats
+                ? Nothing
+                : Ensure(() =>
+                {
+                    var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+                    // Consider making GameObjectCount private and getting the info via an event instead
+                    _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
+                        Color.White);
+                    _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
+                        Color.White);
 
-            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-            // Consider making GameObjectCount private and getting the info via an event instead
-            _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
-                            Color.White);
-            _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
-                Color.White);
+                    _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
+                        Color.White);
 
-            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
-                Color.White);
+                    _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}",
+                        new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
+                        Color.White);
 
-            _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
-                Color.White);
+                    _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
+                        Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
-                Color.White);
-            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
-                Color.White);
-
-            return Nothing;
-        }
+                    _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
+                        Color.White);
+                    _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}",
+                        new Vector2(
+                            leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
+                        Color.White);
+                });
 
         private static Either<IFailure, Unit> EnableAllDiagnostics() =>
             Ensure(() =>
@@ -588,7 +574,6 @@ namespace MazerPlatformer
                         _playerPoints = value;
                 });
 
-
         /// <summary>
         /// Update collision events statistics received from the game world
         /// </summary>
@@ -604,14 +589,14 @@ namespace MazerPlatformer
             });
     }
 
-    public class AssetLoadFailure : IFailure
+    internal class ShortCircuit : IFailure
     {
-        public AssetLoadFailure(string empty)
+        public ShortCircuit(string message)
         {
-            Reason = empty;
+            Reason = message;
         }
 
         public string Reason { get; set; }
-        public static IFailure Create(string message) => new AssetLoadFailure(message);
+        public static IFailure Create(string msg) => new ShortCircuit(msg);
     }
 }

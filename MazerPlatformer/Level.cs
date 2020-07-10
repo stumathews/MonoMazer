@@ -492,11 +492,7 @@ namespace MazerPlatformer
             }
         }
 
-        public void ResetPlayer(int health = 100, int points = 0)
-        {
-            Player.SetPlayerVitals(health, points);
-        }
-
-        
+        public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
+            => Player.SetPlayerVitals(health, points);
     }
 }
