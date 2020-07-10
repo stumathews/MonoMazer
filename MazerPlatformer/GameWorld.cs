@@ -80,7 +80,7 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal void LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
+        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
         {
 
             // Prepare a new level
@@ -95,6 +95,7 @@ namespace MazerPlatformer
             _rooms = _level.GetRooms();
 
             _removeWallTimer.Start();
+            return Nothing;
 
         }
 
@@ -107,13 +108,14 @@ namespace MazerPlatformer
         /// <summary>
         /// Unload the game world, and save it
         /// </summary>
-        public void UnloadContent()
+        public Either<IFailure, Unit> UnloadContent()
         {
             _unloading = true;
             _gameObjects.Clear();
             _level.UnLoad();
             _unloading = false;
             _removeWallTimer.Stop();
+            return Nothing;
         }
 
         public void SaveLevel()
@@ -266,14 +268,15 @@ namespace MazerPlatformer
         /// Overwrite any defaults that are now in the level file
         /// </summary>
         /// <param name="details"></param>
-        private void OnLevelLoad(Level.LevelDetails details)
-        {
-            Cols = _level.Cols;
-            Rows = _level.Rows;
-            _roomWidth = _level.RoomWidth;
-            _roomHeight = _level.RoomHeight;
-            OnLoadLevel?.Invoke(details);
-        }
+        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details)
+            => Ensure(()=>
+            {
+                Cols = _level.Cols;
+                Rows = _level.Rows;
+                _roomWidth = _level.RoomWidth;
+                _roomHeight = _level.RoomHeight;
+                OnLoadLevel?.Invoke(details);
+            });
 
         public void StartOrResumeLevelMusic()
         {
@@ -446,7 +449,7 @@ namespace MazerPlatformer
         // Inform the Game world that the up button was pressed, make the player idle
         public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Level.Player.SetAsIdle();
 
-        public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
+        public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
             Level.Player.MoveInDirection(direction, dt);
 
         public bool IsPathAccessibleBetween(GameObject obj1, GameObject obj2)

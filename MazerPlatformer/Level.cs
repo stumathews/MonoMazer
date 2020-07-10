@@ -95,7 +95,7 @@ namespace MazerPlatformer
 
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event LevelLoadInfo OnLoad;
-        public delegate void LevelLoadInfo(LevelDetails details);
+        public delegate Either<IFailure, Unit> LevelLoadInfo(LevelDetails details);
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
 
         // Main collection of game objects within the level

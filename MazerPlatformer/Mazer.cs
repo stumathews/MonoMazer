@@ -95,7 +95,7 @@ namespace MazerPlatformer
             _menuMusic = Content.Load<Song>("Music/bgm_menu");
 
             // Load the game world up - creates the level, characters and other aspects of the game world
-            _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0);
+            _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0).ThrowIfFailed();
         }
 
         /// <summary>
@@ -145,12 +145,25 @@ namespace MazerPlatformer
             _gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
         }
 
-        private void OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
+        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
         {
-            var playerPoints = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Points)?.Value;
-            var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
-            _playerHealth = playerHealth ?? _playerHealth;
-            _playerPoints = playerPoints ?? _playerPoints;
+            //var playerPoints = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Points)?.Value;
+            //var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
+
+            var pointsComponent =
+                levelDetails.Player.Components
+                    .SingleOrNone(o => o.Type == Component.ComponentType.Points)
+                    .ToEither(NotFound.Create("Could not find points component on player"))
+                    .Map(component => _playerPoints = (int) component.Value);
+
+            var healthComponent = levelDetails.Player.Components
+                .SingleOrNone(o => o.Type == Component.ComponentType.Health)
+                .ToEither(NotFound.Create("could not find the health component on the player"))
+                .Map(component => _playerHealth = (int) component.Value);
+
+            return from points in pointsComponent
+                   from health in healthComponent
+                   select Nothing;
         }
 
 
@@ -161,7 +174,7 @@ namespace MazerPlatformer
         protected override void UnloadContent()
         {
             // Unload any non ContentManager content here
-            _gameWorld.UnloadContent();
+            _gameWorld.UnloadContent().ThrowIfFailed();
         }
 
         /// <summary>
@@ -171,12 +184,10 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            UserInterface.Active.Update(gameTime);
-
-            _gameCommands.Update(gameTime); // get input
-            _gameStateMachine.Update(gameTime); // NB: game world is updated by PlayingGameState
-
-            base.Update(gameTime);
+            Ensure(()=>UserInterface.Active.Update(gameTime))
+                .Bind(unit => Ensure(()=>_gameCommands.Update(gameTime))) // get input
+                .Bind(unit => Ensure(()=>_gameStateMachine.Update(gameTime))) // NB: game world is updated by PlayingGameState
+                .Bind(unit => Ensure(()=>base.Update(gameTime))).ThrowIfFailed();
         }
 
         /// <summary>
@@ -213,7 +224,7 @@ namespace MazerPlatformer
         }
 
 
-        private void ProgressToLevel(int level) 
+        private Either<IFailure, Unit> ProgressToLevel(int level) 
             => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
 
         /// <summary>
@@ -223,28 +234,26 @@ namespace MazerPlatformer
         /// <param name="isFreshStart"></param>
         /// <param name="overridePlayerHealth">player health from previous level, overrides any within level file</param>
         /// <param name="overridePlayerScore">player score from previous level, overrides any within level file</param>
-        private void StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-        {
-            _playerDied = false;
-            _gameWorld.UnloadContent();
-            _gameWorld.LoadContent(levelNumber: level, overridePlayerHealth, overridePlayerScore);
-            _gameWorld.Initialize(); // We need to reinitialize things once we've reload content
-            StartOrContinueLevel(isFreshStart: isFreshStart);
-        }
+        private Either<IFailure, Unit> StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
+            => Ensure( ()=> _playerDied = false)
+                .Bind(unit => _gameWorld.UnloadContent())
+                .Bind(unit => _gameWorld.LoadContent(levelNumber: level, overridePlayerHealth, overridePlayerScore))
+                .Bind(unit => _gameWorld.Initialize()) // We need to reinitialize things once we've reload content
+                .Bind(unit => StartOrContinueLevel(isFreshStart: isFreshStart));
 
-        private void PlayMenuMusic() => MediaPlayer.Play(_menuMusic);
+        private Either<IFailure, Unit> PlayMenuMusic() => Ensure(()=>MediaPlayer.Play(_menuMusic));
 
         // This allows the playing state to indirectly move the player in the game world 
-        internal void MovePlayerInDirection(CharacterDirection dir, GameTime dt) => _gameWorld.MovePlayer(dir, dt);
+        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) => _gameWorld.MovePlayer(dir, dt);
 
         // This allows the Playing state to indirectly update the gameWorld
-        internal void UpdateGameWorld(GameTime dt) => _gameWorld.Update(dt);
+        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) => _gameWorld.Update(dt);
 
         // This allows the playing state to indirectly send player commands to game world
-        internal void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _gameWorld.OnKeyUp(sender, keyboardEventArgs);
+        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _gameWorld.OnKeyUp(sender, keyboardEventArgs);
 
         // Hide the menu and ask the game world to start or continue
-        internal void StartOrContinueLevel(bool isFreshStart)
+        internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart)
         {
             HideMenu();
             _currentGameState = GameStates.Playing;
@@ -252,8 +261,9 @@ namespace MazerPlatformer
 
             // If we're continuing then we want to keep whatever the player's current health/points are, otherwise reset them
             if (!isFreshStart)
-                return;
+                return Nothing;
             ResetPlayerStatistics();
+            return Nothing;
         }
 
         private void ResetPlayerStatistics()
@@ -273,7 +283,7 @@ namespace MazerPlatformer
         }
 
         // Creates the UI elements that the menu will use
-        private void SetupMenuUi()
+        private Either<IFailure, Unit> SetupMenuUi()
         {
             _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
             _gameOverPanel = new Panel();
@@ -344,6 +354,8 @@ namespace MazerPlatformer
             UserInterface.Active.AddEntity(_mainMenuPanel);
             UserInterface.Active.AddEntity(_controlsPanel);
             UserInterface.Active.AddEntity(_gameOverPanel);
+
+            return Nothing;
         }
 
         private void QuitGame()
