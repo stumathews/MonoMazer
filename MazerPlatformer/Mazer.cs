@@ -20,7 +20,7 @@ namespace MazerPlatformer
 {
     public class Mazer : Game
     {
-        private readonly SpriteBatch _spriteBatch;
+        private SpriteBatch _spriteBatch;
 
         public static SpriteFont GetGameFont() => _font;
         
@@ -28,15 +28,15 @@ namespace MazerPlatformer
         private static SpriteFont _font;
 
         // Top level game commands such as start, quit, resume etc
-        private readonly CommandManager _gameCommands;
+        private CommandManager _gameCommands;
 
         // GameWorld, contains, updates and manages the player, npc, pickups and level details - Its distinct from the UI of the game (it has events the UI can subscribe to)
-        private readonly GameWorld _gameWorld;
+        private GameWorld _gameWorld;
 
         // Top level game states such as Pause, Playing etc
-        private readonly FSM _gameStateMachine;
+        private FSM _gameStateMachine;
 
-        private readonly PauseState _pauseState;
+        private PauseState _pauseState;
         private PlayingGameState _playingState;
 
         private enum GameStates { Paused, Playing }
@@ -69,20 +69,36 @@ namespace MazerPlatformer
         
         public Mazer()
         {
-            var graphics = new GraphicsDeviceManager(this);
+            SetupGraphicsDevice()
+                .Bind(unit => CreateInfrastructure()).ThrowIfFailed();
+
             Content.RootDirectory = "Content";
-            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-            graphics.ApplyChanges();
-
-            _gameCommands = new CommandManager();
-            _gameStateMachine = new FSM(this);
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
-            _pauseState = new PauseState(this);
-            _playingState = new PlayingGameState(this);
-
             IsFixedTimeStep = false;
+
+            // local funcs 
+            Either<IFailure, Unit> SetupGraphicsDevice() =>
+                Ensure(() => 
+                { 
+                    var graphics = new GraphicsDeviceManager(this)
+                    {
+                        PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                        PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+                    };
+
+                    graphics.ApplyChanges();
+                });
+
+            Either<IFailure, Unit> CreateInfrastructure() =>
+                Ensure(() =>
+                {
+                    _gameCommands = new CommandManager();
+                    _gameStateMachine = new FSM(this);
+                    _spriteBatch = new SpriteBatch(GraphicsDevice);
+                    _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height,
+                        NumRows, NumCols, _spriteBatch);
+                    _pauseState = new PauseState(this);
+                    _playingState = new PlayingGameState(this);
+                });
         }
         
         /// <summary>
@@ -91,12 +107,16 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            _font = Content.Load<SpriteFont>("Sprites/gameFont");
-            _menuMusic = Content.Load<Song>("Music/bgm_menu");
-
-            // Load the game world up - creates the level, characters and other aspects of the game world
-            _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0).ThrowIfFailed();
+            TryLoadContent<SpriteFont>("Sprites/gameFont")
+                .Map(font => _font = font)
+                .Bind(success => TryLoadContent<Song>("Music/bgm_menu"))
+                .Map(song => _menuMusic = song)
+                .Bind(success => _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0))
+            .ThrowIfFailed();
         }
+
+        private Either<IFailure, T> TryLoadContent<T>(string assetName) 
+            => EnsureWithReturn(() => Content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
@@ -106,50 +126,65 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            base.Initialize();
+            Ensure(() => base.Initialize())
+                .Bind(unit => Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor)))
+                .Bind(unit => SetupMenuUi())
+                .Bind(unit => InitializeGameStateMachine())
+                .Map(unit => InitializeGameWorld())
+                .Map(gameWorld =>
+                {
+                    SetupGameCommands();
+                    ConnectGameWorldToUI(gameWorld);
+                    return Nothing;
+                }).ThrowIfFailed();
 
-            UserInterface.Initialize(Content, BuiltinThemes.editor);
+
+            /* local funcs */
+            GameWorld InitializeGameWorld()
+            {
+                _gameWorld.Initialize();
+                return _gameWorld;
+            }
+
+            void SetupGameCommands()
+            {
+                _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
+                _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
+                _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
+                _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
+                _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
+                _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
+                _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
+                _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
+                _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
+                _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
+                _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
+                _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
+                _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
+                _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
+                _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
+                _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
+                _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
+            }
             
-            SetupMenuUi();
-            InitializeGameStateMachine();
-            _gameWorld.Initialize();
-
-            _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-            _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
-            _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-            _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
-            _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-            _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-            _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-            _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-            _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-            _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-            _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-            _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-            _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-            _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
-            _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
-            _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
-            _gameCommands.AddKeyUpCommand(Keys.Escape, OnEscapeKeyReleased);
-
-            /* Connect the UI to the game world */
-
-            _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-            _gameWorld.OnPlayerStateChanged += (state) => Ensure(()=>_characterState = state);
-            _gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-            _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
-            _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-            _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            _gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-            _gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
-            _gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            void ConnectGameWorldToUI(GameWorld gameWorld)
+            {
+                /* Connect the UI to the game world */
+                gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+                gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
+                gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
+                gameWorld.OnPlayerCollisionDirectionChanged +=
+                    (direction) => Ensure(() => _characterCollisionDirection = direction);
+                gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+                gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+                gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+                gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
+                gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            }
         }
 
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
         {
-            //var playerPoints = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Points)?.Value;
-            //var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
-
             var pointsComponent =
                 levelDetails.Player.Components
                     .SingleOrNone(o => o.Type == Component.ComponentType.Points)
@@ -161,6 +196,7 @@ namespace MazerPlatformer
                 .ToEither(NotFound.Create("could not find the health component on the player"))
                 .Map(component => _playerHealth = (int) component.Value);
 
+            // Return a Unit if both points and health were obtained successfully
             return from points in pointsComponent
                    from health in healthComponent
                    select Nothing;
@@ -184,10 +220,15 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            Ensure(()=>UserInterface.Active.Update(gameTime))
-                .Bind(unit => Ensure(()=>_gameCommands.Update(gameTime))) // get input
-                .Bind(unit => Ensure(()=>_gameStateMachine.Update(gameTime))) // NB: game world is updated by PlayingGameState
-                .Bind(unit => Ensure(()=>base.Update(gameTime))).ThrowIfFailed();
+            Ensure(action: () => UserInterface.Active.Update(gameTime))
+                .Bind(unit => UpdateGameCommands()) // get input
+                .Bind(unit => UpdateStateMachine()) // NB: game world is updated by PlayingGameState
+                .Bind(unit => UpdateBase())
+            .ThrowIfFailed();
+
+            Either<IFailure, Unit> UpdateGameCommands() => Ensure(()=>_gameCommands.Update(gameTime));
+            Either<IFailure, Unit> UpdateStateMachine() => Ensure(()=>_gameStateMachine.Update(gameTime));
+            Either<IFailure, Unit> UpdateBase() => Ensure(()=>base.Update(gameTime));
         }
 
         /// <summary>
@@ -361,70 +402,79 @@ namespace MazerPlatformer
         private void QuitGame()
             => Exit();
 
-        private void SetupGameOverMenu()
-        {
-            var closeButton = new Button("Return to main menu");
-            var restartLevel = new Button("Try again");
-            var quit = new Button("Quit game");
-
-            _gameOverPanel.ClearChildren();
-            _gameOverPanel.AddChild(new Header("You died!"));
-            _gameOverPanel.AddChild(new RichParagraph("You had {{YELLOW}}" + _playerPoints + "{{DEFAULT}} points.{{DEFAULT}}"));
-            _gameOverPanel.AddChild(new RichParagraph("You picked up {{YELLOW}}" + _playerPickups + "{{DEFAULT}} pick-ups.{{DEFAULT}}"));
-            _gameOverPanel.AddChild(new RichParagraph("You reach level {{YELLOW}}" + _currentLevel + "{{DEFAULT}}.{{DEFAULT}}\n"));
-            _gameOverPanel.AddChild(new RichParagraph("Try again to {{BOLD}}improve!\n"));
-            _gameOverPanel.AddChild(restartLevel);
-            _gameOverPanel.AddChild(closeButton);
-            _gameOverPanel.Visible = false;
-
-            closeButton.OnClick += (button) =>
+        private Either<IFailure, Unit> SetupGameOverMenu() =>
+            Ensure(() =>
             {
-                _playerDied = false;
+                var closeButton = new Button("Return to main menu");
+                var restartLevel = new Button("Try again");
+                var quit = new Button("Quit game");
+
+                _gameOverPanel.ClearChildren();
+                _gameOverPanel.AddChild(new Header("You died!"));
+                _gameOverPanel.AddChild(
+                    new RichParagraph("You had {{YELLOW}}" + _playerPoints + "{{DEFAULT}} points.{{DEFAULT}}"));
+                _gameOverPanel.AddChild(
+                    new RichParagraph("You picked up {{YELLOW}}" + _playerPickups +
+                                      "{{DEFAULT}} pick-ups.{{DEFAULT}}"));
+                _gameOverPanel.AddChild(
+                    new RichParagraph("You reach level {{YELLOW}}" + _currentLevel + "{{DEFAULT}}.{{DEFAULT}}\n"));
+                _gameOverPanel.AddChild(new RichParagraph("Try again to {{BOLD}}improve!\n"));
+                _gameOverPanel.AddChild(restartLevel);
+                _gameOverPanel.AddChild(closeButton);
                 _gameOverPanel.Visible = false;
-                _currentGameState = GameStates.Paused;
-            };
 
-            restartLevel.OnClick += (button) =>
-            {
-                _playerDied = false;
-                _gameOverPanel.Visible = false;
-                StartLevel(_currentLevel);
-            };
+                closeButton.OnClick += (button) =>
+                {
+                    _playerDied = false;
+                    _gameOverPanel.Visible = false;
+                    _currentGameState = GameStates.Paused;
+                };
 
-            quit.OnClick += (b) => QuitGame();
-        }
+                restartLevel.OnClick += (button) =>
+                {
+                    _playerDied = false;
+                    _gameOverPanel.Visible = false;
+                    StartLevel(_currentLevel);
+                };
 
-        internal void ShowMenu() => _mainMenuPanel.Visible = true; // used by internal pause state
-        private void HideMenu() => _mainMenuPanel.Visible = false;
+                quit.OnClick += (b) => QuitGame();
+            });
+
+        internal Either<IFailure, Unit> ShowMenu() => Ensure(() => _mainMenuPanel.Visible = true); // used by internal pause state
+        private Either<IFailure, Unit> HideMenu() => Ensure(() => _mainMenuPanel.Visible = false);
 
         // Sets up the main game playing states (Playing, Paused) and initialize the state machine for the top level game (Character states are separate and are within the game world)
-        private void InitializeGameStateMachine()
-        {
-            var toPausedTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
-            var toPlayingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
-
-            var states = new State[] { _pauseState, _playingState };
-            var transitions = new[] { toPausedTransition, toPlayingTransition };
-
-            _gameStateMachine.AddState(_pauseState);
-            _gameStateMachine.AddState(_playingState);
-
-            // Allow each state to go into any other state, except itself. (Paused -> playing and PLaying -> Paused)
-            foreach (var state in states)
+        private Either<IFailure, Unit> InitializeGameStateMachine() =>
+            Ensure(() =>
             {
-                state.Initialize();
-                foreach (var transition in transitions)
-                {
-                    if (state.Name != transition.NextState.Name) // except itself
-                        state.AddTransition(transition);
-                }
-            }
+                var toPausedTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
+                var toPlayingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
 
-            // The pause state will inform us when its entered and we can act accordingly 
-            _pauseState.OnStateChanged += (state, reason) => { OnPauseStateChanged(state, reason); }; // Cant use Either here
-            // Ready the state machine and put it into the default state of 'idle' state            
-            _gameStateMachine.Initialise(_pauseState.Name);
-        }
+                var states = new State[] {_pauseState, _playingState};
+                var transitions = new[] {toPausedTransition, toPlayingTransition};
+
+                _gameStateMachine.AddState(_pauseState);
+                _gameStateMachine.AddState(_playingState);
+
+                // Allow each state to go into any other state, except itself. (Paused -> playing and PLaying -> Paused)
+                foreach (var state in states)
+                {
+                    state.Initialize();
+                    foreach (var transition in transitions)
+                    {
+                        if (state.Name != transition.NextState.Name) // except itself
+                            state.AddTransition(transition);
+                    }
+                }
+
+                // The pause state will inform us when its entered and we can act accordingly 
+                _pauseState.OnStateChanged += (state, reason) =>
+                {
+                    OnPauseStateChanged(state, reason);
+                }; // Cant use Either here
+                // Ready the state machine and put it into the default state of 'idle' state            
+                _gameStateMachine.Initialise(_pauseState.Name);
+            });
 
         /// <summary>
         /// Draw current level, score, number of collisions etc
@@ -465,33 +515,33 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        private static void EnableAllDiagnostics()
-        {
-            Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
-            Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
-            Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
-            Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
-            Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
-            Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
-        }
+        private static Either<IFailure, Unit> EnableAllDiagnostics() =>
+            Ensure(() =>
+            {
+                Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
+                Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
+                Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
+                Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
+                Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
+                Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
+            });
 
-        private void OnEscapeKeyReleased(GameTime time)
+        private Either<IFailure, Unit> OnEscapeKeyReleased(GameTime time)
         {
-            if (_currentGameState == GameStates.Playing)
+            return _currentGameState == GameStates.Playing 
+                ? PauseGame() 
+                : ResumeGame();
+
+            Either<IFailure, Unit> PauseGame()
             {
                 _currentGameState = GameStates.Paused;
-                ShowMenu();
+                return ShowMenu();
             }
-            else
-            {
-                // resume
-                HideMenu();
-                StartOrContinueLevel(isFreshStart: false);
-            }
+
+            Either<IFailure, Unit> ResumeGame() => HideMenu().Bind(unit => StartOrContinueLevel(isFreshStart: false));
         }
 
-        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied(List<Component> components)
-            =>
+        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied(List<Component> components) =>
             Ensure(() =>
             {
                 // We don't have a game over state, as we use the pause state and then show a game over screen
@@ -502,7 +552,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason)
             => reason == State.StateChangeReason.Enter 
-                ? PlayMenuMusic().Bind(unit => Ensure(ShowMenu)) 
+                ? PlayMenuMusic().Bind(unit => ShowMenu()) 
                 : Nothing;
 
         // Inform the UI that game objects have been removed or added
@@ -541,5 +591,16 @@ namespace MazerPlatformer
 
                 _numGameCollisionsEvents++;
             });
+    }
+
+    public class AssetLoadFailure : IFailure
+    {
+        public AssetLoadFailure(string empty)
+        {
+            Reason = empty;
+        }
+
+        public string Reason { get; set; }
+        public static IFailure Create(string message) => new AssetLoadFailure(message);
     }
 }
