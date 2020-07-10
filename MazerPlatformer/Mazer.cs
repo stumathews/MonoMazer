@@ -140,7 +140,7 @@ namespace MazerPlatformer
         protected override void Initialize()
         {
             Ensure(() => base.Initialize())
-                .Bind(unit => Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor)))
+                .Bind(unit => InitializeUI())
                 .Bind(unit => SetupMenuUi())
                 .Bind(unit => InitializeGameStateMachine())
                 .Map(unit => InitializeGameWorld())
@@ -186,13 +186,17 @@ namespace MazerPlatformer
                 gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
                 gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
                 gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-                gameWorld.OnPlayerCollisionDirectionChanged +=
-                    (direction) => Ensure(() => _characterCollisionDirection = direction);
+                gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
                 gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
                 gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
                 gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
                 gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
                 gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            }
+
+            Either<IFailure, Unit> InitializeUI()
+            {
+                return Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor));
             }
         }
 
@@ -319,81 +323,79 @@ namespace MazerPlatformer
             => SetupGameOverMenu().Iter(unit => _gameOverPanel.Visible = true);
 
         // Creates the UI elements that the menu will use
-        private Either<IFailure, Unit> SetupMenuUi()
-        {
-            // Ensure Me...
-            _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-            _gameOverPanel = new Panel();
-            _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-
-            SetupMainMenuPanel();
-            SetupInstructionsPanel();
-            SetupGameOverMenu();
-
-            /* Local functions */
-
-            void SetupMainMenuPanel()
+        private Either<IFailure, Unit> SetupMenuUi() =>
+            Ensure(() =>
             {
-                var diagnostics = new Button("Diagnostics On/Off");
-                var controlsButton = new Button("Controls", ButtonSkin.Fancy);
-                var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-                var startGameButton = new Button("New");
-                var saveGameButton = new Button("Save");
-                var loadGameButton = new Button("Load");
+                _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+                _gameOverPanel = new Panel();
+                _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
 
-                HideMenu();
+                SetupMainMenuPanel();
+                SetupInstructionsPanel();
+                SetupGameOverMenu();
 
-                _mainMenuPanel.AdjustHeightAutomatically = true;
-                _mainMenuPanel.AddChild(new Header("Main Menu"));
-                _mainMenuPanel.AddChild(new HorizontalLine());
-                _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
-                _mainMenuPanel.AddChild(startGameButton);
-                _mainMenuPanel.AddChild(saveGameButton);
-                _mainMenuPanel.AddChild(loadGameButton);
-                _mainMenuPanel.AddChild(controlsButton);
-                _mainMenuPanel.AddChild(diagnostics);
-                _mainMenuPanel.AddChild(quitButton);
+                // Add the panels to the UI
+                UserInterface.Active.AddEntity(_mainMenuPanel);
+                UserInterface.Active.AddEntity(_controlsPanel);
+                UserInterface.Active.AddEntity(_gameOverPanel);
 
-                startGameButton.OnClick += (Entity entity) =>
+                /* Local functions */
+
+                void SetupMainMenuPanel()
                 {
-                    _currentLevel = 1;
-                    StartLevel(_currentLevel);
-                };
-                saveGameButton.OnClick += (e) =>
+                    var diagnostics = new Button("Diagnostics On/Off");
+                    var controlsButton = new Button("Controls", ButtonSkin.Fancy);
+                    var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
+                    var startGameButton = new Button("New");
+                    var saveGameButton = new Button("Save");
+                    var loadGameButton = new Button("Load");
+
+                    HideMenu();
+
+                    _mainMenuPanel.AdjustHeightAutomatically = true;
+                    _mainMenuPanel.AddChild(new Header("Main Menu"));
+                    _mainMenuPanel.AddChild(new HorizontalLine());
+                    _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
+                    _mainMenuPanel.AddChild(startGameButton);
+                    _mainMenuPanel.AddChild(saveGameButton);
+                    _mainMenuPanel.AddChild(loadGameButton);
+                    _mainMenuPanel.AddChild(controlsButton);
+                    _mainMenuPanel.AddChild(diagnostics);
+                    _mainMenuPanel.AddChild(quitButton);
+
+                    startGameButton.OnClick += (Entity entity) =>
+                    {
+                        _currentLevel = 1;
+                        StartLevel(_currentLevel);
+                    };
+                    saveGameButton.OnClick += (e) =>
+                    {
+                        _gameWorld.SaveLevel();
+                        StartOrContinueLevel(isFreshStart: false);
+                    };
+                    loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
+                    diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
+                    quitButton.OnClick += (Entity entity) => QuitGame();
+                    controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
+                }
+
+                void SetupInstructionsPanel()
                 {
-                    _gameWorld.SaveLevel();
-                    StartOrContinueLevel(isFreshStart: false);
-                };
-                loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
-                diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
-                quitButton.OnClick += (Entity entity) => QuitGame();
-                controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
-            }
+                    var closeControlsPanelButton = new Button("Back");
 
-            void SetupInstructionsPanel()
-            {
-                var closeControlsPanelButton = new Button("Back");
-
-                _controlsPanel.Visible = false;
-                _controlsPanel.AdjustHeightAutomatically = true;
-                _controlsPanel.AddChild(new Header("Mazer's Controls"));
-                _controlsPanel.AddChild(new RichParagraph(
-                    "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
-                    "A level is cleared when all the baloons are collected.\n\n" +
-                    "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
-                    "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
-                    "{{BOLD}}Good Luck!"));
-                _controlsPanel.AddChild(closeControlsPanelButton);
-                closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
-            }
-
-            // Add the panels to the UI
-            UserInterface.Active.AddEntity(_mainMenuPanel);
-            UserInterface.Active.AddEntity(_controlsPanel);
-            UserInterface.Active.AddEntity(_gameOverPanel);
-
-            return Nothing;
-        }
+                    _controlsPanel.Visible = false;
+                    _controlsPanel.AdjustHeightAutomatically = true;
+                    _controlsPanel.AddChild(new Header("Mazer's Controls"));
+                    _controlsPanel.AddChild(new RichParagraph(
+                        "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
+                        "A level is cleared when all the baloons are collected.\n\n" +
+                        "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
+                        "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
+                        "{{BOLD}}Good Luck!"));
+                    _controlsPanel.AddChild(closeControlsPanelButton);
+                    closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
+                }
+            });
 
         private Either<IFailure, Unit> QuitGame()
             => Ensure(Exit);
