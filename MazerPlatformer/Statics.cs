@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,8 +14,8 @@ namespace MazerPlatformer
     {
         public static Rectangle ToRectangle(this BoundingBox box)
         {
-            var rect = new Rectangle(new Point((int) box.Min.X, (int) box.Min.Y),
-                new Point((int) box.Max.X, (int) box.Max.Y));
+            var rect = new Rectangle(new Point((int)box.Min.X, (int)box.Min.Y),
+                new Point((int)box.Max.X, (int)box.Max.Y));
             return rect;
         }
 
@@ -26,7 +27,7 @@ namespace MazerPlatformer
 
         public static T ParseEnum<T>(this string value)
         {
-            return (T) Enum.Parse(typeof(T), value, true);
+            return (T)Enum.Parse(typeof(T), value, true);
         }
 
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
@@ -35,7 +36,7 @@ namespace MazerPlatformer
             if (gameObject.Type != GameObject.GameObjectType.Npc) return false;
             return gameObject.FindComponentByType(Component.ComponentType.NpcType)
                 .Match(
-                    Some: component => (Npc.NpcTypes) component.Value == type, 
+                    Some: component => (Npc.NpcTypes)component.Value == type,
                     None: () => false);
 
         }
@@ -43,30 +44,30 @@ namespace MazerPlatformer
         public static T GetRandomEnumValue<T>()
         {
             var values = Enum.GetValues(typeof(T));
-            return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
+            return (T)values.GetValue(Level.RandomGenerator.Next(values.Length));
         }
 
         public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc)
         {
-            if (npc.Type != GameObject.GameObjectType.Npc) 
+            if (npc.Type != GameObject.GameObjectType.Npc)
                 return Option<Npc.NpcTypes>.None;
 
-            return  npc.FindComponentByType(Component.ComponentType.NpcType)
+            return npc.FindComponentByType(Component.ComponentType.NpcType)
                 .Bind(component => string.IsNullOrEmpty(component.Value.ToString())
                     ? Option<string>.None
                     : component.Value.ToString())
                 .Map(ParseEnum<Npc.NpcTypes>);
         }
 
-        public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure,Unit>> failures)
+        public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure, Unit>> failures)
         {
             var failed = failures.Lefts().ToList();
             return failed.Any() ? new AggregatePipelineFailure(failed).ToFailure<Unit>() : Nothing.ToSuccess();
         }
 
         public static IFailure AsFailure(this Exception e) => new ExceptionFailure(e);
-        
-        public static Either<IFailure, Unit> SetPlayerVitals(this Player player,int health, int points) 
+
+        public static Either<IFailure, Unit> SetPlayerVitals(this Player player, int health, int points)
             => SetPlayerVitalComponents(player.Components, health, points);
 
         public static Either<IFailure, Unit> SetPlayerVitalComponents(List<Component> components, int health, int points)
@@ -79,8 +80,8 @@ namespace MazerPlatformer
 
             return
                 (from h in healthComponent.ToEither<IFailure>(new NotFound("health component not found"))
-                    from p in pointsComponent.ToEither<IFailure>(new NotFound("health component not found"))
-                    select Nothing);
+                 from p in pointsComponent.ToEither<IFailure>(new NotFound("health component not found"))
+                 select Nothing);
         }
 
         public static Option<T> SingleOrNone<T>(this List<T> list, Func<T, bool> predicate)
@@ -108,24 +109,27 @@ namespace MazerPlatformer
         public static Either<IFailure, T> ToFailure<T>(this IFailure failure)
             => Prelude.Left<IFailure, T>(failure);
 
-        public static Either<L, R> ToFailure<L,R>(this L left)
+        public static Either<L, R> ToFailure<L, R>(this L left)
             => Prelude.Left<L, R>(left);
 
-        public static Either<IFailure, Unit> Ensure(Action action) 
+        public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
 
-        public static Either<IFailure, T> EnsureWithReturn<T>(Func<T> action) 
+        public static Either<L, Unit> Ensure<L>(Action action, L failure)
+            => action.TryThis<L>(failure);
+
+        public static Either<IFailure, T> EnsureWithReturn<T>(Func<T> action)
             => action.TryThis();
 
         public static Either<L, T> EnsureWithReturn<L, T>(Func<T> action, L left)
-            => action.TryThis<L,T>(left);
+            => action.TryThis<L, T>(left);
 
-        public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action) 
+        public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action)
             => either.IfLeft(action);
 
         public static void IfFailedAnd<R>(this Either<IFailure, R> either, bool condition, Action<IFailure> action)
         {
-            if(condition)
+            if (condition)
                 either.IfFailed(action);
         }
 
@@ -151,10 +155,16 @@ namespace MazerPlatformer
         public static Either<IFailure, T> TryThis<T>(this Func<T> action)
             => new Try<T>(() => action())
                 .Match(
-                    unit => unit == null 
-                        ? new NotTypeException(typeof(T)) 
-                        : unit.ToSuccess(), 
+                    unit => unit == null
+                        ? new NotTypeException(typeof(T))
+                        : unit.ToSuccess(),
                     exception => new ExternalLibraryFailure(exception));
+
+        public static Either<L, Unit> TryThis<L>(this Action action, L failure)
+        => new Try<Unit>(() => { action(); return Nothing; })
+            .Match(
+                unit => unit.ToSuccess<L, Unit>(),
+                exception => failure);
 
         public static Either<L, T> TryThis<L, T>(this Func<T> action, L failure)
             => new Try<T>(() => action())

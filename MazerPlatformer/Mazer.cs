@@ -70,7 +70,8 @@ namespace MazerPlatformer
         public Mazer()
         {
             SetupGraphicsDevice()
-                .Bind(unit => CreateInfrastructure()).ThrowIfFailed();
+                .Bind(_ => CreateInfrastructure())
+                .ThrowIfFailed();
 
             Content.RootDirectory = "Content";
             IsFixedTimeStep = false;
@@ -79,14 +80,11 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetupGraphicsDevice() =>
                 Ensure(() => 
                 { 
-                    var graphics = new GraphicsDeviceManager(this)
-                    {
-                        PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
-                        PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
-                    };
-
+                    var graphics = new GraphicsDeviceManager(this);
+                    graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+                    graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
                     graphics.ApplyChanges();
-                });
+                }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
 
             Either<IFailure, Unit> CreateInfrastructure() =>
                 Ensure(() =>
@@ -107,12 +105,27 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            TryLoadContent<SpriteFont>("Sprites/gameFont")
-                .Map(font => _font = font)
-                .Bind(success => TryLoadContent<Song>("Music/bgm_menu"))
-                .Map(song => _menuMusic = song)
-                .Bind(success => _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0))
+            LoadGameFont()
+                .Bind(SetGameFont)
+                .Bind(LoadMenuMusic())
+                .Bind(SetMenuMusic)
+                .Bind(LoadGameWorldContent())
             .ThrowIfFailed();
+
+            Either<IFailure, SpriteFont> LoadGameFont() 
+                => TryLoadContent<SpriteFont>("Sprites/gameFont");
+
+            Either<IFailure, Unit> SetGameFont(SpriteFont font)
+                => Ensure(() => _font = font);
+
+            Func<Unit, Either<IFailure, Song>> LoadMenuMusic() => (unused) 
+                => TryLoadContent<Song>("Music/bgm_menu");
+
+            Either<IFailure, Unit> SetMenuMusic(Song song) 
+                => Ensure(()=>_menuMusic = song);
+
+            Func<Unit, Either<IFailure, Unit>> LoadGameWorldContent() => (unused)
+                => _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0);
         }
 
         private Either<IFailure, T> TryLoadContent<T>(string assetName) 
@@ -221,9 +234,9 @@ namespace MazerPlatformer
         protected override void Update(GameTime gameTime)
         {
             Ensure(action: () => UserInterface.Active.Update(gameTime))
-                .Bind(unit => UpdateGameCommands()) // get input
-                .Bind(unit => UpdateStateMachine()) // NB: game world is updated by PlayingGameState
-                .Bind(unit => UpdateBase())
+                .Bind(ok => UpdateGameCommands()) // get input
+                .Bind(ok => UpdateStateMachine()) // NB: game world is updated by PlayingGameState
+                .Bind(ok => UpdateBase())
             .ThrowIfFailed();
 
             Either<IFailure, Unit> UpdateGameCommands() => Ensure(()=>_gameCommands.Update(gameTime));
@@ -248,21 +261,21 @@ namespace MazerPlatformer
             .ThrowIfFailed();
         }
 
-        private Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch)
-        {
-            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-            _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
-                Color.White);
+        private Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch) =>
+            Ensure(() =>
+            {
+                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+                _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
+                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                    Color.White);
 
-            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
-                Color.White);
-            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
-                Color.White);
-            return new Unit();
-        }
+                _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
+                    Color.White);
+                _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
+                    Color.White);
+            });
 
 
         private Either<IFailure, Unit> ProgressToLevel(int level) 
@@ -307,21 +320,19 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        private void ResetPlayerStatistics()
-        {
-            _playerHealth = 100;
-            _playerPoints = 0;
-            _playerPickups = 0;
+        private Either<IFailure, Unit> ResetPlayerStatistics() =>
+            Ensure(() =>
+            {
+                _playerHealth = 100;
+                _playerPoints = 0;
+                _playerPickups = 0;
 
-            // Inform the game world that we're intending to reset the players state(vitals) 
-            _gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints);
-        }
+                // Inform the game world that we're intending to reset the players state(vitals) 
+                _gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints);
+            });
 
-        private void ShowGameOverScreen()
-        {
-            SetupGameOverMenu();
-            _gameOverPanel.Visible = true;
-        }
+        private Either<IFailure, Unit> ShowGameOverScreen() 
+            => SetupGameOverMenu().Iter(unit => _gameOverPanel.Visible = true);
 
         // Creates the UI elements that the menu will use
         private Either<IFailure, Unit> SetupMenuUi()
