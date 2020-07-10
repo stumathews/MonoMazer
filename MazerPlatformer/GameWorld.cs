@@ -118,7 +118,7 @@ namespace MazerPlatformer
 
         public void SaveLevel()
         {
-            _level.Save();
+            Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, Level.Npcs);
         }
 
         /// <summary>
@@ -127,15 +127,15 @@ namespace MazerPlatformer
         /// Listen for collision events
         /// Listen for scoring, special moves, power-ups etc
         /// </summary>
-        public void Initialize()
+        public Either<IFailure, Unit> Initialize()
         {
             // Hook up the Player events to the external world ie game UI
-            _level.Player.OnStateChanged += state => OnPlayerStateChanged?.Invoke(state); // want to know when the player's state changes
-            _level.Player.OnDirectionChanged += direction => OnPlayerDirectionChanged?.Invoke(direction); // want to know when the player's direction changes
-            _level.Player.OnCollisionDirectionChanged += direction => OnPlayerCollisionDirectionChanged?.Invoke(direction); // want to know when player collides
-            _level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
-            _level.Player.OnCollision += PlayerOnOnCollision;
-            _level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
+            Level.Player.OnStateChanged += state => Ensure(()=> OnPlayerStateChanged?.Invoke(state)); // want to know when the player's state changes
+            Level.Player.OnDirectionChanged += direction => Ensure(()=> OnPlayerDirectionChanged?.Invoke(direction)); // want to know when the player's direction changes
+            Level.Player.OnCollisionDirectionChanged += direction => Ensure(()=> OnPlayerCollisionDirectionChanged?.Invoke(direction)); // want to know when player collides
+            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
+            Level.Player.OnCollision += PlayerOnOnCollision;
+            Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
             
@@ -146,59 +146,65 @@ namespace MazerPlatformer
                 gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component update
                 
                 // Every object will have access to the player
-                gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, _level.Player));
+                gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, Level.Player));
                 // every object will have access to the game world
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
+
+            return Nothing; // TODO: FIXME
         }
         
         private Either<IFailure, Unit> PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
         {
-
             // Change my health component to be affected by the hit points of the other object
-            if (otherObject.Type != GameObjectType.Npc) return Nothing;
-
-            return otherObject.FindComponentByType(Component.ComponentType.NpcType)
-                .Map(component => (Npc.NpcTypes) component.Value)
-                .Iter(type =>
-                {
-                    if (type == Npc.NpcTypes.Enemy)
+            return otherObject.Type != GameObjectType.Npc
+                ? Nothing
+                : otherObject.FindComponentByType(Component.ComponentType.NpcType)
+                    .Map(component => (Npc.NpcTypes) component.Value)
+                    .Iter(type =>
                     {
-                        // deal damage
-                        var newHealth =
-                            from hitPointsComponent in otherObject.FindComponentByType(Component.ComponentType.HitPoints)
-                            from healthComponent in thePlayer.FindComponentByType(Component.ComponentType.Health)
-                            let myHealth = (int) healthComponent.Value
-                            let hitPoints = (int) hitPointsComponent.Value
-                            select myHealth - hitPoints;
-
-                        newHealth.Iter(health =>
+                        if (type == Npc.NpcTypes.Enemy)
                         {
-                            if (health <= 0)
+                            // deal damage
+                            var newHealth =
+                                from hitPointsComponent in otherObject.FindComponentByType(Component.ComponentType.HitPoints)
+                                                                      .ToEither(new NotFound("Could not find hit-point component"))
+                                from healthComponent in thePlayer.FindComponentByType(Component.ComponentType.Health)
+                                                                 .ToEither(new NotFound("Could not find health component"))
+                                let myHealth = (int) healthComponent.Value
+                                let hitPoints = (int) hitPointsComponent.Value
+                                select myHealth - hitPoints;
+
+
+                            newHealth.Iter(health =>
                             {
-                                _level.PlayLoseSound();
-                                _playerDied = true;
-                                OnPlayerDied?.Invoke(thePlayer.Components);
-                            }
+                                if (health <= 0)
+                                {
+                                    _level.PlayLoseSound();
+                                    _playerDied = true;
+                                    OnPlayerDied?.Invoke(thePlayer.Components);
+                                }
 
-                            thePlayer.UpdateComponentByType(Component.ComponentType.Health, health);
-                        });
-                    }
+                                thePlayer.UpdateComponentByType(Component.ComponentType.Health, health);
+                            });
+                        }
 
-                    if (type == Npc.NpcTypes.Pickup)
-                    {
-                        // pickup points
-                        var levelPoints = 
-                            from pickupPointsComponent in otherObject.FindComponentByType(Component.ComponentType.Points)
-                            from myPointsComponent in thePlayer.FindComponentByType(Component.ComponentType.Points)
-                            let myPoints = (int) myPointsComponent.Value
-                            let pickupPoints = (int) pickupPointsComponent.Value
-                            select myPoints + pickupPoints;
+                        if (type == Npc.NpcTypes.Pickup)
+                        {
+                            // pickup points
+                            var levelPoints =
+                                from pickupPointsComponent in otherObject.FindComponentByType(Component.ComponentType.Points)
+                                    .ToEither(new NotFound("Could not find hit-point component"))
+                                from myPointsComponent in thePlayer.FindComponentByType(Component.ComponentType.Points)
+                                 .ToEither(new NotFound("Could not find hit-point component"))
+                                let myPoints = (int) myPointsComponent.Value
+                                let pickupPoints = (int) pickupPointsComponent.Value
+                                select myPoints + pickupPoints;
 
-                        levelPoints.Iter(points =>
-                            thePlayer.UpdateComponentByType(Component.ComponentType.Points, points));
-                    }
-                });
+                            levelPoints.Iter(points =>
+                                thePlayer.UpdateComponentByType(Component.ComponentType.Points, points));
+                        }
+                    });
         }
 
 
@@ -207,17 +213,11 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="spriteBatch"></param>
         public Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
-        {
-            if (_unloading) return Nothing;
-
-            foreach (var gameObject in _gameObjects.Values.Where(obj => obj.Active))
-            {
-                gameObject.Draw(spriteBatch)
-                    .IfFailedLogFailure();
-            }
-
-            return Nothing;
-        }
+            => _unloading ? Nothing
+                          : _gameObjects.Values
+                              .Where(obj => obj.Active)
+                              .Select(gameObject => gameObject.Draw(spriteBatch))
+                              .AggregateFailures();
 
         /// <summary>
         /// Remove game objects that are no longer active
@@ -227,9 +227,9 @@ namespace MazerPlatformer
         /// Inform game object subscribers that they had a collision by raising event
         /// </summary>
         /// <param name="gameTime"></param>
-        public void Update(GameTime gameTime)
+        public Either<IFailure, Unit> Update(GameTime gameTime)
         {
-            if (_unloading) return;
+            if (_unloading) return Nothing;
 
             _removeWallTimer.Update(gameTime);
 
@@ -250,6 +250,8 @@ namespace MazerPlatformer
 
                 CheckForObjectCollisions(gameObject, activeGameObjects, gameTime);
             }
+
+            return Nothing;//FIXME
         }
 
         // The game world wants to know about every component update/change that occurs in the world
@@ -422,7 +424,7 @@ namespace MazerPlatformer
             
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
-            if (obj1.Id == _level.Player.Id)
+            if (obj1.Id == Level.Player.Id)
                 obj2.Active = obj2.Type == GameObjectType.Room;
 
             // Make a celebratory sound on getting a pickup!
@@ -442,10 +444,10 @@ namespace MazerPlatformer
 
 
         // Inform the Game world that the up button was pressed, make the player idle
-        public void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _level.Player.SetAsIdle();
+        public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Level.Player.SetAsIdle();
 
         public void MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
-            _level.Player.MoveInDirection(direction, dt);
+            Level.Player.MoveInDirection(direction, dt);
 
         public bool IsPathAccessibleBetween(GameObject obj1, GameObject obj2)
         {

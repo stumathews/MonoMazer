@@ -58,18 +58,36 @@ namespace MazerPlatformer
                 .Map(ParseEnum<Npc.NpcTypes>);
         }
 
+        public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure,Unit>> failures)
+        {
+            var failed = failures.Lefts().ToList();
+            return failed.Any() ? new AggregatePipelineFailure(failed).ToFailure<Unit>() : Nothing.ToSuccess();
+        }
+
         public static IFailure AsFailure(this Exception e) => new ExceptionFailure(e);
         
-        public static void SetPlayerVitals(this Player player,int health, int points) 
+        public static Either<IFailure, Unit> SetPlayerVitals(this Player player,int health, int points) 
             => SetPlayerVitalComponents(player.Components, health, points);
 
-        public static void SetPlayerVitalComponents(List<Component> components, int health, int points)
+        public static Either<IFailure, Unit> SetPlayerVitalComponents(List<Component> components, int health, int points)
         {
-            var compHealth = components.SingleOrDefault(o => o.Type == Component.ComponentType.Health);
-            if (compHealth != null) compHealth.Value = health;
+            var healthComponent = components.SingleOrNone(o => o.Type == Component.ComponentType.Health)
+                .Map(component => component.Value = health);
 
-            var comPoints = components.SingleOrDefault(o => o.Type == Component.ComponentType.Points);
-            if (comPoints != null) comPoints.Value = points;
+            var pointsComponent = components.SingleOrNone(o => o.Type == Component.ComponentType.Points)
+                .Map(component => component.Value = points);
+
+            return
+                (from h in healthComponent.ToEither<IFailure>(new NotFound("health component not found"))
+                    from p in pointsComponent.ToEither<IFailure>(new NotFound("health component not found"))
+                    select Nothing);
+        }
+
+        public static Option<T> SingleOrNone<T>(this List<T> list, Func<T, bool> predicate)
+        {
+            return EnsureWithReturn(() => list.SingleOrDefault(predicate))
+                .Map(item => item != null ? item : Option<T>.None)
+                .IfLeft(Option<T>.None);
         }
 
         /// <summary>
@@ -153,6 +171,22 @@ namespace MazerPlatformer
             if (found.Count > 0) then(found.First());
             return found;
         }
+    }
+
+    public class AggregatePipelineFailure : IFailure
+    {
+        public AggregatePipelineFailure(IEnumerable<IFailure> failures)
+        {
+            var failureNames = failures.GroupBy(o => o.GetType().Name, o=> o.Reason);
+            var sb = new StringBuilder();
+            foreach (var name in failureNames)
+            {
+                sb.Append($"Failure name: {name.Key} Count: {name.Count()}\n");
+            }
+
+            Reason = sb.ToString();
+        }
+        public string Reason { get; set; }
     }
 
     public class NotTypeException : IFailure

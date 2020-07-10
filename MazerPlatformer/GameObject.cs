@@ -91,7 +91,7 @@ namespace MazerPlatformer
             return _centre;
         }
 
-        private void CalculateBoundingBox()
+        private Either<IFailure, Unit> CalculateBoundingBox()
         {
             // Keep track of our centre
             _centre = GetCentre();
@@ -106,14 +106,16 @@ namespace MazerPlatformer
 
             // Every object gets a bounding sphere and this is used for collision detection
             BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
+            return Nothing; //FIXME
         }
 
         // Called every frame
-        public virtual void Update(GameTime gameTime)
+        public virtual Either<IFailure, Unit> Update(GameTime gameTime)
         {
-            if (!Active) return;
+            if (!Active) return Nothing;
             CalculateBoundingBox();
             StateMachine.Update(gameTime);
+            return Nothing; //FIXME
         }
 
         // Every object can check if its colliding with another object's bounding box
@@ -153,12 +155,14 @@ namespace MazerPlatformer
                 .Map(component => component ?? Option<Component>.None)
                 .IfLeft(Option<Component>.None);
 
+        
+
         /// <summary>
         /// Updates by type, throws if more than one type of this component exists in the game object
         /// </summary>
         /// <param name="newValue"></param>
         /// <returns></returns>
-        public bool UpdateComponentByType(Component.ComponentType type, object  newValue) => UpdateComponent(newValue, Components.Single(o => o.Type == type));
+        public Either<IFailure, Unit> UpdateComponentByType(Component.ComponentType type, object  newValue) => UpdateComponent(newValue, Components.Single(o => o.Type == type));
 
         public Component AddComponent(Component.ComponentType type, object value, string id = null)
         {
@@ -167,15 +171,16 @@ namespace MazerPlatformer
             return component;
         }
 
-        private bool UpdateComponent(object newValue, Component found)
-        {
-            if (found == null) return false;
-            var oldValue = found.Value;
-            found.Value = newValue;
+        private Either<IFailure, Unit> UpdateComponent(object newValue, Component found)
+            => found == null
+                ? new NotFound($"Component not found to set value to {newValue}").ToFailure<Unit>()
+                : Ensure(() =>
+                {
+                    var oldValue = found.Value;
+                    found.Value = newValue;
 
-            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
-            return true;
-        }
+                    OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
+                });
 
         public void AddState(State state) => States.Add(state);
 
@@ -220,7 +225,7 @@ namespace MazerPlatformer
         }
 
         // Specific game objects need to initialize themselves
-        public virtual void Initialize()
+        public virtual Either<IFailure, Unit> Initialize()
         {
             // We enter the default state whatever that is
             foreach(var state in States)
@@ -229,6 +234,7 @@ namespace MazerPlatformer
             StateMachine.Initialise(States.Any() 
                 ? States.FirstOrDefault(s=>s.Name == "default")?.Name ?? States.First()?.Name 
                 : null);
+            return Nothing;
         }
 
         #endregion

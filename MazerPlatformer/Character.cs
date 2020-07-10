@@ -47,9 +47,9 @@ namespace MazerPlatformer
         public virtual event CollisionDirectionChanged OnCollisionDirectionChanged;
 
         /* Delegates that are used for the character events */
-        public delegate void DirectionChanged(CharacterDirection direction);
-        public delegate void CollisionDirectionChanged(CharacterDirection direction);
-        public delegate void StateChanged(CharacterStates state);
+        public delegate Either<IFailure, Unit> DirectionChanged(CharacterDirection direction);
+        public delegate Either<IFailure, Unit> CollisionDirectionChanged(CharacterDirection direction);
+        public delegate Either<IFailure, Unit> StateChanged(CharacterStates state);
 
         protected Character(int x, int y, string id, int width, int height, GameObjectType type, int moveStepIncrement = 3) :
             base(x, y, id, width, height, type)
@@ -57,7 +57,7 @@ namespace MazerPlatformer
             _moveStep = moveStepIncrement;
         }
 
-        public override void Initialize()
+        public override Either<IFailure, Unit> Initialize()
         {
             base.Initialize();
 
@@ -73,12 +73,18 @@ namespace MazerPlatformer
             Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
 
             // Initialize the characters animation
-            Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight,
-                AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
-                AnimationInfo.FrameTime);
+            return EnsureWithReturn( () =>
+            {
+                Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth,
+                    AnimationInfo.FrameHeight,
+                    AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
+                    AnimationInfo.FrameTime);
+                return Nothing;
+            });
         }
 
-        public void SetAsIdle() => SetState(CharacterStates.Idle);
+        public Either<IFailure, Unit> SetAsIdle() 
+            => SetState(CharacterStates.Idle);
 
         private Either<IFailure, Unit> HandleCharacterCollision(GameObject object1, GameObject object2) 
             => SetCollisionDirection(CurrentDirection);
@@ -109,10 +115,10 @@ namespace MazerPlatformer
             return SetCharacterDirection(direction);
         }
 
-        private void SetState(CharacterStates state)
+        private Either<IFailure, Unit> SetState(CharacterStates state)
         {
             CurrentState = state;
-            OnStateChanged?.Invoke(state);
+            return Ensure( () => OnStateChanged?.Invoke(state));
         }
 
         private Either<IFailure, Unit> SetCharacterDirection(CharacterDirection direction) 
@@ -151,9 +157,10 @@ namespace MazerPlatformer
         }
 
         // I can do unique things when my state changes
-        private void OnMyStateChanged(CharacterStates state)
+        private Either<IFailure, Unit> OnMyStateChanged(CharacterStates state)
         {
             if (state == CharacterStates.Idle) Animation.Idle = true;
+            return Nothing;
         }
 
         private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction)
@@ -190,7 +197,7 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        public void SwapDirection()
+        public Either<IFailure, Unit> SwapDirection()
         {
             switch (CurrentDirection)
             {
@@ -207,22 +214,22 @@ namespace MazerPlatformer
                     SetCharacterDirection(CharacterDirection.Left);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return new InvalidDirectionFailure(CurrentDirection);
             }
+
+            return Nothing;
         }
 
-        public void ChangeDirection(CharacterDirection dir) => SetCharacterDirection(dir);
-
+        public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir) 
+            => SetCharacterDirection(dir);
 
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
             => base.Draw(spriteBatch)
                 .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
 
-
-        public override void Update(GameTime gameTime)
-        {
-            base.Update(gameTime);
-            Animation.Update(gameTime, (int)GetCentre().X, (int)GetCentre().Y);
-        }
+        public override Either<IFailure, Unit> Update(GameTime gameTime) 
+            => base.Update(gameTime)
+                .Bind(unit =>
+                Ensure(() => Animation.Update(gameTime, (int) GetCentre().X, (int) GetCentre().Y)));
     }
 }

@@ -36,21 +36,20 @@ namespace MazerPlatformer
         public Npc(int x, int y, string id, int width, int height, GameObjectType type, AnimationInfo animationInfo, int moveStep = 3) : base(x, y, id, width, height, type, moveStep) 
             => AnimationInfo = animationInfo;
 
-        public override void Initialize()
-        {
-            base.Initialize();
-            OnCollision += HandleCollision;
-            Animation.Idle = false;
+        public override Either<IFailure, Unit> Initialize() 
+            => base.Initialize().Iter(unit =>
+            {
+                OnCollision += HandleCollision;
+                Animation.Idle = false;
 
-            // NPCs start off with random directions
-            CurrentDirection = GetRandomEnumValue<CharacterDirection>();
-        }
-        
+                // NPCs start off with random directions
+                CurrentDirection = GetRandomEnumValue<CharacterDirection>();
+            });
+
         private Either<IFailure, Unit> HandleCollision(GameObject thisObject, GameObject otherObject)
         {
             NpcState = NpcStates.Colliding;
-            if (otherObject.IsPlayer()) return Nothing;
-            return NudgeOutOfCollision();
+            return otherObject.IsPlayer() ? Nothing : NudgeOutOfCollision();
         }
     }
 

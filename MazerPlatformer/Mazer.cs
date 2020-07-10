@@ -135,9 +135,9 @@ namespace MazerPlatformer
             /* Connect the UI to the game world */
 
             _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-            _gameWorld.OnPlayerStateChanged += (state) => _characterState = state;
-            _gameWorld.OnPlayerDirectionChanged += (direction) => _characterDirection = direction;
-            _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => _characterCollisionDirection = direction;
+            _gameWorld.OnPlayerStateChanged += (state) => Ensure(()=>_characterState = state);
+            _gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
+            _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
             _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
             _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
             _gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;

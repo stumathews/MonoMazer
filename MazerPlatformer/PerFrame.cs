@@ -19,11 +19,11 @@ namespace MazerPlatformer
         /// Called each frame to update itself
         /// </summary>
         /// <param name="gameTime"></param>
-        void Update(GameTime gameTime);
+        Either<IFailure, Unit> Update(GameTime gameTime);
 
         /// <summary>
         /// Called each frame to initialize itself
         /// </summary>
-        void Initialize();
+        Either<IFailure, Unit> Initialize();
     }
 }

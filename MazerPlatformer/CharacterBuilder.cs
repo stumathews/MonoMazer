@@ -13,7 +13,7 @@ namespace MazerPlatformer
 {
     public class CharacterBuilder
     {
-        public int DefaultNumPirates = 10;
+        public static int DefaultNumPirates = 10;
         public const int DefaultNumDodos = 5;
         public const int DefaultNumPickups = 5;
         public ContentManager ContentManager { get; }
