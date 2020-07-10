@@ -99,11 +99,10 @@ namespace MazerPlatformer
 
         }
 
-        private void AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
-        {
-            foreach (var levelGameObject in levelGameObjects)
-                AddToGameObjects(levelGameObject.Key, levelGameObject.Value);
-        }
+        private Either<IFailure, Unit> AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
+            => levelGameObjects
+                .Select(levelGameObject => AddToGameObjects(levelGameObject.Key, levelGameObject.Value))
+                .AggregateFailures();
 
         /// <summary>
         /// Unload the game world, and save it
@@ -138,6 +137,7 @@ namespace MazerPlatformer
             Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue); // want to know when the player's components change
             Level.Player.OnCollision += PlayerOnOnCollision;
             Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
+            
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
             
@@ -149,6 +149,7 @@ namespace MazerPlatformer
                 
                 // Every object will have access to the player
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, Level.Player));
+                
                 // every object will have access to the game world
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
@@ -163,50 +164,56 @@ namespace MazerPlatformer
                 ? Nothing
                 : otherObject.FindComponentByType(Component.ComponentType.NpcType)
                     .Map(component => (Npc.NpcTypes) component.Value)
-                    .Iter(type =>
+                    .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                    .Bind(type =>
                     {
-                        if (type == Npc.NpcTypes.Enemy)
+                        Either<IFailure, Unit> result = Nothing;
+                        switch (type)
                         {
-                            // deal damage
-                            var newHealth =
-                                from hitPointsComponent in otherObject.FindComponentByType(Component.ComponentType.HitPoints)
-                                                                      .ToEither(new NotFound("Could not find hit-point component"))
-                                from healthComponent in thePlayer.FindComponentByType(Component.ComponentType.Health)
-                                                                 .ToEither(new NotFound("Could not find health component"))
-                                let myHealth = (int) healthComponent.Value
-                                let hitPoints = (int) hitPointsComponent.Value
-                                select myHealth - hitPoints;
-
-
-                            newHealth.Iter(health =>
-                            {
-                                if (health <= 0)
-                                {
-                                    _level.PlayLoseSound();
-                                    _playerDied = true;
-                                    OnPlayerDied?.Invoke(thePlayer.Components);
-                                }
-
-                                thePlayer.UpdateComponentByType(Component.ComponentType.Health, health);
-                            });
+                            case Npc.NpcTypes.Enemy:
+                                // deal damage
+                                result = DetermineNewHealth(thePlayer, otherObject)
+                                    .Bind(health => thePlayer.UpdateComponentByType(Component.ComponentType.Health, health))
+                                    .Bind(health => Ensure(() =>
+                                    {
+                                        if ((int) health > 0) return;
+                                        _level.PlayLoseSound();
+                                        _playerDied = true;
+                                        OnPlayerDied?.Invoke(thePlayer.Components);
+                                    }));
+                                break;
+                            case Npc.NpcTypes.Pickup:
+                                // pickup points
+                                result = DetermineNewLevelPoints(thePlayer, otherObject)
+                                    .Bind(levelPoints => thePlayer.UpdateComponentByType(Component.ComponentType.Points, levelPoints))
+                                    .Map(o => Nothing);
+                                break;
                         }
 
-                        if (type == Npc.NpcTypes.Pickup)
-                        {
-                            // pickup points
-                            var levelPoints =
-                                from pickupPointsComponent in otherObject.FindComponentByType(Component.ComponentType.Points)
-                                    .ToEither(new NotFound("Could not find hit-point component"))
-                                from myPointsComponent in thePlayer.FindComponentByType(Component.ComponentType.Points)
-                                 .ToEither(new NotFound("Could not find hit-point component"))
-                                let myPoints = (int) myPointsComponent.Value
-                                let pickupPoints = (int) pickupPointsComponent.Value
-                                select myPoints + pickupPoints;
-
-                            levelPoints.Iter(points =>
-                                thePlayer.UpdateComponentByType(Component.ComponentType.Points, points));
-                        }
+                        return result;
                     });
+
+            Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
+            {
+                return from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
+                        .ToEither(NotFound.Create("Could not find hit-point component"))
+                    from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
+                        .ToEither(NotFound.Create("Could not find health component"))
+                    let myHealth = (int) healthComponent.Value
+                    let hitPoints = (int) hitPointsComponent.Value
+                    select myHealth - hitPoints;
+            }
+
+            Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
+            {
+                return from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
+                        .ToEither(NotFound.Create("Could not find hit-point component"))
+                    from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
+                        .ToEither(NotFound.Create("Could not find hit-point component"))
+                    let myPoints = (int) myPointsComponent.Value
+                    let pickupPoints = (int) pickupPointsComponent.Value
+                    select myPoints + pickupPoints;
+            }
         }
 
 
@@ -285,11 +292,13 @@ namespace MazerPlatformer
             _level.PlaySong();
         }
 
-        private void AddToGameObjects(string id, GameObject gameObject)
-        {
-            _gameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _gameObjects.Count());
-        }
+        private Either<IFailure, Unit> AddToGameObjects(string id, GameObject gameObject) 
+            => Ensure(()=>
+            {
+                _gameObjects.Add(id, gameObject);
+                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false,
+                    runningTotalCount: _gameObjects.Count());
+            });
 
         private void RemoveFromGameObjects(string id)
         {

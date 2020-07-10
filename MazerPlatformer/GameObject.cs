@@ -147,9 +147,9 @@ namespace MazerPlatformer
         }
 
         /// <summary>
-        /// Find a component, assuming there is only one of this type otherwise throws
+        /// Find a component, assuming there is only one of this type otherwise None
         /// </summary>
-        /// <remarks>This should throw an exception if more than one of the same component type is found ie programmer error</remarks>
+        /// <remarks>Returns None if the object is not found or is null</remarks>
         public Option<Component> FindComponentByType(Component.ComponentType type)
             => EnsureWithReturn(() => Components.SingleOrDefault(o => o.Type == type))
                 .Map(component => component ?? Option<Component>.None)
@@ -158,11 +158,12 @@ namespace MazerPlatformer
         
 
         /// <summary>
-        /// Updates by type, throws if more than one type of this component exists in the game object
+        /// Updates by type, returns the updated value, fails otherwise
         /// </summary>
         /// <param name="newValue"></param>
         /// <returns></returns>
-        public Either<IFailure, Unit> UpdateComponentByType(Component.ComponentType type, object  newValue) => UpdateComponent(newValue, Components.Single(o => o.Type == type));
+        public Either<IFailure, object> UpdateComponentByType(Component.ComponentType type, object  newValue) 
+            => UpdateComponent(newValue, Components.Single(o => o.Type == type));
 
         public Component AddComponent(Component.ComponentType type, object value, string id = null)
         {
@@ -171,15 +172,16 @@ namespace MazerPlatformer
             return component;
         }
 
-        private Either<IFailure, Unit> UpdateComponent(object newValue, Component found)
+        private Either<IFailure, object> UpdateComponent(object newValue, Component found)
             => found == null
                 ? new NotFound($"Component not found to set value to {newValue}").ToFailure<Unit>()
-                : Ensure(() =>
+                : EnsureWithReturn(() =>
                 {
                     var oldValue = found.Value;
                     found.Value = newValue;
 
                     OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
+                    return newValue;
                 });
 
         public void AddState(State state) => States.Add(state);
