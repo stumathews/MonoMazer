@@ -67,7 +67,13 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="failures"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure, Unit>> failures)
+        public static Either<IFailure, T> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> failures, T left)
+        {
+            var failed = failures.Lefts().ToList();
+            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() : left.ToSuccess();
+        }
+
+        public static Either<IFailure, Unit> AggregateUnitFailures(this IEnumerable<Either<IFailure, Unit>> failures)
         {
             var failed = failures.Lefts().ToList();
             return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<Unit>() : Nothing.ToSuccess();
