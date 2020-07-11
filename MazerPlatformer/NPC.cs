@@ -99,7 +99,7 @@ namespace MazerPlatformer
                     .Iter(gameWorld =>
                     {
                         var player = (Player) playerComponent.Value;
-                        var npcRoom = gameWorld.GetRoomIn(Npc);
+                        var npcRoom = gameWorld.GetRoomIn(Npc).ThrowIfNone(NotFound.Create("Room unexpectedly not found"));
                         var myRow = gameWorld.ToRoomRow(Npc);
                         var myCol = gameWorld.ToRoomColumn(Npc);
                         var playerRow = gameWorld.ToRoomRow(player);

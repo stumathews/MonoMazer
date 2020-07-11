@@ -380,14 +380,14 @@ namespace MazerPlatformer
                     gameObject2.IsColliding = gameObject1.IsColliding = false;
                 }
             }
-        }
+        });
 
-        public Room GetRoomIn(GameObject gameObject)
+        public Option<Room> GetRoomIn(GameObject gameObject)
         {
             var col = ToRoomColumn(gameObject);
             var row = ToRoomRow(gameObject);
             var roomNumber = ((row - 1) * Cols) + col - 1;
-            return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : null;
+            return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : Option<Room>.None;
         }
 
         private Room GetRoom(int roomNumber)
