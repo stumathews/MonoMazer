@@ -217,22 +217,53 @@ namespace MazerPlatformer
             return new ConditionNotSatisfied();
         }
 
+        /// <summary>
+        /// Runs code with exception => failure handling
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
         public static Either<IFailure, Unit> EnsureIf(bool condition, Action action) 
             => condition ? Ensure(action).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied();
 
+        /// <summary>
+        /// Explicitly turns failures into Right values
+        /// </summary>
+        /// <typeparam name="L"></typeparam>
+        /// <typeparam name="R"></typeparam>
+        /// <param name="either"></param>
+        /// <param name="returnAs"></param>
+        /// <returns></returns>
         public static Either<L, R> IgnoreFailure<L,R>(this Either<L, R> either, R returnAs )
             => either.IfLeft(returnAs);
 
+        /// <summary>
+        /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="condition"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
         public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> action)
         {
             return condition ? (Either<IFailure, T>) action.Invoke() : new ConditionNotSatisfied();
         }
 
+        /// <summary>
+        /// Safe version of DoIf that returns the result of the action a the Right value of an Either<IFailure,R>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="condition"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
         public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> action)
         {
             return condition ? (Either<IFailure, T>)action.Invoke() : new ConditionNotSatisfied();
         }
 
+        /// <summary>
+        /// A Unit
+        /// </summary>
         public static Unit Nothing => new Unit(); 
 
         public static List<T> IfEither<T>(T one, T two, Func<T, bool> matches, Action<T> then)
