@@ -248,6 +248,26 @@ namespace MazerPlatformer
             => either.IfLeft(Nothing);
 
         /// <summary>
+        /// Either it was originally a failure...or the transform failed or it worked
+        /// </summary>
+        /// <typeparam name="L"></typeparam>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="either"></param>
+        /// <param name="transformingFunction"></param>
+        /// <returns></returns>
+        //public static Either<IFailure, T> EnsuringBind<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction) 
+        //    => either.Bind((r) => EnsureWithReturn( () => transformingFunction(r)));
+
+        public static Either<IFailure, Either<TransformExceptionFailure, T>> EnsuringMap<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction) 
+            => either.Map((r) => EnsureWithReturn(() 
+                => transformingFunction(r), new TransformExceptionFailure("An exception occured while ensuring a map")));
+
+        public static Either<IFailure, Either<TransformExceptionFailure, Either<IFailure, T>>> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure,T>> transformingFunction) 
+            => either.Bind<Either<TransformExceptionFailure, Either<IFailure, T>>>(right 
+                => EnsureWithReturn(() => transformingFunction(right), new TransformExceptionFailure("An exception occured while ensuring a bind")));
+
+
+        /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -291,6 +311,17 @@ namespace MazerPlatformer
             centre.X = gameObject.X + gameObject.Width / 2;
             centre.Y = gameObject.Y + gameObject.Height / 2;
             return centre;
+        }
+
+    }
+
+    public class TransformExceptionFailure : IFailure
+    {
+        public string Reason { get; set; }
+
+        public TransformExceptionFailure(string message)
+        {
+            Reason = message;
         }
 
     }

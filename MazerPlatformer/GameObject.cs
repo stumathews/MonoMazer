@@ -241,12 +241,15 @@ namespace MazerPlatformer
         {
             if (!disposing) return;
 
-            OnDisposing?.Invoke(this);
-
-            // Cleanup objects we know we wont need or that other objects should not need.
-            Components.Clear();
-            States.Clear();
-            StateTransitions.Clear();
+            Ensure(() => OnDisposing?.Invoke(this))
+                .EnsuringMap(unit =>
+                {
+                    // Cleanup objects we know we wont need or that other objects should not need.
+                    Components.Clear();
+                    States.Clear();
+                    StateTransitions.Clear();
+                    return Nothing;
+                });
         }
 
         public void Dispose()
