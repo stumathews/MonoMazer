@@ -239,6 +239,9 @@ namespace MazerPlatformer
         public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either) where TLeft : IFailure
             => either.IfLeft(failure => throw new UnexpectedFailureException(failure));
 
+        public static T ThrowIfNone<T>(this Option<T> option, IFailure failure)
+            => option.IfNone(() => throw new UnexpectedFailureException(failure));
+
         public static bool ToggleSetting(ref bool setting)
         {
             return setting = !setting;
