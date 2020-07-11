@@ -321,8 +321,8 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
             // Determine which room the game object is in
-            var col = ToRoomColumn(gameObject);
-            var row = ToRoomRow(gameObject);
+            var col = ToRoomColumn(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to column number")); ;
+            var row = ToRoomRow(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to row  number")); ;
             var roomNumber = ((row - 1) * Cols) + col - 1;
 
             // Only check for collisions with adjacent rooms or current room
@@ -378,8 +378,8 @@ namespace MazerPlatformer
 
         public Option<Room> GetRoomIn(GameObject gameObject)
         {
-            var col = ToRoomColumn(gameObject);
-            var row = ToRoomRow(gameObject);
+            var col = ToRoomColumn(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to column number"));
+            var row = ToRoomRow(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to row  number"));
             var roomNumber = ((row - 1) * Cols) + col - 1;
             return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : Option<Room>.None;
         }
@@ -387,9 +387,11 @@ namespace MazerPlatformer
         private Option<Room> GetRoom(int roomNumber) => EnsureWithReturn(() 
             => _rooms[roomNumber]).ToOption();
 
-        public int ToRoomColumn(GameObject gameObject1) => (int) Math.Ceiling((float) gameObject1.X / _roomWidth);
+        public Option<int> ToRoomColumn(GameObject gameObject1) => EnsureWithReturn(() 
+            => (int) Math.Ceiling((float) gameObject1.X / _roomWidth)).ToOption();
 
-        public int ToRoomRow(GameObject o1) => (int) Math.Ceiling((float) o1.Y / _roomHeight);
+        public Option<int> ToRoomRow(GameObject o1) => EnsureWithReturn(() 
+            => (int) Math.Ceiling((float) o1.Y / _roomHeight)).ToOption();
 
         private static void RemoveRandomWall(Room roomIn, SimpleGameTimeTimer timer)
         {
@@ -459,21 +461,21 @@ namespace MazerPlatformer
         public bool IsPathAccessibleBetween(GameObject obj1, GameObject obj2)
         {
             var obj1Row = ToRoomRow(obj1);
-            var obj1Col = ToRoomColumn(obj1);
+            var obj1Col = ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number")); ;
             var obj2Row = ToRoomRow(obj2);
-            var obj2Col = ToRoomColumn(obj2);
+            var obj2Col = ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
 
             var isSameRow = obj1Row == obj2Row;
             var isSameCol = obj1Col == obj2Col;
 
             if (isSameRow)
             {
-                GetMaxMinRange(obj2Col, obj1Col, out var greaterCol, out var smallerCol);
+                var minMax = GetMaxMinRange(obj2Col, obj1Col).ThrowIfNone(NotFound.Create("Missing MinMax arguments")); ;
 
                 var roomsInThisRow = _rooms.Where(o => o.Row+1 == obj1Row);
                     var cropped = roomsInThisRow.Where(o=>
-                                                       o.Col >= smallerCol-1 && 
-                                                       o.Col <= greaterCol-1).OrderBy(o=>o.X).ToList();
+                                                       o.Col >= minMax.smaller-1 && 
+                                                       o.Col <= minMax.greater-1).OrderBy(o=>o.X).ToList();
                 
                 for (var i = 0; i < cropped.Count-1; i++)
                 {
@@ -489,11 +491,12 @@ namespace MazerPlatformer
 
             if (isSameCol)
             {
-                GetMaxMinRange(obj2Row, obj1Row, out var greaterRow, out var smallerRow);
+                var minMax = GetMaxMinRange(obj2Row, obj1Row).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+                
                 var roomsInThisCol = _rooms.Where(o => o.Col + 1 == obj1Col);
                 var cropped = roomsInThisCol.Where(o =>
-                    o.Row >= smallerRow - 1 &&
-                    o.Row <= greaterRow - 1).OrderBy(o => o.Y).ToList();
+                    o.Row >= minMax.smaller - 1 &&
+                    o.Row <= minMax.greater - 1).OrderBy(o => o.Y).ToList();
                 for (var i = 0; i < cropped.Count - 1; i++)
                 {
                     var hasABottom = cropped[i].HasSide(Room.Side.Bottom);
@@ -510,17 +513,30 @@ namespace MazerPlatformer
             return false;
         }
 
-        private static void GetMaxMinRange(int obj1Col, int obj2Col, out int greaterCol, out int smallerCol)
+        private static Option<(int greater, int smaller)> GetMaxMinRange(Option<int> obj1Col, Option<int> obj2Col)
         {
-            if (obj1Col > obj2Col)
+            return from oc1 in obj1Col
+                from oc2 in obj2Col
+                select NewFunction(oc1, oc2);
+
+
+
+        (int, int) NewFunction(int o1, int o2)
             {
-                greaterCol = obj1Col;
-                smallerCol = obj2Col;
-            }
-            else
-            {
-                smallerCol = obj1Col;
-                greaterCol = obj2Col;
+                var smallerCol = 0;
+                var greaterCol = 0;
+                if (o1 > o2)
+                {
+                    greaterCol = o1;
+                    smallerCol = o2;
+                }
+                else
+                {
+                    smallerCol = o1;
+                    greaterCol = o2;
+                }
+
+                return (greaterCol, smallerCol);
             }
         }
 
