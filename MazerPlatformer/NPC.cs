@@ -99,6 +99,7 @@ namespace MazerPlatformer
                     .Iter(gameWorld =>
                     {
                         var player = (Player) playerComponent.Value;
+                        // Great example of using an Option<Room> to get an expected room, otherwise throw as unrecoverable
                         var npcRoom = gameWorld.GetRoomIn(Npc).ThrowIfNone(NotFound.Create("Room unexpectedly not found"));
                         var myRow = gameWorld.ToRoomRow(Npc);
                         var myCol = gameWorld.ToRoomColumn(Npc);

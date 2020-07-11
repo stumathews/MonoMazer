@@ -318,8 +318,7 @@ namespace MazerPlatformer
 
         });
 
-        private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject,
-            IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
+        private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
             // Determine which room the game object is in
             var col = ToRoomColumn(gameObject);
@@ -329,7 +328,7 @@ namespace MazerPlatformer
             // Only check for collisions with adjacent rooms or current room
             if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
             {
-                var roomIn = GetRoom(roomNumber);
+                var roomIn = GetRoom(roomNumber).ThrowIfNone(NotFound.Create($"Room not found at room number {roomNumber}"));
                 var adjacentRooms = new List<Room>
                     {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
                 var collisionRooms = new List<Room>();
@@ -385,10 +384,8 @@ namespace MazerPlatformer
             return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : Option<Room>.None;
         }
 
-        private Room GetRoom(int roomNumber)
-        {
-            return _rooms[roomNumber];
-        }
+        private Option<Room> GetRoom(int roomNumber) => EnsureWithReturn(() 
+            => _rooms[roomNumber]).ToOption();
 
         public int ToRoomColumn(GameObject gameObject1) => (int) Math.Ceiling((float) gameObject1.X / _roomWidth);
 
