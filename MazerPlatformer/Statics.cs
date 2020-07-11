@@ -204,13 +204,13 @@ namespace MazerPlatformer
         /// Unsafe version of EnsureIf
         /// </summary>
         /// <param name="condition"></param>
-        /// <param name="action"></param>
+        /// <param name="then"></param>
         /// <returns>Either a unit or failure</returns>
-        public static Either<IFailure, Unit> DoIff(bool condition, Action action)
+        public static Either<IFailure, Unit> DoIfReturn(bool condition, Action then)
         {
             if (condition)
             {
-                action();
+                then();
                 return Nothing.ToSuccess();
             }
 
@@ -221,10 +221,10 @@ namespace MazerPlatformer
         /// Runs code with exception => failure handling
         /// </summary>
         /// <param name="condition"></param>
-        /// <param name="action"></param>
+        /// <param name="then"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> EnsureIf(bool condition, Action action) 
-            => condition ? Ensure(action).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied();
+        public static Either<IFailure, Unit> EnsureIf(bool condition, Action then) 
+            => condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied();
 
         /// <summary>
         /// Explicitly turns failures into Right values
@@ -254,11 +254,11 @@ namespace MazerPlatformer
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="condition"></param>
-        /// <param name="action"></param>
+        /// <param name="then"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> action)
+        public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> then)
         {
-            return condition ? (Either<IFailure, T>)action.Invoke() : new ConditionNotSatisfied();
+            return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfied();
         }
 
         /// <summary>
