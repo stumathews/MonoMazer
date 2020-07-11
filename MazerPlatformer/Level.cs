@@ -141,6 +141,7 @@ namespace MazerPlatformer
             LevelFileName = $"Level{LevelNumber}.xml";
         }        
 
+        // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
         public List<Room> MakeRooms(bool removeRandomSides = false)
         {
             var mazeGrid = new List<Room>();

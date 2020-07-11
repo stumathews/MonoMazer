@@ -5,9 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
+using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -19,7 +21,7 @@ namespace MazerPlatformer
         public ContentManager ContentManager { get; }
         public int Rows { get; }
         public int Cols { get; }
-        private Random _random = new Random();
+        private readonly Random _random = new Random();
 
         public CharacterBuilder(ContentManager contentManager, int rows, int cols)
         {
@@ -28,6 +30,7 @@ namespace MazerPlatformer
             Cols = cols;
         }
 
+        // can convert this into a Option<Npc>
         public Npc CreateNpc(List<Room> rooms, string assetName, 
             int frameWidth = AnimationInfo.DefaultFrameWidth, 
             int frameHeight = AnimationInfo.DefaultFrameHeight,
@@ -37,9 +40,16 @@ namespace MazerPlatformer
         {
             var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
 
-            var randomRoom = rooms[ Level.RandomGenerator.Next(0, Rows * Cols)];
-            var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 
-                AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, animationInfo, moveStep);
+            var randomRoom = rooms[Level.RandomGenerator.Next(0, Rows * Cols)];
+
+            var npc = new Npc((int)randomRoom.GetCentre().X,
+                            (int)randomRoom.GetCentre().Y,
+                            Guid.NewGuid().ToString(), 
+                            AnimationInfo.DefaultFrameWidth,
+                            AnimationInfo.DefaultFrameHeight, 
+                            GameObject.GameObjectType.Npc, 
+                            animationInfo,
+                            moveStep);
 
             if (type != Npc.NpcTypes.Enemy) return npc;
 
@@ -58,7 +68,7 @@ namespace MazerPlatformer
             return npc;
         }
 
-        public void GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level)
+        public Either<IFailure, Unit> GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => Ensure(() =>
         {
             int numPirates = DefaultNumPirates;
             int numDodos = DefaultNumDodos;
@@ -114,6 +124,6 @@ namespace MazerPlatformer
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
-        }
+        });
     }
 }

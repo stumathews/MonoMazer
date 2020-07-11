@@ -108,7 +108,7 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        private void DrawSide(Side side)
+        private Either<IFailure, Unit> DrawSide(Side side) => Ensure(() =>
         {
             /* 
 			  A Room is made up of points A,B,C,D:
@@ -123,15 +123,16 @@ namespace MazerPlatformer
 				 AD = Left  
 			*/
 
-            /* Draws each side as a separate Line*/			
+            /* Draws each side as a separate Line*/
             switch (side)
             {
                 case Side.Top:
                     if (Diganostics.DrawTop)
                     {
                         if (Diganostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(), _rectDetails.GetBy(), _wallProperties[side].Color, WallThickness);
-						
+                            SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(),
+                                _rectDetails.GetBy(), _wallProperties[side].Color, WallThickness);
+
                         if (Diganostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
@@ -141,7 +142,8 @@ namespace MazerPlatformer
                     if (Diganostics.DrawRight)
                     {
                         if (Diganostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(), _rectDetails.GetCy(), _wallProperties[side].Color, WallThickness);
+                            SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(),
+                                _rectDetails.GetCy(), _wallProperties[side].Color, WallThickness);
 
                         if (Diganostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
@@ -152,10 +154,11 @@ namespace MazerPlatformer
                     if (Diganostics.DrawBottom)
                     {
                         if (Diganostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(), _rectDetails.GetDy(), _wallProperties[side].Color, WallThickness);
-						
+                            SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(),
+                                _rectDetails.GetDy(), _wallProperties[side].Color, WallThickness);
+
                         if (Diganostics.DrawSquareSideBounds)
-                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White,2.5f);
+                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
 
                     break;
@@ -163,8 +166,9 @@ namespace MazerPlatformer
                     if (Diganostics.DrawLeft)
                     {
                         if (Diganostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(), _rectDetails.GetAy(), _wallProperties[side].Color, WallThickness);
-						
+                            SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(),
+                                _rectDetails.GetAy(), _wallProperties[side].Color, WallThickness);
+
                         if (Diganostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
@@ -176,8 +180,8 @@ namespace MazerPlatformer
             }
 
             if (Diganostics.DrawSquareBounds) /* should be the same as bounding box*/
-                SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);	
-        }
+                SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
+        });
 
         // check to see if a side is missing or not
         public bool HasSide(Side side)

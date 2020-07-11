@@ -123,7 +123,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> SetCharacterDirection(CharacterDirection direction) 
             => SetAnimationDirection(direction, Animation)
-                .Iter(unit => 
+                .EnsuringMap(unit => 
             {
                 CurrentDirection = direction;
                 OnDirectionChanged?.Invoke(direction);
@@ -131,6 +131,7 @@ namespace MazerPlatformer
 
                 Animation.Idle = false;
                 CanMove = true;
+                return Nothing;
             });
 
         // The arguments could still be null, and could throw exceptions, but otherwise only depends on its arguments
@@ -158,21 +159,21 @@ namespace MazerPlatformer
         }
 
         // I can do unique things when my state changes
-        private Either<IFailure, Unit> OnMyStateChanged(CharacterStates state)
+        private Either<IFailure, Unit> OnMyStateChanged(CharacterStates state) => Ensure(() =>
         {
             if (state == CharacterStates.Idle) Animation.Idle = true;
-            return Nothing;
-        }
+        });
 
-        private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction)
+        private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction) => Ensure(() =>
         {
             LastCollisionDirection = direction;
             OnCollisionDirectionChanged?.Invoke(direction);
-            return Nothing;
-        }
+        });
 
+        [PureFunction]
         private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? _moveStep;
 
+        // impure as uses underlying class State
         protected Either<IFailure, Unit> NudgeOutOfCollision()
         {
             CanMove = false;
@@ -198,6 +199,7 @@ namespace MazerPlatformer
             return Nothing;
         }
 
+        // impure
         public Either<IFailure, Unit> SwapDirection()
         {
             switch (CurrentDirection)
@@ -221,16 +223,18 @@ namespace MazerPlatformer
             return Nothing;
         }
 
+        //impure
         public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir) 
             => SetCharacterDirection(dir);
 
+        // both call into external libs
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
             => base.Draw(spriteBatch)
                 .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
 
+        // both call into external libs
         public override Either<IFailure, Unit> Update(GameTime gameTime) 
             => base.Update(gameTime)
-                .Bind(unit =>
-                Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y)));
+                .Bind(unit => Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y)));
     }
 }
