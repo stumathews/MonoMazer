@@ -222,9 +222,14 @@ namespace MazerPlatformer
         public static Either<L, R> IgnoreFailure<L,R>(this Either<L, R> either, R returnAs )
             => either.IfLeft(returnAs);
 
-        public static Either<IFailure, T> DoIfReturn<T>(bool condition, Func<T> action)
+        public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> action)
         {
             return condition ? (Either<IFailure, T>) action.Invoke() : new ConditionNotSatisfied();
+        }
+
+        public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> action)
+        {
+            return condition ? (Either<IFailure, T>)action.Invoke() : new ConditionNotSatisfied();
         }
 
         public static Unit Nothing => new Unit(); 

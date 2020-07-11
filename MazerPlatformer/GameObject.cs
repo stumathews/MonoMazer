@@ -191,18 +191,21 @@ namespace MazerPlatformer
 
         // Draw the max point (lower right point)
         protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
+            => EnsureIf(Diganostics.DrawMaxPoint, 
+                    () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
                 .IgnoreFailure(Nothing);
 
         // Draw the bounding box
         protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
+            => EnsureIf(Diganostics.DrawGameObjectBounds, 
+                    () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
                 .IgnoreFailure(Nothing);
 
         // Draw the bounding sphere
-        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => EnsureIf(Diganostics.DrawGameObjectBounds, () 
-            => Ensure(() => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua)))
-            .IgnoreFailure(Nothing);
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
+            => EnsureIf(Diganostics.DrawGameObjectBounds, 
+                    () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
+                .IgnoreFailure(Nothing);
 
         // Draw all the diagnostics together
         protected Either<IFailure, Unit> DrawObjectDiagnostics(SpriteBatch spriteBatch) =>
@@ -217,7 +220,7 @@ namespace MazerPlatformer
             // All game objects can ask to draw some text over it if it wants
             // dependency on Mazer for game font ok.
 
-            DoIfReturn(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
+            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
             {
                 return Ensure(() =>
                 {
