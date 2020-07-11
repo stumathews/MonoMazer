@@ -270,15 +270,46 @@ namespace MazerPlatformer
         /// <param name="either"></param>
         /// <param name="transformingFunction"></param>
         /// <returns></returns>
-        public static Either<IFailure, Either<TransformExceptionFailure, T>> EnsuringMap<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction) 
-            => either.Map((r) => EnsureWithReturn(() 
+        public static Either<IFailure, Either<TransformExceptionFailure, T>> EnsuringMapX<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction)
+            => either.Map((r) => EnsureWithReturn(()
                 => transformingFunction(r), new TransformExceptionFailure("An exception occured while ensuring a map")));
 
-        public static Either<IFailure, Either<TransformExceptionFailure, Either<IFailure, T>>> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure,T>> transformingFunction) =>
-            either.Bind<Either<TransformExceptionFailure, Either<IFailure, T>>>(f: right
-                => EnsureWithReturn(() => transformingFunction(right),
-                    new TransformExceptionFailure("An exception occured while ensuring a bind")));
+        public static Either<IFailure, T> EnsuringMap<L, T>(this Either<IFailure, L> either,
+            Func<L, T> transformingFunction)
+            => either.Map((r) => EnsureWithReturn(()
+                        => transformingFunction(r),
+                    TransformExceptionFailure.Create("An exception occured while ensuring a map")))
+                .Match(
+                    Left: failure => failure.ToEitherFailure<T>(),
+                    Right: datas => datas.Match(
+                        Left: failure => failure.ToEitherFailure<T>(),
+                        Right: t => t.ToSuccess<T>()));
 
+        public static Either<IFailure, Either<IFailure, Either<IFailure, T>>> EnsuringBindX<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) =>
+            either.Bind<Either<IFailure, Either<IFailure, T>>>(f: right
+                => EnsureWithReturn(() => transformingFunction(right),
+                    TransformExceptionFailure.Create("An exception occured while ensuring a bind")));
+
+        public static Either<IFailure, T> EnsuringBind<R, T>(this Either<IFailure, R> either,
+            Func<R, Either<IFailure, T>> transformingFunction) =>
+            either.Bind<Either<IFailure,  T>>(f: right
+                    => EnsureWithReturn3(() => transformingFunction(right),
+                        TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
+                .Match(
+                    Left: failure => failure.ToEitherFailure<T>(),
+                    Right: datas => datas.Match(
+                        Left: failure => failure.ToEitherFailure<T>(),
+                        Right: t => t.ToSuccess()));
+
+        /// <summary>
+        /// Cancels remaining pipeline if condition is met
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arg"></param>
+        /// <param name="func"></param>
+        /// <returns></returns>
+        public static Either<IFailure, T> Require<T>(T arg, Func<bool> func) 
+            => func() ? ConditionNotSatisfied.Create("Require").ToEitherFailure<T>() : arg.ToSuccess();
 
         /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>
