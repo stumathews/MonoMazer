@@ -220,14 +220,10 @@ namespace MazerPlatformer
             // All game objects can ask to draw some text over it if it wants
             // dependency on Mazer for game font ok.
 
-            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
+            EnsureIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
             {
-                return Ensure(() =>
-                {
-                    spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
-                    spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty,
-                        new Vector2(X + 10, Y + Height), Color.White);
-                });
+                spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
+                spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
             });
 
             return Ensure(()=> DrawObjectDiagnostics(spriteBatch));
