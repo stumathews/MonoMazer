@@ -62,7 +62,7 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure, Unit>> failures)
         {
             var failed = failures.Lefts().ToList();
-            return failed.Any() ? new AggregatePipelineFailure(failed).ToFailure<Unit>() : Nothing.ToSuccess();
+            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<Unit>() : Nothing.ToSuccess();
         }
 
         public static IFailure AsFailure(this Exception e) => new ExceptionFailure(e);
@@ -116,10 +116,10 @@ namespace MazerPlatformer
         /// <typeparam name="T"></typeparam>
         /// <param name="failure"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> ToFailure<T>(this IFailure failure)
+        public static Either<IFailure, T> ToEitherFailure<T>(this IFailure failure)
             => Prelude.Left<IFailure, T>(failure);
 
-        public static Either<L, R> ToFailure<L, R>(this L left)
+        public static Either<L, R> ToEitherFailure<L, R>(this L left)
             => Prelude.Left<L, R>(left);
 
         public static Either<IFailure, Unit> Ensure(Action action)
@@ -188,7 +188,7 @@ namespace MazerPlatformer
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
-                        ? failure.ToFailure<L,T>()
+                        ? failure.ToEitherFailure<L,T>()
                         : unit.ToSuccess<L, T>(),
                     exception => failure);
 

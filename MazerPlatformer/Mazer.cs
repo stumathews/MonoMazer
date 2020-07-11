@@ -310,7 +310,7 @@ namespace MazerPlatformer
                 .Map(unit => _currentGameState = GameStates.Playing)
                 .Bind(unit => _gameWorld.StartOrResumeLevelMusic())
                 .Bind(unit => !isFreshStart 
-                    ? ShortCircuit.Create("Not Fresh Start").ToFailure<Unit>() 
+                    ? ShortCircuit.Create("Not Fresh Start").ToEitherFailure<Unit>() 
                     : ResetPlayerStatistics());
 
         private Either<IFailure, Unit> ResetPlayerStatistics() =>
