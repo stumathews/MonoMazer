@@ -229,7 +229,7 @@ namespace MazerPlatformer
                           : _gameObjects.Values
                               .Where(obj => obj.Active)
                               .Select(gameObject => gameObject.Draw(spriteBatch))
-                              .AggregateFailures();
+                              .AggregateUnitFailures();
 
         /// <summary>
         /// Remove game objects that are no longer active
@@ -239,9 +239,9 @@ namespace MazerPlatformer
         /// Inform game object subscribers that they had a collision by raising event
         /// </summary>
         /// <param name="gameTime"></param>
-        public Either<IFailure, Unit> Update(GameTime gameTime)
+        public Either<IFailure, Unit> Update(GameTime gameTime) => Ensure(() =>
         {
-            if (_unloading) return Nothing;
+            if (_unloading) return;
 
             _removeWallTimer.Update(gameTime);
 
@@ -262,9 +262,7 @@ namespace MazerPlatformer
 
                 CheckForObjectCollisions(gameObject, activeGameObjects, gameTime);
             }
-
-            return Nothing;//FIXME
-        }
+        });
 
         // The game world wants to know about every component update/change that occurs in the world
         private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
