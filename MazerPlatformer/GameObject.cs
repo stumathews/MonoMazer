@@ -185,27 +185,23 @@ namespace MazerPlatformer
 
         // Draw the centre point of the object
         protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch)
-            => EnsureIf(Diganostics.DrawCentrePoint,
-                () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
-                .IgnoreFailure(Nothing);
+            => EnsureIf(Diganostics.DrawCentrePoint, () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
+                .IgnoreFailure();
 
         // Draw the max point (lower right point)
         protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawMaxPoint, 
-                    () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
-                .IgnoreFailure(Nothing);
+            => EnsureIf(Diganostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
+                .IgnoreFailure();
 
         // Draw the bounding box
         protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawGameObjectBounds, 
-                    () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
-                .IgnoreFailure(Nothing);
+            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
+                .IgnoreFailure();
 
         // Draw the bounding sphere
         protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
-            => EnsureIf(Diganostics.DrawGameObjectBounds, 
-                    () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
-                .IgnoreFailure(Nothing);
+            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
+                .IgnoreFailure();
 
         // Draw all the diagnostics together
         protected Either<IFailure, Unit> DrawObjectDiagnostics(SpriteBatch spriteBatch) =>
@@ -214,20 +210,17 @@ namespace MazerPlatformer
                 .Bind(unit => DrawGameObjectBoundingBox(spriteBatch))
                 .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatch));
 
-        // Specific game objects need to initialize
-        public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
+        // All game objects can ask to draw some text over it if it wants
+        // dependency on Mazer for game font ok.
+        public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
+            DoIfReturn(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () => DrawText(spriteBatch))
+                .Bind(unit => DrawObjectDiagnostics(spriteBatch));
+
+        private Either<IFailure, Unit> DrawText(SpriteBatch spriteBatch) => Ensure(() =>
         {
-            // All game objects can ask to draw some text over it if it wants
-            // dependency on Mazer for game font ok.
-
-            EnsureIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
-            {
-                spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
-                spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
-            });
-
-            return Ensure(()=> DrawObjectDiagnostics(spriteBatch));
-        }
+            spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
+            spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
+        });
 
         // Specific game objects need to initialize themselves
         public virtual Either<IFailure, Unit> Initialize()

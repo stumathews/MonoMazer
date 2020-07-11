@@ -238,15 +238,25 @@ namespace MazerPlatformer
             => either.IfLeft(returnAs);
 
         /// <summary>
+        /// Explicitly turns a failure into a uint
+        /// </summary>
+        /// <typeparam name="L"></typeparam>
+        /// <typeparam name="R"></typeparam>
+        /// <param name="either"></param>
+        /// <returns></returns>
+        public static Either<L, Unit> IgnoreFailure<L>(this Either<L, Unit> either)
+            => either.IfLeft(Nothing);
+
+        /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="condition"></param>
-        /// <param name="action"></param>
+        /// <param name="then"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> action)
+        public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> then)
         {
-            return condition ? (Either<IFailure, T>) action.Invoke() : new ConditionNotSatisfied();
+            return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfied();
         }
 
         /// <summary>
