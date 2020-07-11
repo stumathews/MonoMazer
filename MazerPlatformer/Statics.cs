@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
@@ -130,7 +131,7 @@ namespace MazerPlatformer
             => Prelude.Left<L, R>(left);
 
         /// <summary>
-        /// Runs code that is contains external dependencies and turns any exceptions caused by it into a failure
+        /// Runs code that is contains external dependencies and 
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
@@ -153,6 +154,9 @@ namespace MazerPlatformer
 
         public static Either<L, T> EnsureWithReturn<L, T>(Func<T> action, L left)
             => action.TryThis<L, T>(left);
+
+        public static Either<L, T> EnsureWithReturn3<L, T>(Func<T> action, L left) where L : IFailure
+            => action.TryThis3<L, T>(left);
 
         public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action)
             => either.IfLeft(action);
@@ -203,6 +207,28 @@ namespace MazerPlatformer
                         ? failure.ToEitherFailure<L,T>()
                         : unit.ToSuccess<L, T>(),
                     exception => failure);
+
+        public static Either<IFailure, T> TryThis2<T>(this Func<T> action, IFailure failure)
+            => new Try<T>(() => action())
+                .Match(
+                    unit => unit == null
+                        ? failure.ToEitherFailure<T>()
+                        : unit.ToSuccess(),
+                    exception => failure.WithException(exception).ToEitherFailure<T>());
+
+        public static Either<L, T> TryThis3<L, T>(this Func<T> action, L failure) where L : IFailure
+            => new Try<T>(() => action())
+                .Match(
+                    unit => unit == null
+                        ? failure.ToEitherFailure<L, T>()
+                        : unit.ToSuccess<L,T>(),
+                    exception => failure.WithException<L>(exception));
+
+        public static L WithException<L>(this L failure,  Exception e) where L : IFailure
+        {
+            failure.Reason += $" Exception: {e}";
+            return failure;
+        }
 
         public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either) where TLeft : IFailure
             => either.IfLeft(failure => throw new UnexpectedFailureException(failure));
@@ -367,10 +393,15 @@ namespace MazerPlatformer
     {
         public string Reason { get; set; }
 
+        public Exception Exception { get; set; }
+
         public TransformExceptionFailure(string message)
         {
             Reason = message;
         }
+
+        
+        public static IFailure Create(string msg) => new TransformExceptionFailure(msg);
 
     }
 
