@@ -196,26 +196,22 @@ namespace MazerPlatformer
                     });
 
         private Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
-        {
-            return from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
-                    .ToEither(NotFound.Create("Could not find hit-point component"))
-                from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
-                    .ToEither(NotFound.Create("Could not find hit-point component"))
-                let myPoints = (int) myPointsComponent.Value
-                let pickupPoints = (int) pickupPointsComponent.Value
-                select myPoints + pickupPoints;
-        }
+            => from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
+                .ToEither(NotFound.Create("Could not find hit-point component"))
+            from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
+                .ToEither(NotFound.Create("Could not find hit-point component"))
+            let myPoints = (int) myPointsComponent.Value
+            let pickupPoints = (int) pickupPointsComponent.Value
+            select myPoints + pickupPoints;
 
-        private Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
-        {
-            return from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
-                    .ToEither(NotFound.Create("Could not find hit-point component"))
-                from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
-                    .ToEither(NotFound.Create("Could not find health component"))
-                let myHealth = (int) healthComponent.Value
-                let hitPoints = (int) hitPointsComponent.Value
-                select myHealth - hitPoints;
-        }
+        private Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1) 
+            => from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
+                .ToEither(NotFound.Create("Could not find hit-point component"))
+            from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
+                .ToEither(NotFound.Create("Could not find health component"))
+            let myHealth = (int) healthComponent.Value
+            let hitPoints = (int) hitPointsComponent.Value
+            select myHealth - hitPoints;
 
 
         /// <summary>
@@ -392,34 +388,7 @@ namespace MazerPlatformer
 
         public Option<int> ToRoomRow(GameObject o1) => EnsureWithReturn(() 
             => (int) Math.Ceiling((float) o1.Y / _roomHeight)).ToOption();
-
-        private static void RemoveRandomWall(Room roomIn, SimpleGameTimeTimer timer)
-        {
-            if (!timer.IsTimedOut()) return;
-
-            var randomSide = GetRandomEnumValue<Room.Side>();
-            switch (randomSide)
-            {
-                case Room.Side.Bottom:
-                    roomIn.RoomBelow?.RemoveSide(Room.Side.Top);
-                    break;
-                case Room.Side.Right:
-                    roomIn.RoomRight?.RemoveSide(Room.Side.Left);
-                    break;
-                case Room.Side.Top:
-                    roomIn.RoomAbove?.RemoveSide(Room.Side.Bottom);
-                    break;
-                case Room.Side.Left:
-                    roomIn.RoomLeft?.RemoveSide(Room.Side.Right);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            roomIn.RemoveSide(randomSide);
-            timer.Reset();
-        }
-
+        
         /// <summary>
         /// Deactivate objects that collided (will be removed before next update)
         /// Informs the Game (Mazer) that a collision occured
@@ -445,7 +414,7 @@ namespace MazerPlatformer
         }
 
         // What to do specifically when a room registers a collision
-        private void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, Room.SideCharacteristic sideCharacteristics)
+        private static void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, Room.SideCharacteristic sideCharacteristics)
         {
             if(otherObject.Type == GameObjectType.Player)
                 room.RemoveSide(side);
@@ -486,13 +455,14 @@ namespace MazerPlatformer
                     var rightHasLeft = cropped[i].RoomRight.HasSide(Room.Side.Left);
                     if (rightHasLeft) return false;
                 }
+
                 return true;
             }
 
             if (isSameCol)
             {
                 var minMax = GetMaxMinRange(obj2Row, obj1Row).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
-                
+
                 var roomsInThisCol = _rooms.Where(o => o.Col + 1 == obj1Col);
                 var cropped = roomsInThisCol.Where(o =>
                     o.Row >= minMax.smaller - 1 &&
@@ -511,33 +481,28 @@ namespace MazerPlatformer
             }
 
             return false;
-        }
+        });
 
-        private static Option<(int greater, int smaller)> GetMaxMinRange(Option<int> obj1Col, Option<int> obj2Col)
+        private static Option<(int greater, int smaller)> GetMaxMinRange(Option<int> number1, Option<int> number2) 
+            => from oc1 in number1
+            from oc2 in number2
+            select SortBySize(oc1, oc2);
+
+        [PureFunction]
+        private static (int greater, int smaller) SortBySize(int number1, int number2)
         {
-            return from oc1 in obj1Col
-                from oc2 in obj2Col
-                select NewFunction(oc1, oc2);
-
-
-
-        (int, int) NewFunction(int o1, int o2)
+            int smallerCol;
+            int greaterCol;
+            if (number1 > number2)
             {
-                var smallerCol = 0;
-                var greaterCol = 0;
-                if (o1 > o2)
-                {
-                    greaterCol = o1;
-                    smallerCol = o2;
-                }
-                else
-                {
-                    smallerCol = o1;
-                    greaterCol = o2;
-                }
-
+                greaterCol = number1;
+                smallerCol = number2;
                 return (greaterCol, smallerCol);
             }
+
+            smallerCol = number1;
+            greaterCol = number2;
+            return (greaterCol, smallerCol);
         }
 
         public Either<IFailure, Unit> SetPlayerStatistics(int health = 100, int points = 0)
