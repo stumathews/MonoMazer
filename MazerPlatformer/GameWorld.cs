@@ -80,11 +80,11 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
+        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) => Ensure(() =>
         {
-
             // Prepare a new level
-            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, _random);
+            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager,
+                levelNumber, _random);
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
@@ -95,34 +95,29 @@ namespace MazerPlatformer
             _rooms = _level.GetRooms();
 
             _removeWallTimer.Start();
-            return Nothing;
-
-        }
+        });
 
         private Either<IFailure, Unit> AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
-        {
-            return levelGameObjects
+            => levelGameObjects
                 .Map(levelGameObject => AddToGameObjects(levelGameObject.Key, levelGameObject.Value))
                 .AggregateUnitFailures();
-        }
 
         /// <summary>
         /// Unload the game world, and save it
         /// </summary>
-        public Either<IFailure, Unit> UnloadContent()
-            => Ensure(() =>
-            {
-                _unloading = true;
-                _gameObjects.Clear();
-                _level.UnLoad(); // TODO: I/O
-                _unloading = false;
-                _removeWallTimer.Stop();
-            });
+        public Either<IFailure, Unit> UnloadContent() => Ensure(() =>
+        {
+            _unloading = true;
+            _gameObjects.Clear();
+            _level.UnLoad(); // TODO: I/O
+            _unloading = false;
+            _removeWallTimer.Stop();
+        });
 
-        public void SaveLevel()
+        public Either<IFailure, Unit> SaveLevel() => Ensure(() =>
         {
             Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, Level.Npcs);
-        }
+        });
 
         /// <summary>
         /// The game world will listen events raised by game objects
@@ -130,39 +125,43 @@ namespace MazerPlatformer
         /// Listen for collision events
         /// Listen for scoring, special moves, power-ups etc
         /// </summary>
-        public Either<IFailure, Unit> Initialize()
+        public Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
             // Hook up the Player events to the external world ie game UI
-            Level.Player.OnStateChanged += state => Ensure(()=> OnPlayerStateChanged?.Invoke(state)); // want to know when the player's state changes
-            Level.Player.OnDirectionChanged += direction => Ensure(()=> OnPlayerDirectionChanged?.Invoke(direction)); // want to know when the player's direction changes
-            Level.Player.OnCollisionDirectionChanged += direction => Ensure(()=> OnPlayerCollisionDirectionChanged?.Invoke(direction)); // want to know when player collides
-            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => Ensure(()=> OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue)); // want to know when the player's components change
+            Level.Player.OnStateChanged += state => Ensure(() => OnPlayerStateChanged?.Invoke(state)); // want to know when the player's state changes
+            Level.Player.OnDirectionChanged += direction => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction)); // want to know when the player's direction changes
+            Level.Player.OnCollisionDirectionChanged += direction => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction)); // want to know when player collides
+            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue)); // want to know when the player's components change
             Level.Player.OnCollision += PlayerOnOnCollision;
-            Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound(); 
-            
+            Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound();
+
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
-            
+
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
-                gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
-                gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component update
-                
+                gameObject.Value.OnCollision +=
+                    new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
+                gameObject.Value.OnGameObjectComponentChanged +=
+                    ValueOfGameObjectComponentChanged; // be informed about this objects component update
+
                 // Every object will have access to the player
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, Level.Player));
-                
+
                 // every object will have access to the game world
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
+        });
 
-            return Nothing; // TODO: FIXME
-        }
-        
+        /// <summary>
+        /// Change my health component to be affected by the hit points of the other object
+        /// </summary>
+        /// <param name="thePlayer"></param>
+        /// <param name="otherObject"></param>
+        /// <returns></returns>
         private Either<IFailure, Unit> PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
-        {
-            // Change my health component to be affected by the hit points of the other object
-            return otherObject.Type != GameObjectType.Npc
+            => otherObject.Type != GameObjectType.Npc
                 ? Nothing
                 : otherObject.FindComponentByType(Component.ComponentType.NpcType)
                     .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
@@ -196,30 +195,27 @@ namespace MazerPlatformer
                         return result;
                     });
 
-            Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
-            {
-                return from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
-                        .ToEither(NotFound.Create("Could not find hit-point component"))
-                    from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
-                        .ToEither(NotFound.Create("Could not find health component"))
-                    let myHealth = (int) healthComponent.Value
-                    let hitPoints = (int) hitPointsComponent.Value
-                    select myHealth - hitPoints;
-            }
-
-            Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
-            {
-                return from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
-                        .ToEither(NotFound.Create("Could not find hit-point component"))
-                    from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
-                        .ToEither(NotFound.Create("Could not find hit-point component"))
-                    let myPoints = (int) myPointsComponent.Value
-                    let pickupPoints = (int) pickupPointsComponent.Value
-                    select myPoints + pickupPoints;
-            }
+        private Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
+        {
+            return from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
+                    .ToEither(NotFound.Create("Could not find hit-point component"))
+                from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
+                    .ToEither(NotFound.Create("Could not find hit-point component"))
+                let myPoints = (int) myPointsComponent.Value
+                let pickupPoints = (int) pickupPointsComponent.Value
+                select myPoints + pickupPoints;
         }
 
-        
+        private Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
+        {
+            return from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
+                    .ToEither(NotFound.Create("Could not find hit-point component"))
+                from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
+                    .ToEither(NotFound.Create("Could not find health component"))
+                let myHealth = (int) healthComponent.Value
+                let hitPoints = (int) hitPointsComponent.Value
+                select myHealth - hitPoints;
+        }
 
 
         /// <summary>
@@ -267,43 +263,39 @@ namespace MazerPlatformer
         });
 
         // The game world wants to know about every component update/change that occurs in the world
-        private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
-            Ensure(() =>
-            {
-                // See if we can hook this up to an event listener in the UI
-                // A game object changed!
-                Console.WriteLine(
-                    $"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
-            });
+        private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) => Ensure(() =>
+        {
+            // See if we can hook this up to an event listener in the UI
+            // A game object changed!
+            Console.WriteLine(
+                $"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
+        });
 
         /// <summary>
         /// Overwrite any defaults that are now in the level file
         /// </summary>
         /// <param name="details"></param>
-        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details)
-            => Ensure(()=>
-            {
-                Cols = _level.Cols;
-                Rows = _level.Rows;
-                _roomWidth = _level.RoomWidth;
-                _roomHeight = _level.RoomHeight;
-                OnLoadLevel?.Invoke(details);
-            });
+        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details) => Ensure(()=>
+        {
+            Cols = _level.Cols;
+            Rows = _level.Rows;
+            _roomWidth = _level.RoomWidth;
+            _roomHeight = _level.RoomHeight;
+            OnLoadLevel?.Invoke(details);
+        });
 
         public Either<IFailure, Unit> StartOrResumeLevelMusic() 
             => string.IsNullOrEmpty(_level.LevelFile.Music) 
                 ? Nothing 
                 : _level.PlaySong();
 
-        private Either<IFailure, Unit> AddToGameObjects(string id, GameObject gameObject) 
-            => Ensure(()=>
-            {
-                _gameObjects.Add(id, gameObject);
-                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false,
-                    runningTotalCount: _gameObjects.Count());
-            });
+        private Either<IFailure, Unit> AddToGameObjects(string id, GameObject gameObject) => Ensure(()=>
+        {
+            _gameObjects.Add(id, gameObject);
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _gameObjects.Count());
+        });
 
-        private void RemoveFromGameObjects(string id)
+        private Either<IFailure, Unit> RemoveFromGameObjects(string id) => Ensure(() =>
         {
             var gameObject = _gameObjects[id];
             if (gameObject == null)
@@ -321,29 +313,32 @@ namespace MazerPlatformer
             _gameObjects.Remove(id);
             gameObject.Dispose();
 
-            if(_level.NumPickups == 0)
+            if (_level.NumPickups == 0)
                 OnLevelCleared?.Invoke(_level);
 
-        }
+        });
 
-        private void CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime)
+        private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject,
+            IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
             // Determine which room the game object is in
             var col = ToRoomColumn(gameObject);
             var row = ToRoomRow(gameObject);
             var roomNumber = ((row - 1) * Cols) + col - 1;
-            
+
             // Only check for collisions with adjacent rooms or current room
             if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
             {
                 var roomIn = GetRoom(roomNumber);
-                var adjacentRooms = new List<Room> {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
+                var adjacentRooms = new List<Room>
+                    {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
                 var collisionRooms = new List<Room>();
 
                 collisionRooms.AddRange(adjacentRooms);
                 collisionRooms.Add(roomIn);
 
-                if(roomIn.RoomNumber != roomNumber) throw new ArgumentException("We didn't get the room number we expected!");
+                if (roomIn.RoomNumber != roomNumber)
+                    throw new ArgumentException("We didn't get the room number we expected!");
 
                 foreach (var room in collisionRooms.Where(room => room != null))
                     NotifyIfColliding(gameObject, room);
@@ -354,7 +349,7 @@ namespace MazerPlatformer
 
                 // Wait!, while we're in this room is it time to randomly removes some walls?
                 //RemoveRandomWall(roomIn, _removeWallTimer);
-                
+
             }
             else
             {
