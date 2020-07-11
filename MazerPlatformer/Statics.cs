@@ -61,6 +61,11 @@ namespace MazerPlatformer
                 .Map(ParseEnum<Npc.NpcTypes>);
         }
 
+        /// <summary>
+        /// Turns multiple failures into one failure aggregated failure
+        /// </summary>
+        /// <param name="failures"></param>
+        /// <returns></returns>
         public static Either<IFailure, Unit> AggregateFailures(this IEnumerable<Either<IFailure, Unit>> failures)
         {
             var failed = failures.Lefts().ToList();
@@ -253,23 +258,21 @@ namespace MazerPlatformer
             => either.IfLeft(Nothing);
 
         /// <summary>
-        /// Either it was originally a failure...or the transform failed or it worked
+        /// Ensuring map will return either a transformation failure or the result of the transformation
         /// </summary>
         /// <typeparam name="L"></typeparam>
         /// <typeparam name="T"></typeparam>
         /// <param name="either"></param>
         /// <param name="transformingFunction"></param>
         /// <returns></returns>
-        //public static Either<IFailure, T> EnsuringBind<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction) 
-        //    => either.Bind((r) => EnsureWithReturn( () => transformingFunction(r)));
-
         public static Either<IFailure, Either<TransformExceptionFailure, T>> EnsuringMap<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction) 
             => either.Map((r) => EnsureWithReturn(() 
                 => transformingFunction(r), new TransformExceptionFailure("An exception occured while ensuring a map")));
 
-        public static Either<IFailure, Either<TransformExceptionFailure, Either<IFailure, T>>> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure,T>> transformingFunction) 
-            => either.Bind<Either<TransformExceptionFailure, Either<IFailure, T>>>(right 
-                => EnsureWithReturn(() => transformingFunction(right), new TransformExceptionFailure("An exception occured while ensuring a bind")));
+        public static Either<IFailure, Either<TransformExceptionFailure, Either<IFailure, T>>> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure,T>> transformingFunction) =>
+            either.Bind<Either<TransformExceptionFailure, Either<IFailure, T>>>(f: right
+                => EnsureWithReturn(() => transformingFunction(right),
+                    new TransformExceptionFailure("An exception occured while ensuring a bind")));
 
 
         /// <summary>
