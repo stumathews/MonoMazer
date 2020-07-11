@@ -163,8 +163,8 @@ namespace MazerPlatformer
             return otherObject.Type != GameObjectType.Npc
                 ? Nothing
                 : otherObject.FindComponentByType(Component.ComponentType.NpcType)
-                    .Map(component => (Npc.NpcTypes) component.Value)
                     .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                    .EnsuringMap(component => (Npc.NpcTypes) component.Value)
                     .Bind(type =>
                     {
                         Either<IFailure, Unit> result = Nothing;
@@ -173,14 +173,15 @@ namespace MazerPlatformer
                             case Npc.NpcTypes.Enemy:
                                 // deal damage
                                 result = DetermineNewHealth(thePlayer, otherObject)
-                                    .Bind(health => thePlayer.UpdateComponentByType(Component.ComponentType.Health, health))
-                                    .Bind(health => Ensure(() =>
+                                    .Bind(newHealth => thePlayer.UpdateComponentByType(Component.ComponentType.Health, newHealth))
+                                    .Bind(newHealth => Require(newHealth, () => (int)newHealth > 0))
+                                    .EnsuringBind(newHealth =>
                                     {
-                                        if ((int) health > 0) return;
                                         _level.PlayLoseSound();
                                         _playerDied = true;
                                         OnPlayerDied?.Invoke(thePlayer.Components);
-                                    }));
+                                        return Nothing.ToSuccess();
+                                    });
                                 break;
                             case Npc.NpcTypes.Pickup:
                                 // pickup points
@@ -215,6 +216,8 @@ namespace MazerPlatformer
                     select myPoints + pickupPoints;
             }
         }
+
+        
 
 
         /// <summary>
