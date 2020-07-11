@@ -62,7 +62,7 @@ namespace MazerPlatformer
         }
 
         /// <summary>
-        /// Turns multiple failures into one failure aggregated failure
+        /// Reduces multiple failures into one failure ie aggregates it
         /// </summary>
         /// <param name="failures"></param>
         /// <returns></returns>
@@ -129,6 +129,11 @@ namespace MazerPlatformer
         public static Either<L, R> ToEitherFailure<L, R>(this L left)
             => Prelude.Left<L, R>(left);
 
+        /// <summary>
+        /// Runs code that is contains external dependencies and turns any exceptions caused by it into a failure
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
         public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
 
