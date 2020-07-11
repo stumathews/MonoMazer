@@ -169,7 +169,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, object> UpdateComponent(object newValue, Component found)
             => found == null
-                ? new NotFound($"Component not found to set value to {newValue}").ToFailure<Unit>()
+                ? new NotFound($"Component not found to set value to {newValue}").ToEitherFailure<Unit>()
                 : EnsureWithReturn(() =>
                 {
                     var oldValue = found.Value;
