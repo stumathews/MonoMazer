@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
@@ -213,8 +215,8 @@ namespace MazerPlatformer
                 then();
                 return Nothing.ToSuccess();
             }
-
-            return new ConditionNotSatisfied();
+            StackTrace stackTrace = new StackTrace();
+            return new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -223,8 +225,11 @@ namespace MazerPlatformer
         /// <param name="condition"></param>
         /// <param name="then"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> EnsureIf(bool condition, Action then) 
-            => condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied();
+        public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
+        {
+            StackTrace stackTrace = new StackTrace();
+            return condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
+        }
 
         /// <summary>
         /// Explicitly turns failures into Right values
@@ -276,7 +281,9 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> then)
         {
-            return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfied();
+
+            StackTrace stackTrace = new StackTrace();
+            return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -288,7 +295,9 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> then)
         {
-            return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfied();
+
+            StackTrace stackTrace = new StackTrace();
+            return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -330,7 +339,7 @@ namespace MazerPlatformer
     {
         public AggregatePipelineFailure(IEnumerable<IFailure> failures)
         {
-            var failureNames = failures.GroupBy(o => o.GetType().Name, o=> o.Reason);
+            var failureNames = failures.GroupBy(o => o.GetType().Name + o.Reason);
             var sb = new StringBuilder();
             foreach (var name in failureNames)
             {
