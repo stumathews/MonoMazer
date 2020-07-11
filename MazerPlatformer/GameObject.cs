@@ -214,7 +214,8 @@ namespace MazerPlatformer
         // dependency on Mazer for game font ok.
         public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
             DoIfReturn(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () => DrawText(spriteBatch))
-                .Bind(unit => DrawObjectDiagnostics(spriteBatch));
+                .Bind(unit => DrawObjectDiagnostics(spriteBatch))
+                .IgnoreFailure();
 
         private Either<IFailure, Unit> DrawText(SpriteBatch spriteBatch) => Ensure(() =>
         {
