@@ -99,10 +99,12 @@ namespace MazerPlatformer
 
         }
 
-        private Either<IFailure, Unit> AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
-            => levelGameObjects
-                .Select(levelGameObject => AddToGameObjects(levelGameObject.Key, levelGameObject.Value))
-                .AggregateFailures();
+        private Either<IFailure, Dictionary<string, GameObject>> AddToGameObjects(Dictionary<string, GameObject> levelGameObjects, Dictionary<string, GameObject> gameObjects)
+        {
+            return levelGameObjects
+                .Map(levelGameObject => AddToGameObjects2(levelGameObject.Key, levelGameObject.Value, gameObjects))
+                .AggregateFailures(gameObjects);
+        }
 
         /// <summary>
         /// Unload the game world, and save it
