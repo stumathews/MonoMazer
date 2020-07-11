@@ -223,6 +223,16 @@ namespace MazerPlatformer
             if (found.Count > 0) then(found.First());
             return found;
         }
+
+        public static Vector2 GetCentre(this GameObject gameObject)
+        {
+            // This function is a pure function
+            Vector2 centre;
+            centre.X = gameObject.X + gameObject.Width / 2;
+            centre.Y = gameObject.Y + gameObject.Height / 2;
+            return centre;
+        }
+
     }
 
     public class AggregatePipelineFailure : IFailure

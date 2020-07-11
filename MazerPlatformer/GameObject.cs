@@ -78,23 +78,18 @@ namespace MazerPlatformer
             Height = height;
             StateMachine = new FSM(this);
             Type = type;
-            CalculateBoundingBox();
+            CalculateBoundingBox(X, Y, Width, Height);
             Active = true;
         }
 
         // Determine the centre point of the game object in 2D space
         private Vector2 _centre;
-        public Vector2 GetCentre()
-        {
-            _centre.X = X + Width / 2;
-            _centre.Y = Y + Height / 2;
-            return _centre;
-        }
+        
 
-        private Either<IFailure, Unit> CalculateBoundingBox()
+        private Either<IFailure, Unit> CalculateBoundingBox(int x, int y, int width, int height)
         {
             // Keep track of our centre
-            _centre = GetCentre();
+            _centre = this.GetCentre();
 
             // Keep track of the max point of the bounding box
             _maxPoint = _centre;
@@ -102,10 +97,10 @@ namespace MazerPlatformer
             _maxPoint.Y = Height;
 
             // Every object gets a bounding box, used internally for outlining square bounds of object
-            _boundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
+            _boundingBox = new BoundingBox(new Vector3( x, y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
 
             // Every object gets a bounding sphere and this is used for collision detection
-            BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
+            BoundingSphere = new BoundingSphere(new Vector3(_centre, 0), 29);
             return Nothing; //FIXME
         }
 
@@ -113,7 +108,7 @@ namespace MazerPlatformer
         public virtual Either<IFailure, Unit> Update(GameTime gameTime)
         {
             if (!Active) return Nothing;
-            CalculateBoundingBox();
+            CalculateBoundingBox(X, Y, Width, Height);
             StateMachine.Update(gameTime);
             return Nothing; //FIXME
         }
