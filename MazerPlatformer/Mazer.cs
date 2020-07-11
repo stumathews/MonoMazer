@@ -76,7 +76,7 @@ namespace MazerPlatformer
             Content.RootDirectory = "Content";
             IsFixedTimeStep = false;
 
-            // local funcs 
+            // local 
             Either<IFailure, Unit> SetupGraphicsDevice() =>
                 Ensure(() => 
                 { 
@@ -92,11 +92,10 @@ namespace MazerPlatformer
                     _gameCommands = new CommandManager();
                     _gameStateMachine = new FSM(this);
                     _spriteBatch = new SpriteBatch(GraphicsDevice);
-                    _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height,
-                        NumRows, NumCols, _spriteBatch);
+                    _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
                     _pauseState = new PauseState(this);
                     _playingState = new PlayingGameState(this);
-                });
+                }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
         }
         
         /// <summary>
@@ -139,18 +138,17 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            Ensure(() => base.Initialize())
-                .Bind(unit => InitializeUI())
-                .Bind(unit => SetupMenuUi())
-                .Bind(unit => InitializeGameStateMachine())
-                .Map(unit => InitializeGameWorld())
-                .Map(gameWorld =>
-                {
-                    SetupGameCommands();
-                    ConnectGameWorldToUI(gameWorld);
-                    return Nothing;
-                }).ThrowIfFailed();
+            var initialization =
+                from gameWorld in Ensure(() => base.Initialize())
+                    .Bind(unit => InitializeUI())
+                    .Bind(unit => SetupMenuUi())
+                    .Bind(unit => InitializeGameStateMachine())
+                    .Map(unit => InitializeGameWorld())
+                from unit in SetupGameCommands()
+                    .Bind(unit => ConnectGameWorldToUI(gameWorld))
+                select Nothing;
 
+            initialization.ThrowIfFailed();
 
             /* local funcs */
             GameWorld InitializeGameWorld()
@@ -159,40 +157,47 @@ namespace MazerPlatformer
                 return _gameWorld;
             }
 
-            void SetupGameCommands()
-            {
-                _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-                _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
-                _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-                _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
-                _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-                _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-                _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-                _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-                _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-                _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-                _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-                _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-                _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-                _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
-                _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
-                _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
-                _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
-            }
-            
-            void ConnectGameWorldToUI(GameWorld gameWorld)
-            {
-                /* Connect the UI to the game world */
-                gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-                gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
-                gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-                gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
-                gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-                gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-                gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-                gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
-                gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
-            }
+            Either<IFailure, Unit> SetupGameCommands() =>
+                Ensure(() =>
+                {
+
+                    _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
+                    _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
+                    _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
+                    _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
+                    _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
+                    _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
+                    _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
+                    _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
+                    _gameCommands.AddKeyUpCommand(Keys.D1,
+                        (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
+                    _gameCommands.AddKeyUpCommand(Keys.D2,
+                        (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
+                    _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
+                    _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
+                    _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
+                    _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
+                    _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
+                    _gameCommands.AddKeyUpCommand(Keys.N,
+                        (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
+                    _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
+                });
+
+            Either<IFailure, Unit> ConnectGameWorldToUI(GameWorld gameWorld) =>
+                Ensure(() =>
+                {
+                    /* Connect the UI to the game world */
+                    gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+                    gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
+                    gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
+                    gameWorld.OnPlayerCollisionDirectionChanged += (direction) =>
+                        Ensure(() => _characterCollisionDirection = direction);
+                    gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+                    gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+                    gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+                    gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
+                    gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+                });
 
             Either<IFailure, Unit> InitializeUI()
             {

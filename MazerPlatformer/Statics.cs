@@ -125,6 +125,14 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
 
+        /// <summary>
+        /// Ensures code that might throw exceptions doesn't and returns IFailure instead.
+        /// This is so that we know exactly outcomes a function can have ie IFailure or Unit
+        /// </summary>
+        /// <typeparam name="L">Type of the left side of either</typeparam>
+        /// <param name="action">Function to run</param>
+        /// <param name="failure">instance of the left hand side considered a failure</param>
+        /// <returns></returns>
         public static Either<L, Unit> Ensure<L>(Action action, L failure)
             => action.TryThis<L>(failure);
 
