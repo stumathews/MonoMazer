@@ -101,10 +101,10 @@ namespace MazerPlatformer
                         var player = (Player) playerComponent.Value;
                         // Great example of using an Option<Room> to get an expected room, otherwise throw as unrecoverable
                         var npcRoom = gameWorld.GetRoomIn(Npc).ThrowIfNone(NotFound.Create("Room unexpectedly not found"));
-                        var myRow = gameWorld.ToRoomRow(Npc);
-                        var myCol = gameWorld.ToRoomColumn(Npc);
-                        var playerRow = gameWorld.ToRoomRow(player);
-                        var playerCol = gameWorld.ToRoomColumn(player);
+                        var myRow = gameWorld.ToRoomRow(Npc).ThrowIfNone(NotFound.Create("Could not find room row for NPC"));
+                        var myCol = gameWorld.ToRoomColumn(Npc).ThrowIfNone(NotFound.Create("Could not find room col for NPC"));
+                        var playerRow = gameWorld.ToRoomRow(player).ThrowIfNone(NotFound.Create("Could not find room row for player"));
+                        var playerCol = gameWorld.ToRoomColumn(player).ThrowIfNone(NotFound.Create("Could not find room col for player"));
                         var sameRow = playerRow == myRow;
                         var sameCol = playerCol == myCol;
                         Npc.SubInfoText = $"R={myRow} C={myCol}";
@@ -115,7 +115,7 @@ namespace MazerPlatformer
                         {
                             Character.CharacterDirection newDir;
                             var changeDirection = !sameCol || !sameRow;
-                            if (sameCol && gameWorld.IsPathAccessibleBetween(player, Npc))
+                            if (sameCol && gameWorld.IsPathAccessibleBetween(player, Npc).ThrowIfFailed())
                             {
                                 newDir = myRow < playerRow
                                     ? Character.CharacterDirection.Down
@@ -125,7 +125,7 @@ namespace MazerPlatformer
                                 playerSeen = true;
 
                             }
-                            else if (sameRow && gameWorld.IsPathAccessibleBetween(player, Npc))
+                            else if (sameRow && gameWorld.IsPathAccessibleBetween(player, Npc).ThrowIfFailed())
                             {
                                 newDir = myCol < playerCol
                                     ? Character.CharacterDirection.Right

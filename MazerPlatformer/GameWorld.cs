@@ -422,31 +422,38 @@ namespace MazerPlatformer
 
 
         // Inform the Game world that the up button was pressed, make the player idle
-        public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => Level.Player.SetAsIdle();
+        public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
+            => Level.Player.SetAsIdle();
 
-        public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) =>
-            Level.Player.MoveInDirection(direction, dt);
+        public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
+            => Level.Player.MoveInDirection(direction, dt);
 
-        public bool IsPathAccessibleBetween(GameObject obj1, GameObject obj2)
+        public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsureWithReturn(() =>
         {
-            var obj1Row = ToRoomRow(obj1);
-            var obj1Col = ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number")); ;
-            var obj2Row = ToRoomRow(obj2);
-            var obj2Col = ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
+            var obj1Row = ToRoomRow(obj1)
+                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
+            var obj1Col = ToRoomColumn(obj1)
+                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
+            var obj2Row = ToRoomRow(obj2)
+                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
+            var obj2Col = ToRoomColumn(obj2)
+                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
 
             var isSameRow = obj1Row == obj2Row;
             var isSameCol = obj1Col == obj2Col;
 
             if (isSameRow)
             {
-                var minMax = GetMaxMinRange(obj2Col, obj1Col).ThrowIfNone(NotFound.Create("Missing MinMax arguments")); ;
+                var (greater, smaller) = GetMaxMinRange(obj2Col, obj1Col)
+                    .ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+                ;
 
-                var roomsInThisRow = _rooms.Where(o => o.Row+1 == obj1Row);
-                    var cropped = roomsInThisRow.Where(o=>
-                                                       o.Col >= minMax.smaller-1 && 
-                                                       o.Col <= minMax.greater-1).OrderBy(o=>o.X).ToList();
-                
-                for (var i = 0; i < cropped.Count-1; i++)
+                var roomsInThisRow = _rooms.Where(o => o.Row + 1 == obj1Row);
+                var cropped = roomsInThisRow.Where(o =>
+                    o.Col >= smaller - 1 &&
+                    o.Col <= greater - 1).OrderBy(o => o.X).ToList();
+
+                for (var i = 0; i < cropped.Count - 1; i++)
                 {
                     var hasARightSide = cropped[i].HasSide(Room.Side.Right);
                     if (hasARightSide) return false;
