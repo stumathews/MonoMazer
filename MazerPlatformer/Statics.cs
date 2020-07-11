@@ -199,12 +199,13 @@ namespace MazerPlatformer
         {
             return setting = !setting;
         }
-
-        public static void DoIf(bool condition, Action action)
-        {
-            if (condition) action?.Invoke();
-        }
-
+        
+        /// <summary>
+        /// Unsafe version of EnsureIf
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="action"></param>
+        /// <returns>Either a unit or failure</returns>
         public static Either<IFailure, Unit> DoIff(bool condition, Action action)
         {
             if (condition)
