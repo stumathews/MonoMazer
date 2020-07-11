@@ -84,9 +84,18 @@ namespace MazerPlatformer
 
         // Determine the centre point of the game object in 2D space
         private Vector2 _centre;
-        
 
-        private Either<IFailure, Unit> CalculateBoundingBox(int x, int y, int width, int height)
+        // Get the centre of the game object
+        private Vector2 Centre => _centre;
+
+        public Vector2 MaxPoint
+        {
+            get => _maxPoint;
+            set => _maxPoint = value;
+        }
+
+
+        private Either<IFailure, Unit> CalculateBoundingBox(int x, int y, int width, int height) => Ensure(() =>
         {
             // Keep track of our centre
             _centre = this.GetCentre();
@@ -97,21 +106,19 @@ namespace MazerPlatformer
             _maxPoint.Y = Height;
 
             // Every object gets a bounding box, used internally for outlining square bounds of object
-            _boundingBox = new BoundingBox(new Vector3( x, y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
+            _boundingBox = new BoundingBox(new Vector3(x, y, 0), new Vector3((int) _maxPoint.X, (int) _maxPoint.Y, 0));
 
             // Every object gets a bounding sphere and this is used for collision detection
             BoundingSphere = new BoundingSphere(new Vector3(_centre, 0), 29);
-            return Nothing; //FIXME
-        }
+        });
 
         // Called every frame
-        public virtual Either<IFailure, Unit> Update(GameTime gameTime)
+        public virtual Either<IFailure, Unit> Update(GameTime gameTime) => Ensure(() =>
         {
-            if (!Active) return Nothing;
+            if (!Active) return;
             CalculateBoundingBox(X, Y, Width, Height);
             StateMachine.Update(gameTime);
-            return Nothing; //FIXME
-        }
+        });
 
         // Every object can check if its colliding with another object's bounding box
         public virtual bool IsCollidingWith(GameObject otherObject)
@@ -132,14 +139,7 @@ namespace MazerPlatformer
             handler?.Invoke(this, otherObject);
         }
 
-        // Get the centre of the game object
-        private Vector2 Centre => _centre;
-
-        public Vector2 MaxPoint
-        {
-            get => _maxPoint;
-            set => _maxPoint = value;
-        }
+        
 
         /// <summary>
         /// Find a component, assuming there is only one of this type otherwise None
@@ -149,9 +149,7 @@ namespace MazerPlatformer
             => EnsureWithReturn(() => Components.SingleOrDefault(o => o.Type == type))
                 .Map(component => component ?? Option<Component>.None)
                 .IfLeft(Option<Component>.None);
-
         
-
         /// <summary>
         /// Updates by type, returns the updated value, fails otherwise
         /// </summary>
@@ -160,12 +158,12 @@ namespace MazerPlatformer
         public Either<IFailure, object> UpdateComponentByType(Component.ComponentType type, object  newValue) 
             => UpdateComponent(newValue, Components.Single(o => o.Type == type));
 
-        public Component AddComponent(Component.ComponentType type, object value, string id = null)
+        public Either<IFailure, Component> AddComponent(Component.ComponentType type, object value, string id = null) => EnsureWithReturn(() =>
         {
             var component = new Component(type, value, id);
             Components.Add(component);
             return component;
-        }
+        });
 
         private Either<IFailure, object> UpdateComponent(object newValue, Component found)
             => found == null
@@ -179,7 +177,8 @@ namespace MazerPlatformer
                     return newValue;
                 });
 
-        public void AddState(State state) => States.Add(state);
+        public Either<IFailure, Unit> AddState(State state) => Ensure(() 
+            => States.Add(state));
 
         #region Diganostics
 
@@ -249,7 +248,7 @@ namespace MazerPlatformer
                     States.Clear();
                     StateTransitions.Clear();
                     return Nothing;
-                });
+                }).ThrowIfFailed();
         }
 
         public void Dispose()
