@@ -185,23 +185,22 @@ namespace MazerPlatformer
 
         // Draw the centre point of the object
         protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch)
-            => DoIff(Diganostics.DrawCentrePoint,
-                () => Ensure(() => spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f)))
+            => EnsureIf(Diganostics.DrawCentrePoint,
+                () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
                 .IgnoreFailure(Nothing);
 
         // Draw the max point (lower right point)
         protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
-            => DoIff(Diganostics.DrawMaxPoint, () => Ensure(() => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f)))
             => EnsureIf(Diganostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
                 .IgnoreFailure(Nothing);
 
         // Draw the bounding box
         protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
-            => DoIff(Diganostics.DrawGameObjectBounds, () => Ensure(() => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f)))
+            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
                 .IgnoreFailure(Nothing);
 
         // Draw the bounding sphere
-        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => DoIff(Diganostics.DrawGameObjectBounds, () 
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => EnsureIf(Diganostics.DrawGameObjectBounds, () 
             => Ensure(() => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua)))
             .IgnoreFailure(Nothing);
 
