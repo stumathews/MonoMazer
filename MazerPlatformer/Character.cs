@@ -75,7 +75,7 @@ namespace MazerPlatformer
             // Initialize the characters animation
             return EnsureWithReturn( () =>
             {
-                Animation.Initialize(AnimationInfo.Texture, GetCentre(), AnimationInfo.FrameWidth,
+                Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth,
                     AnimationInfo.FrameHeight,
                     AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
                     AnimationInfo.FrameTime);
@@ -122,7 +122,7 @@ namespace MazerPlatformer
         }
 
         private Either<IFailure, Unit> SetCharacterDirection(CharacterDirection direction) 
-            => SetAnimationDirection(direction)
+            => SetAnimationDirection(direction, Animation)
                 .Iter(unit => 
             {
                 CurrentDirection = direction;
@@ -133,27 +133,28 @@ namespace MazerPlatformer
                 CanMove = true;
             });
 
-        private Either<IFailure, Unit> SetAnimationDirection(CharacterDirection direction)
+        // The arguments could still be null, and could throw exceptions, but otherwise only depends on its arguments
+        private Either<IFailure, Animation> SetAnimationDirection(CharacterDirection direction, Animation animation)
         {
             switch (direction)
             {
                 case CharacterDirection.Up:
-                    Animation.CurrentAnimationDirection = Animation.AnimationDirection.Up;
+                    animation.CurrentAnimationDirection = Animation.AnimationDirection.Up;
                     break;
                 case CharacterDirection.Right:
-                    Animation.CurrentAnimationDirection = Animation.AnimationDirection.Right;
+                    animation.CurrentAnimationDirection = Animation.AnimationDirection.Right;
                     break;
                 case CharacterDirection.Down:
-                    Animation.CurrentAnimationDirection = Animation.AnimationDirection.Down;
+                    animation.CurrentAnimationDirection = Animation.AnimationDirection.Down;
                     break;
                 case CharacterDirection.Left:
-                    Animation.CurrentAnimationDirection = Animation.AnimationDirection.Left;
+                    animation.CurrentAnimationDirection = Animation.AnimationDirection.Left;
                     break;
                 default:
                     return new InvalidDirectionFailure(direction);
             }
 
-            return Nothing;
+            return animation;
         }
 
         // I can do unique things when my state changes
@@ -230,6 +231,6 @@ namespace MazerPlatformer
         public override Either<IFailure, Unit> Update(GameTime gameTime) 
             => base.Update(gameTime)
                 .Bind(unit =>
-                Ensure(() => Animation.Update(gameTime, (int) GetCentre().X, (int) GetCentre().Y)));
+                Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y)));
     }
 }
