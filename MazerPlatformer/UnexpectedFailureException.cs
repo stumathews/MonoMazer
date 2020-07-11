@@ -10,5 +10,6 @@ namespace MazerPlatformer
         }
 
         public string Reason { get; set; }
+        public static IFailure Create(IFailure failure) => new UnexpectedFailureException(failure);
     }
 }
