@@ -218,7 +218,7 @@ namespace MazerPlatformer
             return collision;
         }
 
-        public void RemoveSide(Side side)
+        public Either<IFailure, Unit> RemoveSide(Side side) => Ensure(() =>
         {
             switch (side)
             {
@@ -237,7 +237,7 @@ namespace MazerPlatformer
                 default:
                     throw new ArgumentOutOfRangeException("Wall", side, null);
             }
-        }
+        });
 
         /* A room has sides which can be destroyed or collided with - they also have individual behaviors, including collision detection */
         public class SideCharacteristic
