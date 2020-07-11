@@ -216,6 +216,9 @@ namespace MazerPlatformer
             return new ConditionNotSatisfied();
         }
 
+        public static Either<IFailure, Unit> EnsureIf(bool condition, Action action) 
+            => condition ? Ensure(action).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied();
+
         public static Either<L, R> IgnoreFailure<L,R>(this Either<L, R> either, R returnAs )
             => either.IfLeft(returnAs);
 

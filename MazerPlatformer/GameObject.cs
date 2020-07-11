@@ -192,6 +192,7 @@ namespace MazerPlatformer
         // Draw the max point (lower right point)
         protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
             => DoIff(Diganostics.DrawMaxPoint, () => Ensure(() => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f)))
+            => EnsureIf(Diganostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
                 .IgnoreFailure(Nothing);
 
         // Draw the bounding box
