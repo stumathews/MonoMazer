@@ -223,17 +223,16 @@ namespace MazerPlatformer
         });
 
         // Specific game objects need to initialize themselves
-        public virtual Either<IFailure, Unit> Initialize()
+        public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
             // We enter the default state whatever that is
-            foreach(var state in States)
+            foreach (var state in States)
                 StateMachine.AddState(state);
 
-            StateMachine.Initialise(States.Any() 
-                ? States.FirstOrDefault(s=>s.Name == "default")?.Name ?? States.First()?.Name 
+            StateMachine.Initialise(States.Any()
+                ? States.FirstOrDefault(s => s.Name == "default")?.Name ?? States.First()?.Name
                 : null);
-            return Nothing;
-        }
+        });
 
         #endregion
 
