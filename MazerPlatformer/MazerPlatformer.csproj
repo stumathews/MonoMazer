@@ -73,6 +73,7 @@
     <Compile Include="Room.cs" />
     <Compile Include="SimpleGameTimeTimer.cs" />
     <Compile Include="Statics.cs" />
+    <Compile Include="UnexpectedFailure.cs" />
     <Compile Include="UnexpectedFailureException.cs" />
   </ItemGroup>
   <ItemGroup>
