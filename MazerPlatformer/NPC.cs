@@ -41,7 +41,7 @@ namespace MazerPlatformer
                 Animation.Idle = false;
 
                 // NPCs start off with random directions
-                CurrentDirection = GetRandomEnumValue<CharacterDirection>();
+                CurrentDirection = GetRandomEnumValue<CharacterDirection>().ThrowIfFailed();
             });
 
         private Either<IFailure, Unit> HandleCollision(GameObject thisObject, GameObject otherObject)

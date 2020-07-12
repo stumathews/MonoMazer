@@ -14,23 +14,19 @@ namespace MazerPlatformer
 {
     public static class Statics
     {
-        public static Rectangle ToRectangle(this BoundingBox box)
-        {
-            var rect = new Rectangle(new Point((int)box.Min.X, (int)box.Min.Y),
-                new Point((int)box.Max.X, (int)box.Max.Y));
-            return rect;
-        }
+        public static Either<IFailure, Rectangle> ToRectangleImpure(this BoundingBox box) => EnsureWithReturn(() 
+            => new Rectangle(new Point((int) box.Min.X, (int) box.Min.Y), new Point((int) box.Max.X, (int) box.Max.Y)));
 
-        public static BoundingBox ToBoundingBox(this Rectangle rect)
-        {
-            return new BoundingBox(new Vector3(rect.X, rect.Y, 0),
-                new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0));
-        }
+        public static Rectangle ToRectangle(this BoundingBox box) => ToRectangleImpure(box).ThrowIfFailed();
 
-        public static T ParseEnum<T>(this string value)
-        {
-            return (T)Enum.Parse(typeof(T), value, true);
-        }
+        public static Either<IFailure, BoundingBox> ToBoundingBoxImpure(this Rectangle rect) => EnsureWithReturn(()
+            => new BoundingBox(new Vector3(rect.X, rect.Y, 0), new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0)));
+
+        public static BoundingBox ToBoundingBox(this Rectangle rect) => 
+            ToBoundingBoxImpure(rect).ThrowIfFailed();
+
+        public static Either<IFailure, T> ParseEnum<T>(this string value) => EnsureWithReturn(() 
+            => (T) Enum.Parse(typeof(T), value, true));
 
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
         public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
@@ -43,11 +39,11 @@ namespace MazerPlatformer
 
         }
 
-        public static T GetRandomEnumValue<T>()
+        public static Either<IFailure, T> GetRandomEnumValue<T>() => EnsureWithReturn(() =>
         {
             var values = Enum.GetValues(typeof(T));
-            return (T)values.GetValue(Level.RandomGenerator.Next(values.Length));
-        }
+            return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
+        });
 
         public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc)
         {
@@ -58,7 +54,7 @@ namespace MazerPlatformer
                 .Bind(component => string.IsNullOrEmpty(component.Value.ToString())
                     ? Option<string>.None
                     : component.Value.ToString())
-                .Map(ParseEnum<Npc.NpcTypes>);
+                .Bind(str => ParseEnum<Npc.NpcTypes>(str).ToOption());
         }
 
         /// <summary>
@@ -111,9 +107,7 @@ namespace MazerPlatformer
                 .IfLeft(Option<T>.None)
                 .ToEither(NotFound.Create($"Could not find item: ${name}"));
         }
-
-        //
-
+        
         /// <summary>
         /// Make Either<IFailure, T> in right state
         /// </summary>
@@ -172,6 +166,7 @@ namespace MazerPlatformer
                 either.IfFailed(action);
         }
 
+        [PureFunction]
         public static Option<bool> ToOption(this bool thing)
         {
             return thing ? Option<bool>.Some(true) : Option<bool>.None;
@@ -244,6 +239,7 @@ namespace MazerPlatformer
         public static T ThrowIfNone<T>(this Option<T> option, IFailure failure)
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
 
+        [PureFunction]
         public static bool ToggleSetting(ref bool setting)
         {
             return setting = !setting;
