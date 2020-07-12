@@ -88,11 +88,11 @@ namespace MazerPlatformer
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
-            var levelGameObjects = _level.Load(overridePlayerHealth, overridePlayerScore);
-            AddToGameObjects(levelGameObjects);
+            var levelGameObjects = _level.Load(overridePlayerHealth, overridePlayerScore)
+                .Bind(AddToGameObjects);
 
             // We use the rooms locations for collisions detection optimizations later
-            _rooms = _level.GetRooms();
+            _rooms = _level.GetRooms().ThrowIfFailed();
 
             _removeWallTimer.Start();
         });

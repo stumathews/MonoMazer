@@ -68,13 +68,10 @@ namespace MazerPlatformer
             public LevelNpcDetails() { /* Needed for serialization */ }
         }
 
-        
-
 
         public SpriteBatch SpriteBatch { get; }
         public ContentManager ContentManager { get; }
-        
-        
+
         // Level number 1,2,4 etc...
         public int LevelNumber { get; }
         public static readonly Random RandomGenerator = new Random();
@@ -114,17 +111,15 @@ namespace MazerPlatformer
         public static Player Player { get; private set; }
         public static List<Npc> Npcs { get; private set; }
         
-        public Either<IFailure, Unit> PlaySong() 
-            => Ensure(() =>
+        public Either<IFailure, Unit> PlaySong() => Ensure(() 
+            =>
             {
                 MediaPlayer.IsRepeating = true;
                 MediaPlayer.Play(_levelMusic);
             });
-
-        public void PlaySound1() => _jingleSoundEffect.CreateInstance().Play();
-        public void PlayPlayerSpottedSound() => _playerSpottedSound.CreateInstance().Play();
-        public void PlayLoseSound() => _loseSound.CreateInstance().Play();
-
+        public Either<IFailure, Unit> PlaySound1() => Ensure(()=> _jingleSoundEffect.CreateInstance().Play());
+        public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(()=> _playerSpottedSound.CreateInstance().Play());
+        public Either<IFailure, Unit> PlayLoseSound() => Ensure(() => _loseSound.CreateInstance().Play());
 
         public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random random) 
         {
@@ -142,7 +137,7 @@ namespace MazerPlatformer
         }        
 
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
-        public List<Room> MakeRooms(bool removeRandomSides = false)
+        public Either<IFailure, List<Room>> MakeRooms(bool removeRandomSides = false) => EnsureWithReturn(() =>
         {
             var mazeGrid = new List<Room>();
 
@@ -150,13 +145,14 @@ namespace MazerPlatformer
             {
                 for (var col = 0; col < Cols; col++)
                 {
-                    var square = new Room(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight, spriteBatch: SpriteBatch, roomNumber:(row * Cols) + col, row: row, col: col);
+                    var square = new Room(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight,
+                        spriteBatch: SpriteBatch, roomNumber: (row * Cols) + col, row: row, col: col);
                     mazeGrid.Add(square);
                 }
-            }           
+            }
 
             var totalRooms = mazeGrid.Count;
-            
+
             // determine which sides can be removed and then randonly remove a number of them (using only the square objects - no drawing yet)
             for (var i = 0; i < totalRooms; i++)
             {
@@ -187,23 +183,27 @@ namespace MazerPlatformer
                 currentRoom.RoomBelow = canRemoveBelow ? mazeGrid[roomBelowIndex] : null;
                 currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
                 currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
-                    
-                if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) && mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
+
+                if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) &&
+                    mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
                     removableSides.Add(Room.Side.Top);
 
-                if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) && mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
+                if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) &&
+                    mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
                     removableSides.Add(Room.Side.Bottom);
 
-                if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) && mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
+                if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) &&
+                    mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
                     removableSides.Add(Room.Side.Left);
 
-                if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) && mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
+                if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) &&
+                    mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
                     removableSides.Add(Room.Side.Right);
 
                 // which of the sides should we remove for this square?
-                
+
                 if (!removeRandomSides) continue; // Return quick if you don't want to remove random sides
-                
+
                 var randomSide = removableSides[RandomGenerator.Next(0, removableSides.Count)];
                 switch (randomSide)
                 {
@@ -230,7 +230,7 @@ namespace MazerPlatformer
             }
 
             return mazeGrid;
-        }
+        });
 
         /// <summary>
         /// Collate animation details about the player
@@ -238,41 +238,41 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public static Player MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager)
+        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager) => EnsureWithReturn(() =>
         {
             var assetFile = string.IsNullOrEmpty(levelFile?.Player?.SpriteFile)
                 ? @"Sprites\dark_soldier-sword"
                 : levelFile.Player.SpriteFile;
 
             var playerAnimation = new AnimationInfo(
-               texture: contentManager.Load<Texture2D>(assetFile), assetFile,
-               frameWidth: levelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-               frameHeight: levelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-               frameCount: levelFile?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
+                texture: contentManager.Load<Texture2D>(assetFile), assetFile,
+                frameWidth: levelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                frameHeight: levelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                frameCount: levelFile?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
 
-            var player = new Player(x: (int)playerRoom.GetCentre().X, 
-                y: (int)playerRoom.GetCentre().Y,
-                width: levelFile.SpriteWidth ?? AnimationInfo.DefaultFrameWidth, 
-                height: levelFile.SpriteHeight ?? AnimationInfo.DefaultFrameHeight, 
+            var player = new Player(x: (int) playerRoom.GetCentre().X,
+                y: (int) playerRoom.GetCentre().Y,
+                width: levelFile.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                height: levelFile.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
                 animationInfo: playerAnimation);
-            
-            if(levelFile.Player.Components == null)
+
+            if (levelFile.Player.Components == null)
                 levelFile.Player.Components = new List<Component>();
             // Load any additional components from the level file
-            foreach (var component in levelFile.Player.Components) 
+            foreach (var component in levelFile.Player.Components)
                 player.AddComponent(component.Type, component.Value);
 
             // Make sure we actually have health or points for the player
             var playerHealth = player.FindComponentByType(ComponentType.Health);
             var playerPoints = player.FindComponentByType(ComponentType.Points);
 
-            if(playerHealth == null)
+            if (playerHealth == null)
                 player.Components.Add(new Component(ComponentType.Health, 100));
-            if(playerPoints == null)
+            if (playerPoints == null)
                 player.Components.Add(new Component(ComponentType.Points, 0));
 
             return player;
-        }
+        });
 
         /// <summary>
         /// loading the definition of the enemies into a file.
@@ -282,7 +282,7 @@ namespace MazerPlatformer
         /// <param name="NPCBuilder"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static List<Npc> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder NPCBuilder, Level level)
+        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder NPCBuilder, Level level) => EnsureWithReturn(() =>
         {
             var characters = new List<Npc>();
 
@@ -314,13 +314,13 @@ namespace MazerPlatformer
             }
 
             return characters;
-        }
+        });
 
         /// <summary>
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Dictionary<string, GameObject> Load(int? playerHealth = null, int? playerScore = null)
+        public Either<IFailure, Dictionary<string, GameObject>> Load(int? playerHealth = null, int? playerScore = null) => EnsureWithReturn(() =>
         {
             if (File.Exists(LevelFileName))
             {
@@ -352,9 +352,9 @@ namespace MazerPlatformer
                     SpriteFrameCount = AnimationInfo.DefaultFrameCount,
                     SpriteFrameTime = AnimationInfo.DefaultFrameTime,
                     Music = @"Music\bgm_action_1", // Level Music
-                    Sound1 = @"Music\28_jingle",  // Pickup sound
-                    Sound2 = @"Music\29_noise",  // Enemy seen player
-                    Sound3 = @"Music\64_lose2",  // Player died
+                    Sound1 = @"Music\28_jingle", // Pickup sound
+                    Sound2 = @"Music\29_noise", // Enemy seen player
+                    Sound3 = @"Music\64_lose2", // Player died
                     SpriteFile = @"Sprites\dark_soldier-sword" // Default Sprite file for any character not found
                 };
             }
@@ -372,17 +372,17 @@ namespace MazerPlatformer
             var _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
 
             // Make the room objects in the level
-            _rooms = MakeRooms(removeRandomSides: Diganostics.RandomSides);
+            _rooms = MakeRooms(removeRandomSides: Diganostics.RandomSides).ThrowIfFailed();
             foreach (var room in _rooms)
                 AddToLevelGameObjects(room.Id, room);
 
             // Make Player
-            Player = MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], LevelFile, ContentManager);
-                AddToLevelGameObjects(Player.PlayerId, Player);
+            Player = MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], LevelFile, ContentManager).ThrowIfFailed();
+            AddToLevelGameObjects(Player.PlayerId, Player);
 
             // Make the NPCs for the level
-            Npcs = MakeNpCs(_rooms, LevelFile, _npcBuilder, this);
-            
+            Npcs = MakeNpCs(_rooms, LevelFile, _npcBuilder, this).ThrowIfFailed();
+
             // Tally up number on Npcs for latter use
             NumPickups = Npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup));
 
@@ -391,34 +391,34 @@ namespace MazerPlatformer
 
             OnLoad?.Invoke(LevelFile);
             return _levelGameObjects;
-        }
+        });
 
 
-        private void AddToLevelGameObjects(string id, GameObject gameObject)
+        private Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
         {
             _levelGameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _levelGameObjects.Count());
-        }
+            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false,
+                runningTotalCount: _levelGameObjects.Count());
+        });
 
         /// <summary>
         /// Get the room objects in the level
         /// </summary>
         /// <returns>list of rooms created in the level</returns>
-        public List<Room> GetRooms() => _rooms;
+        public Either<IFailure, List<Room>> GetRooms() => EnsureWithReturn(() => _rooms);
 
-        public void UnLoad()
+        public Either<IFailure, Unit> UnLoad() => Ensure(() =>
         {
-            if(!File.Exists(LevelFileName))
+            if (!File.Exists(LevelFileName))
                 Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs);
             Player.Dispose();
             foreach (var npc in Npcs) npc.Dispose();
             foreach (var room in _rooms) room.Dispose();
-        }
-
-        
+        });
 
         // Save the level information including NPcs and Player info
-        public static void Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs)
+        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player,
+            string levelFileName, List<Npc> npcs) => Ensure(() =>
         {
             if (!shouldSave)
                 return;
@@ -438,7 +438,8 @@ namespace MazerPlatformer
                             var details = new LevelNpcDetails
                             {
                                 NpcType = type,
-                                Count = CharacterBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
+                                Count = CharacterBuilder
+                                    .DefaultNumPirates // template level file saves 5 of each type of npc
                             };
                             CopyAnimationInfo(npc, details);
 
@@ -449,7 +450,7 @@ namespace MazerPlatformer
                     }
                 }
             }
-            
+
             // Save Player info into level file
             CopyAnimationInfo(player, levelFile?.Player ?? new LevelPlayerDetails());
 
@@ -470,7 +471,7 @@ namespace MazerPlatformer
 
             void CopyOrUpdateComponents(Character @from, LevelCharacterDetails to)
             {
-                if(to.Components == null)
+                if (to.Components == null)
                     to.Components = new List<Component>();
 
                 foreach (var component in @from.Components)
@@ -491,7 +492,7 @@ namespace MazerPlatformer
                     }
                 }
             }
-        }
+        });
 
         public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
             => Player.SetPlayerVitals(health, points);
