@@ -17,11 +17,13 @@ namespace MazerPlatformer
         public static Either<IFailure, Rectangle> ToRectangleImpure(this BoundingBox box) => EnsureWithReturn(() 
             => new Rectangle(new Point((int) box.Min.X, (int) box.Min.Y), new Point((int) box.Max.X, (int) box.Max.Y)));
 
+        // pure until it throws an exeption
         public static Rectangle ToRectangle(this BoundingBox box) => ToRectangleImpure(box).ThrowIfFailed();
-
+        
         public static Either<IFailure, BoundingBox> ToBoundingBoxImpure(this Rectangle rect) => EnsureWithReturn(()
             => new BoundingBox(new Vector3(rect.X, rect.Y, 0), new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0)));
-
+        
+        // pure until it throws an exception
         public static BoundingBox ToBoundingBox(this Rectangle rect) => 
             ToBoundingBoxImpure(rect).ThrowIfFailed();
 
