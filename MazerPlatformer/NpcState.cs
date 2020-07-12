@@ -1,4 +1,5 @@
 ﻿using GameLibFramework.FSM;
+using LanguageExt;
 using Microsoft.Xna.Framework;
 
 namespace MazerPlatformer
@@ -9,10 +10,11 @@ namespace MazerPlatformer
         protected Npc Npc { get; set; }
         public NpcState(string name, Npc Npc) : base(name) => this.Npc = Npc;
 
-        protected bool IsWithin(int milli, GameTime dt)
+        [PureFunction]
+        protected Either<IFailure, bool> IsWithin(int milli, GameTime dt) => Statics.EnsureWithReturn(() =>
         {
             var isWithin = false;
-            if(WaitTime < milli)
+            if (WaitTime < milli)
             {
                 isWithin = true;
                 WaitTime += dt.ElapsedGameTime.Milliseconds;
@@ -21,7 +23,8 @@ namespace MazerPlatformer
             {
                 WaitTime = 0;
             }
+
             return isWithin;
-        }
+        });
     }
 }
