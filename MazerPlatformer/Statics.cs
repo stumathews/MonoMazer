@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.Xna.Framework;
@@ -399,68 +398,5 @@ namespace MazerPlatformer
             return centre;
         }
 
-    }
-
-    public class TransformExceptionFailure : IFailure
-    {
-        public string Reason { get; set; }
-
-        public Exception Exception { get; set; }
-
-        public TransformExceptionFailure(string message)
-        {
-            Reason = message;
-        }
-
-        
-        public static IFailure Create(string msg) => new TransformExceptionFailure(msg);
-
-    }
-
-    public class AggregatePipelineFailure : IFailure
-    {
-        public AggregatePipelineFailure(IEnumerable<IFailure> failures)
-        {
-            var failureNames = failures.GroupBy(o => o.GetType().Name + o.Reason);
-            var sb = new StringBuilder();
-            foreach (var name in failureNames)
-            {
-                sb.Append($"Failure name: {name.Key} Count: {name.Count()}\n");
-            }
-
-            Reason = sb.ToString();
-        }
-        public string Reason { get; set; }
-    }
-
-    public class NotTypeException : IFailure
-    {
-        public NotTypeException(Type type)
-        {
-            Reason = $"Function did not return expected type of '{type}'";
-        }
-
-        public string Reason { get; set; }
-
-        public static IFailure Create(Type type) => new NotTypeException(type);
-    }
-
-    public static class Diganostics
-    {
-        public static bool DrawLines = true;
-        public static bool DrawGameObjectBounds;
-        public static bool DrawSquareSideBounds;
-        public static bool DrawSquareBounds = false;
-        public static bool DrawCentrePoint;
-        public static bool DrawMaxPoint;
-        public static bool DrawLeft = true;
-        public static bool DrawRight = true;
-        public static bool DrawTop = true;
-        public static bool DrawBottom = true;
-        public static bool RandomSides = true;
-        public static bool DrawPlayerRectangle = false;
-        public static bool DrawObjectInfoText = false;
-        public static bool ShowPlayerStats = false;
-        public static bool LogDiagnostics = false;
     }
 }

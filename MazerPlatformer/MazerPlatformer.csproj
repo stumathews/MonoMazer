@@ -42,6 +42,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AggregatePipelineFailure.cs" />
     <Compile Include="AssetLoadFailure.cs" />
     <Compile Include="Character.cs" />
     <Compile Include="CharacterBuilder.cs" />
@@ -49,6 +50,7 @@
     <Compile Include="Component.cs" />
     <Compile Include="ConditionNotSatisfied.cs" />
     <Compile Include="DecisionState.cs" />
+    <Compile Include="Diganostics.cs" />
     <Compile Include="ExceptionFailure.cs" />
     <Compile Include="ExternalLibraryFailure.cs" />
     <Compile Include="GameObject.cs" />
@@ -57,6 +59,7 @@
     <Compile Include="InvalidCastFailure.cs" />
     <Compile Include="MovingState.cs" />
     <Compile Include="NotFound.cs" />
+    <Compile Include="NotTypeException.cs" />
     <Compile Include="NpcState.cs" />
     <Compile Include="PauseState.cs" />
     <Compile Include="Level.cs" />
@@ -73,6 +76,7 @@
     <Compile Include="Room.cs" />
     <Compile Include="SimpleGameTimeTimer.cs" />
     <Compile Include="Statics.cs" />
+    <Compile Include="TransformExceptionFailure.cs" />
     <Compile Include="UnexpectedFailure.cs" />
     <Compile Include="UnexpectedFailureException.cs" />
   </ItemGroup>
