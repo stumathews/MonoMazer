@@ -389,14 +389,18 @@ namespace MazerPlatformer
             return found;
         }
 
-        public static Vector2 GetCentre(this GameObject gameObject)
+        public static Either<IFailure, Vector2> GetCentreImpure(this GameObject gameObject) => EnsureWithReturn(() =>
         {
             // This function is a pure function
             Vector2 centre;
             centre.X = gameObject.X + gameObject.Width / 2;
             centre.Y = gameObject.Y + gameObject.Height / 2;
             return centre;
-        }
+        });
+
+        // Not pure as it throws but close
+        public static Vector2 GetCentre(this GameObject gameObject) 
+            => GetCentreImpure(gameObject).ThrowIfFailed();
 
     }
 }
