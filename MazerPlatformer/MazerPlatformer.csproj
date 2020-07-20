@@ -42,24 +42,24 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AggregatePipelineFailure.cs" />
-    <Compile Include="AssetLoadFailure.cs" />
+    <Compile Include="Failures\AggregatePipelineFailure.cs" />
+    <Compile Include="Failures\AssetLoadFailure.cs" />
     <Compile Include="Character.cs" />
     <Compile Include="CharacterBuilder.cs" />
     <Compile Include="CollidingState.cs" />
     <Compile Include="Component.cs" />
-    <Compile Include="ConditionNotSatisfied.cs" />
+    <Compile Include="Failures\ConditionNotSatisfiedFailure.cs" />
     <Compile Include="DecisionState.cs" />
     <Compile Include="Diganostics.cs" />
-    <Compile Include="ExceptionFailure.cs" />
-    <Compile Include="ExternalLibraryFailure.cs" />
+    <Compile Include="Failures\ExceptionFailure.cs" />
+    <Compile Include="Failures\ExternalLibraryFailure.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GameWorld.cs" />
     <Compile Include="IFailure.cs" />
-    <Compile Include="InvalidCastFailure.cs" />
+    <Compile Include="Failures\InvalidCastFailure.cs" />
     <Compile Include="MovingState.cs" />
     <Compile Include="NotFound.cs" />
-    <Compile Include="NotTypeException.cs" />
+    <Compile Include="Failures\NotTypeExceptionFailure.cs" />
     <Compile Include="NpcState.cs" />
     <Compile Include="PauseState.cs" />
     <Compile Include="Level.cs" />
@@ -76,9 +76,9 @@
     <Compile Include="Room.cs" />
     <Compile Include="SimpleGameTimeTimer.cs" />
     <Compile Include="Statics.cs" />
-    <Compile Include="TransformExceptionFailure.cs" />
-    <Compile Include="UnexpectedFailure.cs" />
-    <Compile Include="UnexpectedFailureException.cs" />
+    <Compile Include="Failures\TransformExceptionFailure.cs" />
+    <Compile Include="Failures\UnexpectedFailure.cs" />
+    <Compile Include="Failures\UnexpectedFailureException.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="DataTypes">

@@ -194,7 +194,7 @@ namespace MazerPlatformer
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
-                        ? new NotTypeException(typeof(T))
+                        ? new NotTypeExceptionFailure(typeof(T))
                         : unit.ToSuccess(),
                     exception => new ExternalLibraryFailure(exception));
 
@@ -261,7 +261,7 @@ namespace MazerPlatformer
                 return Nothing.ToSuccess();
             }
             var stackTrace = new StackTrace();
-            return new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
+            return new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -273,7 +273,7 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
         {
             var stackTrace = new StackTrace();
-            return condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
+            return condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -344,7 +344,7 @@ namespace MazerPlatformer
         /// <param name="func"></param>
         /// <returns></returns>
         public static Either<IFailure, T> Require<T>(T arg, Func<bool> func) 
-            => func() ? ConditionNotSatisfied.Create("Require").ToEitherFailure<T>() : arg.ToSuccess();
+            => func() ? ConditionNotSatisfiedFailure.Create("Require").ToEitherFailure<T>() : arg.ToSuccess();
 
         /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>
@@ -357,7 +357,7 @@ namespace MazerPlatformer
         {
 
             var stackTrace = new StackTrace();
-            return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
+            return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -371,7 +371,7 @@ namespace MazerPlatformer
         {
 
             var stackTrace = new StackTrace();
-            return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
+            return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>

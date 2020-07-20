@@ -2,15 +2,15 @@
 
 namespace MazerPlatformer
 {
-    public class NotTypeException : IFailure
+    public class NotTypeExceptionFailure : IFailure
     {
-        public NotTypeException(Type type)
+        public NotTypeExceptionFailure(Type type)
         {
             Reason = $"Function did not return expected type of '{type}'";
         }
 
         public string Reason { get; set; }
 
-        public static IFailure Create(Type type) => new NotTypeException(type);
+        public static IFailure Create(Type type) => new NotTypeExceptionFailure(type);
     }
 }
