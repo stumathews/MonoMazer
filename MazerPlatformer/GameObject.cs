@@ -78,7 +78,6 @@ namespace MazerPlatformer
             Height = height;
             StateMachine = new FSM(this);
             Type = type;
-            CalculateBoundingBox(X, Y, Width, Height); // TODO: move. this could throw an exception
             Active = true;
         }
 
