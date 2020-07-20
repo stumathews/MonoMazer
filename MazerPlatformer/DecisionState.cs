@@ -5,6 +5,8 @@ namespace MazerPlatformer
     public class DecisionState : NpcState
     {
         public DecisionState(string name, Npc npc) : base(name, npc) {}
+
+        // relies on external library
         public override void Enter(object owner)
         {
             
@@ -13,6 +15,7 @@ namespace MazerPlatformer
             Npc.SetAsIdle();
         }
 
+        // relies on external library
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);

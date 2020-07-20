@@ -6,6 +6,7 @@ namespace MazerPlatformer
     {
         public CollidingState(string name, Npc npc) : base(name, npc) { }
 
+        // these are coming from the external library
         public override void Enter(object owner)
         {
             base.Enter(owner);
@@ -14,6 +15,7 @@ namespace MazerPlatformer
 
         }
 
+        // this is coming from the external library
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);

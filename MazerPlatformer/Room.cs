@@ -66,6 +66,8 @@ namespace MazerPlatformer
             Col = col;
             Row = row;
 
+            //TODO: We should ensure that this constructor can't throw exceptions
+
             // This allows for reasoning about rectangles in terms of points A, B, C, D
             _rectDetails = new RectDetails(X, Y, Width, Height);
 

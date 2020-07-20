@@ -18,6 +18,7 @@ namespace MazerPlatformer
             Name = "Idle";
         }
 
+        // relies on definition of external library
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);

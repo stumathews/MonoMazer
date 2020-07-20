@@ -24,13 +24,16 @@ namespace MazerPlatformer
             => new BoundingBox(new Vector3(rect.X, rect.Y, 0), new Vector3(rect.X + rect.Width, rect.Y + rect.Height, 0)));
         
         // pure until it throws an exception
-        public static BoundingBox ToBoundingBox(this Rectangle rect) => 
-            ToBoundingBoxImpure(rect).ThrowIfFailed();
+        public static BoundingBox ToBoundingBox(this Rectangle rect) 
+            => ToBoundingBoxImpure(rect).ThrowIfFailed();
 
         public static Either<IFailure, T> ParseEnum<T>(this string value) => EnsureWithReturn(() 
             => (T) Enum.Parse(typeof(T), value, true));
 
+        //TODO: Ensure that GameObjects is not NULL - use Option<T>
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
+
+        //TODO: Ensure that GameObjects is not NULL - use Option<T>
         public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
         {
             if (gameObject.Type != GameObject.GameObjectType.Npc) return false;
@@ -98,14 +101,14 @@ namespace MazerPlatformer
         public static Option<T> SingleOrNone<T>(this List<T> list, Func<T, bool> predicate)
         {
             return EnsureWithReturn(() => list.SingleOrDefault(predicate))
-                .Map(item => item != null ? item : Option<T>.None)
+                .EnsuringMap(item => item != null ? item : Option<T>.None)
                 .IfLeft(Option<T>.None);
         }
 
         public static Either<IFailure, T> SingleOrFailure<T>(this List<T> list, Func<T, bool> predicate, string name = "no name provided")
         {
             return EnsureWithReturn(() => list.SingleOrDefault(predicate))
-                .Map(item => item != null ? item : Option<T>.None)
+                .EnsuringMap(item => item != null ? item : Option<T>.None)
                 .IfLeft(Option<T>.None)
                 .ToEither(NotFound.Create($"Could not find item: ${name}"));
         }
@@ -174,6 +177,7 @@ namespace MazerPlatformer
             return thing ? Option<bool>.Some(true) : Option<bool>.None;
         }
 
+        // contains I/O
         public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
             either.IfLeft(failure => Console.WriteLine($"Draw failed because '{failure.Reason}'"));
 
@@ -183,10 +187,8 @@ namespace MazerPlatformer
         /// <param name="action"></param>
         /// <returns></returns>
         public static Either<IFailure, Unit> TryThis(this Action action)
-        {
-            return new Try<Unit>(() => { action(); return new Unit(); })
-                            .Match(unit => unit.ToSuccess(), exception => new ExternalLibraryFailure(exception));
-        }
+            => new Try<Unit>(() => { action(); return new Unit(); })
+                .Match(unit => unit.ToSuccess(), exception => new ExternalLibraryFailure(exception));
 
         public static Either<IFailure, T> TryThis<T>(this Func<T> action)
             => new Try<T>(() => action())
@@ -242,11 +244,9 @@ namespace MazerPlatformer
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
 
         [PureFunction]
-        public static bool ToggleSetting(ref bool setting)
-        {
-            return setting = !setting;
-        }
-        
+        public static bool ToggleSetting(ref bool setting) 
+            => setting = !setting;
+
         /// <summary>
         /// Unsafe version of EnsureIf
         /// </summary>
@@ -260,7 +260,7 @@ namespace MazerPlatformer
                 then();
                 return Nothing.ToSuccess();
             }
-            StackTrace stackTrace = new StackTrace();
+            var stackTrace = new StackTrace();
             return new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
@@ -272,7 +272,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
         {
-            StackTrace stackTrace = new StackTrace();
+            var stackTrace = new StackTrace();
             return condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
@@ -356,7 +356,7 @@ namespace MazerPlatformer
         public static Either<IFailure, T> DoIf<T>(bool condition, Func<T> then)
         {
 
-            StackTrace stackTrace = new StackTrace();
+            var stackTrace = new StackTrace();
             return condition ? (Either<IFailure, T>) then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
@@ -370,14 +370,15 @@ namespace MazerPlatformer
         public static Either<IFailure, T> EnsureIf<T>(bool condition, Func<T> then)
         {
 
-            StackTrace stackTrace = new StackTrace();
+            var stackTrace = new StackTrace();
             return condition ? (Either<IFailure, T>)then.Invoke() : new ConditionNotSatisfied(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
         /// A Unit
         /// </summary>
-        public static Unit Nothing => new Unit(); 
+        public static Unit Nothing 
+            => new Unit(); 
 
         public static List<T> IfEither<T>(T one, T two, Func<T, bool> matches, Action<T> then)
         {

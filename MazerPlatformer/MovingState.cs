@@ -7,6 +7,8 @@ namespace MazerPlatformer
         public MovingState(string name, Npc npc) : base(name, npc) {}
 
         private readonly SimpleGameTimeTimer _spottedPlayerTimeout = new SimpleGameTimeTimer(5000);
+
+        // relies on definition of external library
         public override void Enter(object owner)
         {
             base.Enter(owner);
@@ -14,6 +16,7 @@ namespace MazerPlatformer
             _spottedPlayerTimeout.Start();
         }
 
+        // relies on definition of external library
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);

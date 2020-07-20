@@ -26,13 +26,14 @@ namespace MazerPlatformer
         public Player(int x, int y, int width, int height, AnimationInfo animationInfo) : base(x, y, PlayerId, width, height, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
 
-        public override Either<IFailure,Unit> Initialize() =>
+        public override Either<IFailure, Unit> Initialize() =>
             base.Initialize()
                 .Iter(unit =>
-                {
-                    // Get notified when I collide with another object (collision handled in base class)
-                    OnCollision += HandleCollision;
-                });
+            {
+                // Get notified when I collide with another object (collision handled in base class)
+                OnCollision += HandleCollision;
+            });
+               
 
         // I can draw myself!
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
