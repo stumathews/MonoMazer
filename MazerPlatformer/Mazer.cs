@@ -70,32 +70,33 @@ namespace MazerPlatformer
         public Mazer()
         {
             SetupGraphicsDevice()
-                .Bind(_ => CreateInfrastructure())
+                .EnsuringBind(_ => CreateInfrastructure())
                 .ThrowIfFailed();
 
             Content.RootDirectory = "Content";
             IsFixedTimeStep = false;
 
             // local 
-            Either<IFailure, Unit> SetupGraphicsDevice() =>
-                Ensure(() => 
-                { 
-                    var graphics = new GraphicsDeviceManager(this);
-                    graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-                    graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-                    graphics.ApplyChanges();
-                }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
-
-            Either<IFailure, Unit> CreateInfrastructure() =>
-                Ensure(() =>
+            Either<IFailure, Unit> SetupGraphicsDevice() => Ensure(() => 
+            {
+                var graphics = new GraphicsDeviceManager(this)
                 {
-                    _gameCommands = new CommandManager();
-                    _gameStateMachine = new FSM(this);
-                    _spriteBatch = new SpriteBatch(GraphicsDevice);
-                    _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
-                    _pauseState = new PauseState(this);
-                    _playingState = new PlayingGameState(this);
-                }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
+                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+                };
+                graphics.ApplyChanges();
+            }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
+
+            Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
+            {
+                // TODO: All these constructors can create invalid objects, consider using smart constructors
+                _gameCommands = new CommandManager();
+                _gameStateMachine = new FSM(this);
+                _spriteBatch = new SpriteBatch(GraphicsDevice);
+                _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
+                _pauseState = new PauseState(this);
+                _playingState = new PlayingGameState(this);
+            }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
         }
         
         /// <summary>
@@ -127,8 +128,8 @@ namespace MazerPlatformer
                 => _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0);
         }
 
-        private Either<IFailure, T> TryLoadContent<T>(string assetName) 
-            => EnsureWithReturn(() => Content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
+        private Either<IFailure, T> TryLoadContent<T>(string assetName) => EnsureWithReturn(() 
+            => Content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
@@ -138,60 +139,47 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            var initialization =
-                from gameWorld in Ensure(() => base.Initialize())
-                    .Bind(unit => InitializeUI())
-                    .Bind(unit => SetupMenuUi())
-                    .Bind(unit => InitializeGameStateMachine())
-                    .Map(unit => InitializeGameWorld())
-                from unit in SetupGameCommands()
-                    .Bind(unit => ConnectGameWorldToUI(gameWorld))
-                select Nothing;
-
-            initialization.ThrowIfFailed();
+            Ensure(() => base.Initialize())
+                    .Bind(success => InitializeUI())
+                    .Bind(success => SetupMenuUi())
+                    .Bind(success => InitializeGameStateMachine())
+                    .Bind(success => InitializeGameWorld())
+                    .Bind(success => SetupGameCommands())
+                    .Bind(ConnectGameWorldToUi)
+            .ThrowIfFailed();
 
             /* local funcs */
-            GameWorld InitializeGameWorld()
+            Either<IFailure, Unit> InitializeGameWorld() => _gameWorld.Initialize();
+
+            Either<IFailure, GameWorld> SetupGameCommands() => EnsureWithReturn(() =>
             {
-                _gameWorld.Initialize();
+                _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
+                _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
+                _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
+                _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
+                _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
+                _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
+                _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
+                _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
+                _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
+                _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
+                _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
+                _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
+                _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
+                _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
+                _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
+                _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
+                _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
                 return _gameWorld;
-            }
+            });
 
-            Either<IFailure, Unit> SetupGameCommands() =>
-                Ensure(() =>
-                {
-
-                    _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-                    _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
-                    _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-                    _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
-                    _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-                    _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-                    _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-                    _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-                    _gameCommands.AddKeyUpCommand(Keys.D1,
-                        (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-                    _gameCommands.AddKeyUpCommand(Keys.D2,
-                        (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-                    _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-                    _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-                    _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-                    _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
-                    _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
-                    _gameCommands.AddKeyUpCommand(Keys.N,
-                        (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
-                    _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
-                });
-
-            Either<IFailure, Unit> ConnectGameWorldToUI(GameWorld gameWorld) =>
-                Ensure(() =>
+            Either<IFailure, Unit> ConnectGameWorldToUi(GameWorld gameWorld) => Ensure(() =>
                 {
                     /* Connect the UI to the game world */
                     gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
                     gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
                     gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-                    gameWorld.OnPlayerCollisionDirectionChanged += (direction) =>
-                        Ensure(() => _characterCollisionDirection = direction);
+                    gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
                     gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
                     gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
                     gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
