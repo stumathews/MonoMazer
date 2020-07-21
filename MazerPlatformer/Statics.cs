@@ -177,6 +177,15 @@ namespace MazerPlatformer
             return thing ? Option<bool>.Some(true) : Option<bool>.None;
         }
 
+        public static Either<L, bool> FailIfTrue<L>(this bool theBool, L theFailure) 
+            => theBool ? theFailure.ToEitherFailure<L, bool>() : theBool.ToSuccess<L, bool>();
+
+        public static Either<IFailure, bool> ShortCircuitIfTrue(this bool theBool)
+            => theBool ? ShortCircuit.Create("Planned Short Circuit").ToEitherFailure<IFailure, bool>() : theBool.ToSuccess<IFailure, bool>();
+
+        public static Either<L, bool> FailIfFalse<L>(this bool theBool, L theFailure)
+            => theBool ? theBool.ToSuccess<L, bool>() : theFailure.ToEitherFailure<L, bool>();
+
         // contains I/O
         public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
             either.IfLeft(failure => Console.WriteLine($"Draw failed because '{failure.Reason}'"));
@@ -325,17 +334,13 @@ namespace MazerPlatformer
                 => EnsureWithReturn(() => transformingFunction(right),
                     TransformExceptionFailure.Create("An exception occured while ensuring a bind")));
 
-        public static Either<IFailure, T> EnsuringBind<R, T>(this Either<IFailure, R> either,
-            Func<R, Either<IFailure, T>> transformingFunction) =>
-            either.Bind<Either<IFailure,  T>>(f: right
-                    => EnsureWithReturn3(() => transformingFunction(right),
-                        TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
-                .Match(
-                    Left: failure => failure.ToEitherFailure<T>(),
-                    Right: datas => datas.Match(
-                        Left: failure => failure.ToEitherFailure<T>(),
-                        Right: t => t.ToSuccess()));
-
+        public static Either<IFailure, T> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) 
+            => either
+                    .Bind(f: right => EnsureWithReturn3(() => transformingFunction(right), TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
+                    .Match( Left: failure => failure.ToEitherFailure<T>(),
+                            Right: eitherData 
+                                => eitherData.Match( Left: failure => failure.ToEitherFailure<T>(),
+                                                Right: t => t.ToSuccess()));
         /// <summary>
         /// Cancels remaining pipeline if condition is met
         /// </summary>
