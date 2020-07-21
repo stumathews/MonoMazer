@@ -224,7 +224,7 @@ namespace MazerPlatformer
             return collision;
         }
 
-        public Either<IFailure, Unit> RemoveSide(Side side) => Ensure(() =>
+        public Either<IFailure, Unit> RemoveSide(Side side)
         {
             switch (side)
             {
@@ -241,21 +241,10 @@ namespace MazerPlatformer
                     _hasSide[3] = false;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("Wall", side, null);
+                    return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Unit>();
             }
-        });
 
-        /* A room has sides which can be destroyed or collided with - they also have individual behaviors, including collision detection */
-        public class SideCharacteristic
-        {
-            public Color Color;
-            public readonly Rectangle Bounds;
-
-            public SideCharacteristic(Color color, Rectangle bounds)
-            {
-                Bounds = bounds;
-                Color = color;
-            }
+            return Nothing.ToSuccess<Unit>();
         }
     }
 }

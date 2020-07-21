@@ -140,7 +140,7 @@ namespace MazerPlatformer
         protected override void Initialize()
         {
             Ensure(() => base.Initialize())
-                    .Bind(success => InitializeUI())
+                    .Bind(success => InitializeUi())
                     .Bind(success => SetupMenuUi())
                     .Bind(success => InitializeGameStateMachine())
                     .Bind(success => InitializeGameWorld())
@@ -174,23 +174,21 @@ namespace MazerPlatformer
             });
 
             Either<IFailure, Unit> ConnectGameWorldToUi(GameWorld gameWorld) => Ensure(() =>
-                {
-                    /* Connect the UI to the game world */
-                    gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-                    gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
-                    gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-                    gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
-                    gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-                    gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-                    gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-                    gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
-                    gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
-                });
-
-            Either<IFailure, Unit> InitializeUI()
             {
-                return Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor));
-            }
+                /* Connect the UI to the game world */
+                gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+                gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
+                gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
+                gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
+                gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+                gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+                gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+                gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
+                gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            });
+
+            Either<IFailure, Unit> InitializeUi()
+                => Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor));
         }
 
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
@@ -237,31 +235,30 @@ namespace MazerPlatformer
         protected override void Draw(GameTime gameTime)
         {
             Ensure(() => base.Draw(gameTime))
-                .Bind(unit => Ensure(() => GraphicsDevice.Clear(_currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver)))
-                .Bind(unit => Ensure(() => _spriteBatch.Begin()))
-                .Bind(unit => _gameWorld.Draw(_spriteBatch))
-                .Bind(unit => DrawPlayerStats(_spriteBatch))
-                .Bind(unit => DrawInGameStats(gameTime))
-                .Bind(unit => Ensure(() => _spriteBatch.End()))
-                .Bind(unit => Ensure(() => UserInterface.Active.Draw(_spriteBatch)))
+                .EnsuringBind(unit => Ensure(() => GraphicsDevice.Clear(_currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver)))
+                .EnsuringBind(unit => Ensure(() => _spriteBatch.Begin()))
+                .EnsuringBind(unit => _gameWorld.Draw(_spriteBatch))
+                .EnsuringBind(unit => DrawPlayerStats(_spriteBatch))
+                .EnsuringBind(unit => DrawInGameStats(gameTime))
+                .EnsuringBind(unit => Ensure(() => _spriteBatch.End()))
+                .EnsuringBind(unit => Ensure(() => UserInterface.Active.Draw(_spriteBatch)))
             .ThrowIfFailed();
         }
 
-        private Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch) =>
-            Ensure(() =>
-            {
-                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
-                    Color.White);
+        private Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch) => Ensure(() =>
+        {
+            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+            _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
+                Color.White);
 
-                _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
-                    Color.White);
-            });
+            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
+                Color.White);
+            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
+                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
+                Color.White);
+        });
 
 
         private Either<IFailure, Unit> ProgressToLevel(int level) 

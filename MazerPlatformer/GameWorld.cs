@@ -388,7 +388,7 @@ namespace MazerPlatformer
 
         public Option<int> ToRoomRow(GameObject o1) => EnsureWithReturn(() 
             => (int) Math.Ceiling((float) o1.Y / _roomHeight)).ToOption();
-        
+
         /// <summary>
         /// Deactivate objects that collided (will be removed before next update)
         /// Informs the Game (Mazer) that a collision occured
@@ -398,7 +398,7 @@ namespace MazerPlatformer
         /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
         private Either<IFailure, Unit> OnObjectCollision(GameObject obj1, GameObject obj2)
         {
-            if (_unloading) return Nothing;
+            if (_unloading) return ShortCircuit.Create("Already Unloading").ToEitherFailure<Unit>();
             
             OnGameWorldCollision?.Invoke(obj1, obj2);
 
@@ -414,7 +414,7 @@ namespace MazerPlatformer
         }
 
         // What to do specifically when a room registers a collision
-        private static void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, Room.SideCharacteristic sideCharacteristics)
+        private static void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics)
         {
             if(otherObject.Type == GameObjectType.Player)
                 room.RemoveSide(side);
