@@ -382,7 +382,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> ResetPlayerStatistics(bool isFreshStart)
             => !isFreshStart
-                ? ShortCircuitFailure.Create("Not Fresh Start").ToEitherFailure<Unit>()
+                ? ShortCircuitFailure.Create("Not Fresh Start").ToEitherFailure<Unit>().IgnoreFailure()
                 : ResetPlayerStatistics();
 
         private Either<IFailure, Unit> StartOrResumeLevelMusic() 
