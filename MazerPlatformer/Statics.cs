@@ -70,13 +70,13 @@ namespace MazerPlatformer
         public static Either<IFailure, T> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> failures, T left)
         {
             var failed = failures.Lefts().ToList();
-            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() : left.ToSuccess();
+            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() : left.ToEither();
         }
 
         public static Either<IFailure, Unit> AggregateUnitFailures(this IEnumerable<Either<IFailure, Unit>> failures)
         {
             var failed = failures.Lefts().ToList();
-            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<Unit>() : Nothing.ToSuccess();
+            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<Unit>() : Nothing.ToEither();
         }
 
         public static IFailure AsFailure(this Exception e) => new ExceptionFailure(e);
@@ -116,10 +116,10 @@ namespace MazerPlatformer
         /// <summary>
         /// Make Either<IFailure, T> in right state
         /// </summary>
-        public static Either<IFailure, T> ToSuccess<T>(this T value)
+        public static Either<IFailure, T> ToEither<T>(this T value)
             => Prelude.Right<IFailure, T>(value);
 
-        public static Either<L, T> ToSuccess<L, T>(this T value)
+        public static Either<L, T> ToEither<L, T>(this T value)
             => Prelude.Right<L, T>(value);
 
         /// <summary>
@@ -178,13 +178,13 @@ namespace MazerPlatformer
         }
 
         public static Either<L, bool> FailIfTrue<L>(this bool theBool, L theFailure) 
-            => theBool ? theFailure.ToEitherFailure<L, bool>() : theBool.ToSuccess<L, bool>();
+            => theBool ? theFailure.ToEitherFailure<L, bool>() : theBool.ToEither<L, bool>();
 
         public static Either<IFailure, bool> ShortCircuitIfTrue(this bool theBool)
-            => theBool ? ShortCircuit.Create("Planned Short Circuit").ToEitherFailure<IFailure, bool>() : theBool.ToSuccess<IFailure, bool>();
+            => theBool ? ShortCircuitFailure.Create("Planned Short Circuit").ToEitherFailure<IFailure, bool>() : theBool.ToEither<IFailure, bool>();
 
         public static Either<L, bool> FailIfFalse<L>(this bool theBool, L theFailure)
-            => theBool ? theBool.ToSuccess<L, bool>() : theFailure.ToEitherFailure<L, bool>();
+            => theBool ? theBool.ToEither<L, bool>() : theFailure.ToEitherFailure<L, bool>();
 
         // contains I/O
         public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
@@ -197,20 +197,20 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, Unit> TryThis(this Action action)
             => new Try<Unit>(() => { action(); return new Unit(); })
-                .Match(unit => unit.ToSuccess(), exception => new ExternalLibraryFailure(exception));
+                .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
         public static Either<IFailure, T> TryThis<T>(this Func<T> action)
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
                         ? new NotTypeExceptionFailure(typeof(T))
-                        : unit.ToSuccess(),
+                        : unit.ToEither(),
                     exception => new ExternalLibraryFailure(exception));
 
         public static Either<L, Unit> TryThis<L>(this Action action, L failure)
         => new Try<Unit>(() => { action(); return Nothing; })
             .Match(
-                unit => unit.ToSuccess<L, Unit>(),
+                unit => unit.ToEither<L, Unit>(),
                 exception => failure);
 
         public static Either<L, T> TryThis<L, T>(this Func<T> action, L failure)
@@ -218,7 +218,7 @@ namespace MazerPlatformer
                 .Match(
                     unit => unit == null
                         ? failure.ToEitherFailure<L,T>()
-                        : unit.ToSuccess<L, T>(),
+                        : unit.ToEither<L, T>(),
                     exception => failure);
 
         public static Either<IFailure, T> TryThis2<T>(this Func<T> action, IFailure failure)
@@ -226,7 +226,7 @@ namespace MazerPlatformer
                 .Match(
                     unit => unit == null
                         ? failure.ToEitherFailure<T>()
-                        : unit.ToSuccess(),
+                        : unit.ToEither(),
                     exception => failure.WithException(exception).ToEitherFailure<T>());
 
         public static Either<L, T> TryThis3<L, T>(this Func<T> action, L failure) where L : IFailure
@@ -234,7 +234,7 @@ namespace MazerPlatformer
                 .Match(
                     unit => unit == null
                         ? failure.ToEitherFailure<L, T>()
-                        : unit.ToSuccess<L,T>(),
+                        : unit.ToEither<L,T>(),
                     exception => failure.WithException<L>(exception));
 
         public static L WithException<L>(this L failure,  Exception e) where L : IFailure
@@ -267,7 +267,7 @@ namespace MazerPlatformer
             if (condition)
             {
                 then();
-                return Nothing.ToSuccess();
+                return Nothing.ToEither();
             }
             var stackTrace = new StackTrace();
             return new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
@@ -282,7 +282,7 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
         {
             var stackTrace = new StackTrace();
-            return condition ? Ensure(then).Bind(unit => Nothing.ToSuccess()) : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
+            return condition ? Ensure(then).Bind(unit => Nothing.ToEither()) : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
         }
 
         /// <summary>
@@ -327,7 +327,7 @@ namespace MazerPlatformer
                     Left: failure => failure.ToEitherFailure<T>(),
                     Right: datas => datas.Match(
                         Left: failure => failure.ToEitherFailure<T>(),
-                        Right: t => t.ToSuccess<T>()));
+                        Right: t => t.ToEither<T>()));
 
         public static Either<IFailure, Either<IFailure, Either<IFailure, T>>> EnsuringBindX<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) =>
             either.Bind<Either<IFailure, Either<IFailure, T>>>(f: right
@@ -340,7 +340,7 @@ namespace MazerPlatformer
                     .Match( Left: failure => failure.ToEitherFailure<T>(),
                             Right: eitherData 
                                 => eitherData.Match( Left: failure => failure.ToEitherFailure<T>(),
-                                                Right: t => t.ToSuccess()));
+                                                Right: t => t.ToEither()));
         /// <summary>
         /// Cancels remaining pipeline if condition is met
         /// </summary>
@@ -349,7 +349,7 @@ namespace MazerPlatformer
         /// <param name="func"></param>
         /// <returns></returns>
         public static Either<IFailure, T> Require<T>(T arg, Func<bool> func) 
-            => func() ? ConditionNotSatisfiedFailure.Create("Require").ToEitherFailure<T>() : arg.ToSuccess();
+            => func() ? ConditionNotSatisfiedFailure.Create("Require").ToEitherFailure<T>() : arg.ToEither();
 
         /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>

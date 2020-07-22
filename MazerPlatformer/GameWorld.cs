@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Messaging;
 using System.Timers;
 using GameLib.EventDriven;
@@ -45,7 +46,7 @@ namespace MazerPlatformer
 
         public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
-        public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
+        public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount);
 
         private int _roomWidth;
         private int _roomHeight;
@@ -62,7 +63,11 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
+            int rows, int cols, SpriteBatch spriteBatch) => EnsureWithReturn(()
+            => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
+
+        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -181,7 +186,7 @@ namespace MazerPlatformer
                                         _level.PlayLoseSound();
                                         _playerDied = true;
                                         OnPlayerDied?.Invoke(thePlayer.Components);
-                                        return Nothing.ToSuccess();
+                                        return Nothing.ToEither();
                                     });
                                 break;
                             case Npc.NpcTypes.Pickup:
@@ -398,7 +403,7 @@ namespace MazerPlatformer
         /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
         private Either<IFailure, Unit> OnObjectCollision(GameObject obj1, GameObject obj2)
         {
-            if (_unloading) return ShortCircuit.Create("Already Unloading").ToEitherFailure<Unit>();
+            if (_unloading) return ShortCircuitFailure.Create("Already Unloading").ToEitherFailure<Unit>();
             
             OnGameWorldCollision?.Invoke(obj1, obj2);
 

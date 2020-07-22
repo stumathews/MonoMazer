@@ -74,6 +74,7 @@
     <Compile Include="PureFunctionAttribute.cs" />
     <Compile Include="RectDetails.cs" />
     <Compile Include="Room.cs" />
+    <Compile Include="ShortCircuitFailure.cs" />
     <Compile Include="SideCharacteristic.cs" />
     <Compile Include="SimpleGameTimeTimer.cs" />
     <Compile Include="Statics.cs" />

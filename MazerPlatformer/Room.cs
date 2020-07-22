@@ -244,7 +244,7 @@ namespace MazerPlatformer
                     return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Unit>();
             }
 
-            return Nothing.ToSuccess<Unit>();
+            return Nothing.ToEither<Unit>();
         }
     }
 }

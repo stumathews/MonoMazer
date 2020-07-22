@@ -72,7 +72,7 @@ namespace MazerPlatformer
                         }
 
                         Npc.MoveInDirection(Npc.CurrentDirection, gameTime);
-                    }).ToSuccess();
+                    }).ToEither();
         }
     }
 }
