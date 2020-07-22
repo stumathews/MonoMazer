@@ -86,7 +86,7 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> SetAsIdle() 
             => SetState(CharacterStates.Idle);
 
-        private Either<IFailure, Unit> HandleCharacterCollision(GameObject object1, GameObject object2) 
+        private Either<IFailure, Unit> HandleCharacterCollision(Option<GameObject> object1, Option<GameObject> object2) 
             => SetCollisionDirection(CurrentDirection);
 
         // Move ie change the character's position

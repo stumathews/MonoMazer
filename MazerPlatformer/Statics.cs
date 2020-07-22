@@ -171,6 +171,9 @@ namespace MazerPlatformer
                 either.IfFailed(action);
         }
 
+        public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn<IFailure, T>(()
+            => (T)value, InvalidCastFailure.Default());
+
         [PureFunction]
         public static Option<bool> ToOption(this bool thing)
         {
@@ -348,8 +351,19 @@ namespace MazerPlatformer
         /// <param name="arg"></param>
         /// <param name="func"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> Require<T>(T arg, Func<bool> func) 
-            => func() ? ConditionNotSatisfiedFailure.Create("Require").ToEitherFailure<T>() : arg.ToEither();
+        public static Either<IFailure, T> Require<T>(T arg, Func<bool> func, IFailure customFailure = null) 
+            => func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
+
+        /// <summary>
+        /// Fali if the condition is met
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arg"></param>
+        /// <param name="func"></param>
+        /// <param name="conditionNotMetMessage"></param>
+        /// <returns></returns>
+        public static Either<IFailure, T> Require<T>(T arg, Func<bool> func, string conditionNotMetMessage)
+            => func() ? ConditionNotSatisfiedFailure.Create(conditionNotMetMessage).ToEitherFailure<T>() : arg.ToEither();
 
         /// <summary>
         /// Unsafe version of EnsureIf that returns the result of the action a the Right value of an Either<IFailure,R>

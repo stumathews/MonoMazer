@@ -165,58 +165,67 @@ namespace MazerPlatformer
         /// <param name="thePlayer"></param>
         /// <param name="otherObject"></param>
         /// <returns></returns>
-        private Either<IFailure, Unit> PlayerOnOnCollision(GameObject thePlayer, GameObject otherObject)
-            => otherObject.Type != GameObjectType.Npc
-                ? Nothing
-                : otherObject.FindComponentByType(Component.ComponentType.NpcType)
-                    .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
-                    .EnsuringMap(component => (Npc.NpcTypes) component.Value)
-                    .Bind(type =>
-                    {
-                        Either<IFailure, Unit> result = Nothing;
-                        switch (type)
-                        {
-                            case Npc.NpcTypes.Enemy:
-                                // deal damage
-                                result = DetermineNewHealth(thePlayer, otherObject)
-                                    .Bind(newHealth => thePlayer.UpdateComponentByType(Component.ComponentType.Health, newHealth))
-                                    .Bind(newHealth => Require(newHealth, () => (int)newHealth > 0))
-                                    .EnsuringBind(newHealth =>
-                                    {
-                                        _level.PlayLoseSound();
-                                        _playerDied = true;
-                                        OnPlayerDied?.Invoke(thePlayer.Components);
-                                        return Nothing.ToEither();
-                                    });
-                                break;
-                            case Npc.NpcTypes.Pickup:
-                                // pickup points
-                                result = DetermineNewLevelPoints(thePlayer, otherObject)
-                                    .Bind(levelPoints => thePlayer.UpdateComponentByType(Component.ComponentType.Points, levelPoints))
-                                    .Map(o => Nothing);
-                                break;
-                        }
+        private Either<IFailure, Unit> PlayerOnOnCollision(Option<GameObject> thePlayer, Option<GameObject> otherGameObject)
+        {
+            return from player in thePlayer.ToEither(NotFound.Create("Player not found"))
+                from gameObject in otherGameObject.ToEither(NotFound.Create("Other not found"))
+                from isNpc in Require(gameObject, () => gameObject.Type != GameObjectType.Npc, "Must be NPC")
+                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType).ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
+                from collisionResult in ActOnTypeCollision(npcType, player, gameObject)
+                select collisionResult;
 
-                        return result;
-                    });
+            Either<IFailure, Unit> ActOnTypeCollision(Npc.NpcTypes type, GameObject player, GameObject otherObject)
+            {
+                // deal damage
+                if (type == Npc.NpcTypes.Enemy)
+                    return from newHealth in DetermineNewHealth(player, otherObject)
+                           from updatedOk in UpdatePlayerHealth(newHealth)
+                           from satisfied in Require(newHealth, () => (int)newHealth > 0)
+                           from diedResult in PlayerDied(newHealth)
+                           select Nothing;
 
-        private Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
-            => from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
-                .ToEither(NotFound.Create("Could not find hit-point component"))
-            from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
-                .ToEither(NotFound.Create("Could not find hit-point component"))
-            let myPoints = (int) myPointsComponent.Value
-            let pickupPoints = (int) pickupPointsComponent.Value
-            select myPoints + pickupPoints;
+                // pickup points
+                if (type == Npc.NpcTypes.Pickup)
+                    return from newPoints in DetermineNewLevelPoints(player, otherObject)
+                           from updatedOk in UpdatePlayerPoints(newPoints)
+                           select Nothing;
 
-        private Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1) 
-            => from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
-                .ToEither(NotFound.Create("Could not find hit-point component"))
-            from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
-                .ToEither(NotFound.Create("Could not find health component"))
-            let myHealth = (int) healthComponent.Value
-            let hitPoints = (int) hitPointsComponent.Value
-            select myHealth - hitPoints;
+                return Nothing.ToEither();
+
+                Either<IFailure, object> UpdatePlayerPoints(int levelPoints)
+                    => player.UpdateComponentByType(Component.ComponentType.Points, levelPoints);
+
+                Either<IFailure, object> UpdatePlayerHealth(int newHealth)
+                    => player.UpdateComponentByType(Component.ComponentType.Health, newHealth);
+
+                Either<IFailure, Unit> PlayerDied(object newHealth) => Ensure(() =>
+                {
+                    _level.PlayLoseSound();
+                    _playerDied = true;
+                    OnPlayerDied?.Invoke(player.Components);
+                });
+            }
+
+            Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
+                => from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
+                    .ToEither(NotFound.Create("Could not find hit-point component"))
+                   from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
+                   .ToEither(NotFound.Create("Could not find hit-point component"))
+                   let myPoints = (int)myPointsComponent.Value
+                   let pickupPoints = (int)pickupPointsComponent.Value
+                   select myPoints + pickupPoints;
+
+            Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
+                => from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
+                    .ToEither(NotFound.Create("Could not find hit-point component"))
+                   from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
+                   .ToEither(NotFound.Create("Could not find health component"))
+                   let myHealth = (int)healthComponent.Value
+                   let hitPoints = (int)hitPointsComponent.Value
+                   select myHealth - hitPoints;
+        }
+
 
 
         /// <summary>
@@ -401,21 +410,36 @@ namespace MazerPlatformer
         /// <param name="obj1"></param>
         /// <param name="obj2"></param>
         /// <remarks>Inactive objects are removed before next frame - see update()</remarks>
-        private Either<IFailure, Unit> OnObjectCollision(GameObject obj1, GameObject obj2)
+        private Either<IFailure, Unit> OnObjectCollision(Option<GameObject> obj1, Option<GameObject> obj2)
         {
-            if (_unloading) return ShortCircuitFailure.Create("Already Unloading").ToEitherFailure<Unit>();
-            
-            OnGameWorldCollision?.Invoke(obj1, obj2);
+            return
+                from o1 in obj1.ToEither(NotFound.Create("Game Object 1 not valid"))
+                from o2 in obj2.ToEither(NotFound.Create("Game Object 2 not valid"))
+                from unloadingFalse in _unloading.FailIfTrue(ShortCircuitFailure.Create("Already Unloading"))
+                from invokeResult in RaiseOnGameWorldCollisionEvent()
+                from setRoomToActiveResult in SetRoomToActive(o1, o2)
+                from soundPlayerCollisionResult in SoundPlayerCollision(o1, o2)
+                select Nothing;
 
-            if (obj1.Id == Level.Player.Id)
-                obj2.Active = obj2.Type == GameObjectType.Room;
+            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) =>
+            Ensure(() =>
+            {
+                if (go1.Id == Level.Player.Id)
+                    go2.Active = go2.Type == GameObjectType.Room;
+            });
 
-            // Make a celebratory sound on getting a pickup!
-            IfEither(obj1, obj2, obj => obj.IsPlayer(), then: (player) 
-                => IfEither(obj1, obj2, o => o.IsNpcType(Npc.NpcTypes.Pickup), 
-                    then: (pickup) => _level.PlaySound1()));
+            Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() =>
+            {
+                OnGameWorldCollision?.Invoke(obj1, obj2);
+            });
 
-            return Nothing; // TODO
+            Either < IFailure, Unit> SoundPlayerCollision(GameObject go1, GameObject go2) => Ensure(() =>
+            {
+                // Make a celebratory sound on getting a pickup!
+                IfEither(go1, go2, obj => obj.IsPlayer(), then: (player)
+                    => IfEither(go1, go2, o => o.IsNpcType(Npc.NpcTypes.Pickup),
+                        then: (pickup) => _level.PlaySound1()));
+            });
         }
 
         // What to do specifically when a room registers a collision

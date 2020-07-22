@@ -175,7 +175,7 @@ namespace MazerPlatformer
                 _gameWorld.Iter(gameWorld =>
                 {
                     /* Connect the UI to the game world */
-                    gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
+                    gameWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
                     gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
                     gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
                     gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
@@ -677,11 +677,8 @@ namespace MazerPlatformer
         // Update the UI when something interesting about the player's inventory changes (health, damage)
         private Either<IFailure, Unit> OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
         {
-            return CastToInt(newValue)
+            return TryCastToT<int>(newValue)
                     .Bind(value => SetPlayerDetails(componentType, value));
-
-            Either<IFailure, int> CastToInt(object value) => EnsureWithReturn(()
-                => (int)value, InvalidCastFailure.Default());
 
             Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value)
             {
@@ -699,12 +696,14 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="object1">object involved in collision</param>
         /// <param name="object2">other object involved in collisions</param>
-        private Either<IFailure, Unit> _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2) => Ensure(() =>
-        {
-            if (object1.Type == GameObject.GameObjectType.Npc)
-                _numCollisionsWithPlayerAndNpCs++;
+        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/)
+            => object1.Map(go =>
+            {
+                if (go.Type == GameObject.GameObjectType.Npc)
+                    _numCollisionsWithPlayerAndNpCs++;
 
-            _numGameCollisionsEvents++;
-        });
+                _numGameCollisionsEvents++;
+                return Nothing;
+            }).ToEither(NotFound.Create("Game Object was invalid or not found"));
     }
 }

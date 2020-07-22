@@ -47,7 +47,7 @@ namespace MazerPlatformer
         }
 
         // I can handle my own collisions
-        public Either<IFailure, Unit> HandleCollision(GameObject thisObject, GameObject otherObject) 
+        public Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 
             => NudgeOutOfCollision();
 
         public void Seen() => OnPlayerSpotted?.Invoke(this, null);
