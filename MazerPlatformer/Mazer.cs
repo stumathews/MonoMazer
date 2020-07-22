@@ -627,7 +627,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> ResumeGame()
                 => from hideMenuResult in HideMenu()
                     from result in StartOrContinueLevel(isFreshStart: false)
-                    select result;
+                    select Nothing;
         }
 
         private bool IsPlaying()
