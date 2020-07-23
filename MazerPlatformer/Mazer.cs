@@ -69,9 +69,12 @@ namespace MazerPlatformer
         
         public Mazer()
         {
-            SetupGraphicsDevice()
-                .EnsuringBind(_ => CreateInfrastructure())
-                .ThrowIfFailed();
+            var initiation = 
+                from setupGraphicsDeviceOk in SetupGraphicsDevice()
+                from createInfrastructureResult in CreateInfrastructure()
+                select Nothing;
+
+            initiation.ThrowIfFailed();
 
             Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
             {
@@ -102,27 +105,32 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            LoadGameFont()
-                .Bind(SetGameFont)
-                .Bind(LoadMenuMusic())
-                .Bind(SetMenuMusic)
-                .Bind(LoadGameWorldContent())
-            .ThrowIfFailed();
+            var loadPipeline = 
+                from font in LoadGameFont()
+                from set in SetGameFont(font)
+                from music in LoadMenuMusic()
+                from setMusic in SetMenuMusic(music)
+                from world in LoadGameWorldContent()
+                select Nothing;
+
+                loadPipeline.ThrowIfFailed();
 
             Either<IFailure, SpriteFont> LoadGameFont() 
                 => TryLoadContent<SpriteFont>("Sprites/gameFont");
 
-            Either<IFailure, Unit> SetGameFont(SpriteFont font)
-                => Ensure(() => _font = font);
-
-            Func<Unit, Either<IFailure, Song>> LoadMenuMusic() => (unused) 
+            Either<IFailure, Unit> SetGameFont(SpriteFont font) => Ensure(() 
+                => _font = font);
+            
+            Either<IFailure, Song> LoadMenuMusic() 
                 => TryLoadContent<Song>("Music/bgm_menu");
 
-            Either<IFailure, Unit> SetMenuMusic(Song song) 
+            Either<IFailure, Unit> SetMenuMusic(Song song)
                 => Ensure(()=>_menuMusic = song);
 
-            Func<Unit, Either<IFailure, Unit>> LoadGameWorldContent() 
-                => (unused) => _gameWorld.Bind(world => world.LoadContent(levelNumber: _currentLevel, 100, 0));
+            Either<IFailure, Unit> LoadGameWorldContent() =>
+                from world in _gameWorld
+                from load in world.LoadContent(levelNumber: _currentLevel, 100, 0)
+                select Nothing;
         }
 
         private Either<IFailure, T> TryLoadContent<T>(string assetName) => EnsureWithReturn(() 
@@ -136,14 +144,16 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            Ensure(() => base.Initialize())
-                    .Bind(success => InitializeUi())
-                    .Bind(success => SetupMenuUi())
-                    .Bind(success => InitializeGameStateMachine())
-                    .Bind(success => InitializeGameWorld())
-                    .Bind(success => SetupGameCommands())
-                    .Bind(success => ConnectGameWorldToUi())
-            .ThrowIfFailed();
+            var initializePipeline = from init in Ensure(() => base.Initialize())
+                from initUi in InitializeUi()
+                from setupMenuUi in SetupMenuUi()
+                from stateMachine in InitializeGameStateMachine()
+                from gameWorld in InitializeGameWorld()
+                from commands in SetupGameCommands()
+                from connectUi in ConnectGameWorldToUi()
+                select Nothing;
+
+            initializePipeline.ThrowIfFailed();
 
             /* local funcs */
             Either<IFailure, Unit> InitializeGameWorld() => _gameWorld.EnsuringBind(world => world.Initialize());
@@ -172,7 +182,7 @@ namespace MazerPlatformer
 
             Either<IFailure, Unit> ConnectGameWorldToUi() => Ensure(() =>
             {
-                _gameWorld.Iter(gameWorld =>
+                _gameWorld.Map(gameWorld =>
                 {
                     /* Connect the UI to the game world */
                     gameWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
@@ -184,6 +194,7 @@ namespace MazerPlatformer
                     gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
                     gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
                     gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+                    return Nothing;
                 });
             });
 
@@ -192,9 +203,11 @@ namespace MazerPlatformer
         }
 
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
-            from points in levelDetails.Player.Components.SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
+            from points in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
                 .EnsuringMap(AssignPlayerPoints)
-            from health in levelDetails.Player.Components.SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
+            from health in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
                 .EnsuringMap(AssignPlayerHealth)
             select Nothing;
 
@@ -211,7 +224,12 @@ namespace MazerPlatformer
         protected override void UnloadContent()
         {
             // Unload any non ContentManager content here
-            _gameWorld.Bind(world => world.UnloadContent()).ThrowIfFailed();
+            var unloadPipeline = 
+                from world in _gameWorld
+                from unload in world.UnloadContent()
+                select Nothing;
+
+            unloadPipeline.ThrowIfFailed();
         }
 
         /// <summary>
@@ -221,11 +239,15 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            Ensure(action: UpdateActiveUiComponents)
-                .Bind(ok => UpdateGameCommands()) // get input
-                .Bind(ok => UpdateStateMachine()) // NB: game world is updated by PlayingGameState
-                .Bind(ok => UpdateBase())
-            .ThrowIfFailed();
+            // Execute the update pipeline
+            var updatePipeline = 
+                 from active in Ensure(UpdateActiveUiComponents)
+                 from gameCommands in UpdateGameCommands() // get input
+                 from stateMachine in UpdateStateMachine() // NB: game world is updated by PlayingGameState
+                 from result in UpdateBase()
+                    select Nothing;
+
+            updatePipeline.ThrowIfFailed();
 
             Either<IFailure, Unit> UpdateGameCommands() => Ensure(()=>_gameCommands.Update(gameTime));
             Either<IFailure, Unit> UpdateStateMachine() => Ensure(()=>_gameStateMachine.Update(gameTime));
@@ -242,28 +264,30 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            Ensure(() => base.Draw(gameTime))
-                .EnsuringBind(unit => ClearGraphicsDevice())
-                .Bind(unit => BeginSpriteBatch())
-                .Bind(unit => DrawGameWorld())
-                .EnsuringMap(unit => DrawPlayerStatistics())
-                .EnsuringMap(unit => PrintGameStatistics(gameTime))
-                .EnsuringMap(unit => EndSpriteBatch())
-                .EnsuringBind(unit => Ensure(() => UserInterface.Active.Draw(_spriteBatch)))
-            .ThrowIfFailed();
+            var drawPipeline = from drawResult in Ensure(() => base.Draw(gameTime))
+                from clearResult in ClearGraphicsDevice()
+                from beginSpriteResult in BeginSpriteBatch()
+                from drawGameWorldResult in DrawGameWorld()
+                from statResult in DrawPlayerStatistics()
+                from gameStatsResult in PrintGameStatistics(gameTime).IgnoreFailure()
+                from endResult in EndSpriteBatch()
+                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(_spriteBatch))
+                select Nothing;
+
+            drawPipeline.ThrowIfFailed();
 
             // Local functions
 
-            Unit EndSpriteBatch()
+            Either<IFailure, Unit> EndSpriteBatch()
             {
                 _spriteBatch.End();
                 return Nothing;
             }
-
-            Unit PrintGameStatistics(GameTime time)
+            
+            Either<IFailure, Unit> PrintGameStatistics(GameTime time)
             {
                 if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats)
-                    return Nothing;
+                    return ShortCircuitFailure.Create("Not need").ToEitherFailure<Unit>();
 
                 var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
                 // Consider making GameObjectCount private and getting the info via an event instead
@@ -289,10 +313,10 @@ namespace MazerPlatformer
                 _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}",
                     new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
                     Color.White);
-                return Nothing;
+                return Nothing.ToEither();
             }
 
-            Unit DrawPlayerStatistics()
+            Either<IFailure, Unit> DrawPlayerStatistics() => Ensure(() =>
             {
                 var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
                 _spriteBatch.DrawString(_font, $"Level: {_currentLevel}",
@@ -301,13 +325,12 @@ namespace MazerPlatformer
                     new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
                 _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}",
                     new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
-                return Nothing;
-            }
+            });
 
-            Either<IFailure, Unit> DrawGameWorld()
-            {
-                return _gameWorld.Bind(world => world.Draw(_spriteBatch));
-            }
+            Either<IFailure, Unit> DrawGameWorld() =>
+                from world in _gameWorld
+                from draw in world.Draw(_spriteBatch)
+                select Nothing;
 
             Either<IFailure, Unit> BeginSpriteBatch()
             {
@@ -349,44 +372,59 @@ namespace MazerPlatformer
         /// <param name="overridePlayerHealth">player health from previous level, overrides any within level file</param>
         /// <param name="overridePlayerScore">player score from previous level, overrides any within level file</param>
         private Either<IFailure, Unit> StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-            => Ensure(() => _playerDied = false)
-                .EnsuringBind(unit => _gameWorld.Bind(world => world.UnloadContent()))
-                .EnsuringBind(unit => _gameWorld.Bind(world => world.LoadContent(levelNumber: level, overridePlayerHealth, overridePlayerScore)))
-                .EnsuringBind(unit => _gameWorld.Bind(world => world.Initialize())) // We need to reinitialize things once we've reload content
-                .Bind(unit => StartOrContinueLevel(isFreshStart: isFreshStart));
+        {
+            _playerDied = false;
+
+            return
+                from gameWorld in _gameWorld
+                from unload in gameWorld.UnloadContent()
+                from load in gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore)
+                from init in gameWorld.Initialize() // We need to reinitialize things once we've reload content
+                from start in StartOrContinueLevel(isFreshStart)
+                select Nothing;
+        }
 
         private Either<IFailure, Unit> PlayMenuMusic() => Ensure(()
             =>MediaPlayer.Play(_menuMusic));
 
         // This allows the playing state to indirectly move the player in the game world 
-        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) 
-            => _gameWorld.Bind(world => world.MovePlayer(dir, dt));
+        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) =>
+            from gameWorld in _gameWorld
+            from move in gameWorld.MovePlayer(dir, dt)
+            select Nothing;
 
         // This allows the Playing state to indirectly update the gameWorld
-        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) 
-            => _gameWorld.Bind(world => world.Update(dt));
+        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) =>
+            from gameWorld in _gameWorld
+            from update in gameWorld.Update(dt)
+            select Nothing;
 
         // This allows the playing state to indirectly send player commands to game world
-        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
-            => _gameWorld.Bind(world => world.OnKeyUp(sender, keyboardEventArgs));
+        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) =>
+            from world in _gameWorld
+            from result in world.OnKeyUp(sender, keyboardEventArgs)
+            select Nothing;
 
         // Hide the menu and ask the game world to start or continue
         internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart)
-            => HideMenu()
-                .Map(unit => SetCurrentGameStateToPlaying())
-                .Bind(unit => StartOrResumeLevelMusic())
-                .Bind(unit => ResetPlayerStatistics(isFreshStart)).ThrowIfFailed();
+        {
+            _currentGameState = GameStates.Playing;
 
-        private GameStates SetCurrentGameStateToPlaying() 
-            => _currentGameState = GameStates.Playing;
+            return from hide in HideMenu()
+                from startMusic in StartOrResumeLevelMusic()
+                from reset in ResetPlayerStatistics(isFreshStart)
+            select Nothing;
+        }
 
-        private Either<IFailure, Unit> ResetPlayerStatistics(bool isFreshStart)
-            => !isFreshStart
+        private Either<IFailure, Unit> ResetPlayerStatistics(bool isFreshStart) =>
+            !isFreshStart
                 ? ShortCircuitFailure.Create("Not Fresh Start").ToEitherFailure<Unit>().IgnoreFailure()
                 : ResetPlayerStatistics();
 
-        private Either<IFailure, Unit> StartOrResumeLevelMusic() 
-            => _gameWorld.Bind(world => world.StartOrResumeLevelMusic());
+        private Either<IFailure, Unit> StartOrResumeLevelMusic() =>
+            from world in _gameWorld
+            from result in world.StartOrResumeLevelMusic()
+            select Nothing;
 
         private Either<IFailure, Unit> ResetPlayerStatistics()
         {
@@ -398,96 +436,97 @@ namespace MazerPlatformer
             return SetPlayerStatistics(_gameWorld);
         }
 
-        private Either<IFailure, Unit> SetPlayerStatistics(Either<IFailure, GameWorld> world) 
-            => world.Bind(gameWorld => gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints));
+        private Either<IFailure, Unit> SetPlayerStatistics(Either<IFailure, GameWorld> gameWorld) =>
+            from world in gameWorld
+            from result in world.SetPlayerStatistics(_playerHealth, _playerPoints)
+            select Nothing;
 
-        private Either<IFailure, Unit> ShowGameOverScreen() 
-            => SetupGameOverMenu()
-                .Bind(unit => MakeGameOverPanelVisible());
+        private Either<IFailure, Unit> ShowGameOverScreen() =>
+            from setup in SetupGameOverMenu()
+            from visible in MakeGameOverPanelVisible()
+            select Nothing;
 
         private Either<IFailure, Unit> MakeGameOverPanelVisible() => Ensure(() 
             => _gameOverPanel.Visible = true);
 
         // Creates the UI elements that the menu will use
-        private Either<IFailure, Unit> SetupMenuUi()
+        private Either<IFailure, Unit> SetupMenuUi() =>
+            from panels in CreatePanels()
+            from setup in SetupMainMenuPanel()
+            from instructions in SetupInstructionsPanel()
+            from gameOver in SetupGameOverMenu()
+            from addResult in AddPanelsToUi()
+            select Nothing;
+
+        private Either<IFailure, Unit> AddPanelsToUi() => Ensure(() =>
         {
-            return CreatePanels()
-                .Bind(unit => SetupMainMenuPanel())
-                .Bind(unit => SetupInstructionsPanel())
-                .Bind(unit => SetupGameOverMenu())
-                .Bind(unit => AddPanelsToUi());
+            UserInterface.Active.AddEntity(_mainMenuPanel);
+            UserInterface.Active.AddEntity(_controlsPanel);
+            UserInterface.Active.AddEntity(_gameOverPanel);
+        });
 
-            /* Local functions */
-            Either<IFailure, Unit> AddPanelsToUi() => Ensure(() =>
+        private Either<IFailure, Unit> CreatePanels() => Ensure(() =>
+        {
+            _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+            _gameOverPanel = new Panel();
+            _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+
+        });
+
+        private Either<IFailure, Unit> SetupMainMenuPanel() => Ensure(() =>
+        {
+            var diagnostics = new Button("Diagnostics On/Off");
+            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
+            var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
+            var startGameButton = new Button("New");
+            var saveGameButton = new Button("Save");
+            var loadGameButton = new Button("Load");
+
+            HideMenu();
+
+            _mainMenuPanel.AdjustHeightAutomatically = true;
+            _mainMenuPanel.AddChild(new Header("Main Menu"));
+            _mainMenuPanel.AddChild(new HorizontalLine());
+            _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
+            _mainMenuPanel.AddChild(startGameButton);
+            _mainMenuPanel.AddChild(saveGameButton);
+            _mainMenuPanel.AddChild(loadGameButton);
+            _mainMenuPanel.AddChild(controlsButton);
+            _mainMenuPanel.AddChild(diagnostics);
+            _mainMenuPanel.AddChild(quitButton);
+
+            startGameButton.OnClick += (Entity entity) =>
             {
-                UserInterface.Active.AddEntity(_mainMenuPanel);
-                UserInterface.Active.AddEntity(_controlsPanel);
-                UserInterface.Active.AddEntity(_gameOverPanel);
-            });
-
-            Either<IFailure, Unit> CreatePanels() => Ensure(() =>
+                _currentLevel = 1;
+                StartLevel(_currentLevel);
+            };
+            saveGameButton.OnClick += (e) =>
             {
-                _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-                _gameOverPanel = new Panel();
-                _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
+                _gameWorld.Bind(world => world.SaveLevel());
+                StartOrContinueLevel(isFreshStart: false);
+            };
+            loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
+            diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
+            quitButton.OnClick += (Entity entity) => QuitGame();
+            controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
+        }, ExternalLibraryFailure.Create("Unable to setup main menu panel"));
 
-            });
+        private Either<IFailure, Unit> SetupInstructionsPanel() => Ensure(() =>
+        {
+            var closeControlsPanelButton = new Button("Back");
 
-            Either<IFailure, Unit> SetupMainMenuPanel() => Ensure(() =>
-            {
-                var diagnostics = new Button("Diagnostics On/Off");
-                var controlsButton = new Button("Controls", ButtonSkin.Fancy);
-                var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-                var startGameButton = new Button("New");
-                var saveGameButton = new Button("Save");
-                var loadGameButton = new Button("Load");
-
-                HideMenu();
-
-                _mainMenuPanel.AdjustHeightAutomatically = true;
-                _mainMenuPanel.AddChild(new Header("Main Menu"));
-                _mainMenuPanel.AddChild(new HorizontalLine());
-                _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
-                _mainMenuPanel.AddChild(startGameButton);
-                _mainMenuPanel.AddChild(saveGameButton);
-                _mainMenuPanel.AddChild(loadGameButton);
-                _mainMenuPanel.AddChild(controlsButton);
-                _mainMenuPanel.AddChild(diagnostics);
-                _mainMenuPanel.AddChild(quitButton);
-
-                startGameButton.OnClick += (Entity entity) =>
-                {
-                    _currentLevel = 1;
-                    StartLevel(_currentLevel);
-                };
-                saveGameButton.OnClick += (e) =>
-                {
-                    _gameWorld.Bind(world => world.SaveLevel());
-                    StartOrContinueLevel(isFreshStart: false);
-                };
-                loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
-                diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
-                quitButton.OnClick += (Entity entity) => QuitGame();
-                controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
-            }, ExternalLibraryFailure.Create("Unable to setup main menu panel"));
-
-            Either<IFailure, Unit> SetupInstructionsPanel() => Ensure(() =>
-            {
-                var closeControlsPanelButton = new Button("Back");
-
-                _controlsPanel.Visible = false;
-                _controlsPanel.AdjustHeightAutomatically = true;
-                _controlsPanel.AddChild(new Header("Mazer's Controls"));
-                _controlsPanel.AddChild(new RichParagraph(
-                    "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
-                    "A level is cleared when all the baloons are collected.\n\n" +
-                    "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
-                    "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
-                    "{{BOLD}}Good Luck!"));
-                _controlsPanel.AddChild(closeControlsPanelButton);
-                closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
-            }, ExternalLibraryFailure.Create("Failed to setup instructions panel"));
-        }
+            _controlsPanel.Visible = false;
+            _controlsPanel.AdjustHeightAutomatically = true;
+            _controlsPanel.AddChild(new Header("Mazer's Controls"));
+            _controlsPanel.AddChild(new RichParagraph(
+                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
+                "A level is cleared when all the baloons are collected.\n\n" +
+                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
+                "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
+                "{{BOLD}}Good Luck!"));
+            _controlsPanel.AddChild(closeControlsPanelButton);
+            closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
+        }, ExternalLibraryFailure.Create("Failed to setup instructions panel"));
 
         private Either<IFailure, Unit> QuitGame()
             => Ensure(Exit);
@@ -570,38 +609,7 @@ namespace MazerPlatformer
             // Ready the state machine and put it into the default state of 'idle' state            
             _gameStateMachine.Initialise(_pauseState.Name);
         });
-
-        /// <summary>
-        /// Draw current level, score, number of collisions etc
-        /// </summary>
-        /// <param name="gameTime"></param>
-        private Either<IFailure, Unit> DrawInGameStats(GameTime gameTime)
-        {
-            return ShouldDrawInGameStates()
-                ? Nothing
-                : Ensure(DrawStats);
-
-            void DrawStats()
-            {
-                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                // Consider making GameObjectCount private and getting the info via an event instead
-                _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90), Color.White);
-                _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120), Color.White);
-                _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150), Color.White);
-                _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180), Color.White);
-                _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210), Color.White);
-                _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240), Color.White);
-                _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270), Color.White);
-            }
-            
-            bool ShouldDrawInGameStates()
-            {
-                return _currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats;
-            }
-        }
-
         
-
         private static Either<IFailure, Unit> EnableAllDiagnostics() => Ensure(() =>
         {
             Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
@@ -612,22 +620,20 @@ namespace MazerPlatformer
             Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
         });
 
-        private Either<IFailure, Unit> OnEscapeKeyReleased(GameTime time)
-        {
-            return IsPlaying() 
+        private Either<IFailure, Unit> OnEscapeKeyReleased(GameTime time) =>
+            IsPlaying() 
                 ? PauseGame() 
                 : ResumeGame();
 
-            Either<IFailure, Unit> PauseGame()
-            {
-                _currentGameState = GameStates.Paused;
-                return ShowMenu();
-            }
+        private Either<IFailure, Unit> ResumeGame()
+            => from hideMenuResult in HideMenu()
+                from result in StartOrContinueLevel(isFreshStart: false)
+                select Nothing;
 
-            Either<IFailure, Unit> ResumeGame()
-                => from hideMenuResult in HideMenu()
-                    from result in StartOrContinueLevel(isFreshStart: false)
-                    select Nothing;
+        private Either<IFailure, Unit> PauseGame()
+        {
+            _currentGameState = GameStates.Paused;
+            return ShowMenu();
         }
 
         private bool IsPlaying()
@@ -643,17 +649,16 @@ namespace MazerPlatformer
             _currentGameState = GameStates.Paused;
         });
 
-        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason)
-        {
-            return StateEntered()
-                ? PlayMenuMusic()
-                    .Bind(unit => ShowMenu())
+        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) =>
+            IsStateEntered(reason)
+                ? from result in PlayMenuMusic()
+                  from show in ShowMenu()
+                    select Nothing
                 : Nothing;
 
-            bool StateEntered()
-            {
-                return reason == State.StateChangeReason.Enter;
-            }
+        private bool IsStateEntered(State.StateChangeReason reason)
+        {
+            return reason == State.StateChangeReason.Enter;
         }
 
         // Inform the UI that game objects have been removed or added
@@ -662,9 +667,8 @@ namespace MazerPlatformer
             // We'll keep track of how many pickups the player picks up over time
             _numGameObjects = runningTotalCount;
 
-            return gameObject.Match(
-                Some:IncrementPlayerPickupCount, 
-                None: () => NotFound.Create("Game Object was invalid").ToEitherFailure<Unit>());
+            return gameObject.Match( Some:IncrementPlayerPickupCount, 
+                                     None: () => NotFound.Create("Game Object was invalid").ToEitherFailure<Unit>());
 
             Either<IFailure, Unit> IncrementPlayerPickupCount(GameObject o) => Ensure(() =>
             {
@@ -677,18 +681,19 @@ namespace MazerPlatformer
         // Update the UI when something interesting about the player's inventory changes (health, damage)
         private Either<IFailure, Unit> OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
         {
-            return TryCastToT<int>(newValue)
-                    .Bind(value => SetPlayerDetails(componentType, value));
+            return 
+                from value in TryCastToT<int>(newValue)
+                from setResult in SetPlayerDetails(componentType, value)
+                select Nothing;
+        }
 
-            Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value)
-            {
-                if (type == Component.ComponentType.Health)
-                    _playerHealth = value;
-                else if (type == Component.ComponentType.Points)
-                    _playerPoints = value;
+        private Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value)
+        {
+            if (type == Component.ComponentType.Health)
+                _playerHealth = value;
+            else if (type == Component.ComponentType.Points) _playerPoints = value;
 
-                return Nothing.ToEither();
-            }
+            return Nothing.ToEither();
         }
 
         /// <summary>
@@ -697,13 +702,18 @@ namespace MazerPlatformer
         /// <param name="object1">object involved in collision</param>
         /// <param name="object2">other object involved in collisions</param>
         private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/)
-            => object1.Map(go =>
+        {
+            return from go in object1.ToEither(NotFound.Create("Game Object was invalid or not found"))
+                from result in IncrementCollisionStats(go)
+                select Nothing;
+        }
+
+        private Either<IFailure, Unit> IncrementCollisionStats(GameObject go) =>
+            Ensure(() =>
             {
-                if (go.Type == GameObject.GameObjectType.Npc)
-                    _numCollisionsWithPlayerAndNpCs++;
+                if (go.Type == GameObject.GameObjectType.Npc) _numCollisionsWithPlayerAndNpCs++;
 
                 _numGameCollisionsEvents++;
-                return Nothing;
-            }).ToEither(NotFound.Create("Game Object was invalid or not found"));
+            });
     }
 }
