@@ -292,6 +292,12 @@ namespace MazerPlatformer
         public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either) where TLeft : IFailure
             => either.IfLeft(failure => throw new UnexpectedFailureException(failure));
 
+        public static T ThrowIfNone<T>(this Option<T> option) => option.IfNone(() =>
+            throw new UnexpectedFailureException(InvalidDataFailure.Create("None was returned unexpectedly")));
+
+        public static Unit ThrowIfSome<T>(this Option<T> option) => option.IfSome((some) =>
+            throw new UnexpectedFailureException(InvalidDataFailure.Create("None was returned unexpectedly")));
+
         public static TRight ThrowIfFailed<TLeft, TRight>(this Either<TLeft, TRight> either, IFailure specificFailure) where TLeft : IFailure
             => either.IfLeft(failure => throw new UnexpectedFailureException(specificFailure));
 
