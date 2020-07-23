@@ -82,6 +82,7 @@
     <Compile Include="Failures\TransformExceptionFailure.cs" />
     <Compile Include="Failures\UnexpectedFailure.cs" />
     <Compile Include="Failures\UnexpectedFailureException.cs" />
+    <Compile Include="UninitializedFailure.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="DataTypes">
