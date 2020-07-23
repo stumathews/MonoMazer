@@ -66,13 +66,14 @@ namespace MazerPlatformer
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
         public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
-             => TestForValidationFailures(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
+             => Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
                 .Match(
                     None: () => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch),
                     Some: failure => failure.ToEitherFailure<GameWorld>());
 
 
-        private static Option<IFailure> TestForValidationFailures(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
+        // Trivial validation for smart constructor
+        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
             int rows, int cols, SpriteBatch spriteBatch)
         {
             // trivial validations

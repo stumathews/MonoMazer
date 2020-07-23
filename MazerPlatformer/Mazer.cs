@@ -129,36 +129,30 @@ namespace MazerPlatformer
         /// </summary>
         protected override void LoadContent()
         {
-            var loadPipeline = 
-                from loadedFont in LoadGameFont()
-                from setResult in SetGameFont(loadedFont)
-                from music in LoadMenuMusic()
-                from setMusic in SetMenuMusic(music)
-                from world in LoadGameWorldContent()
-                select Nothing;
+            // LoadContentPipeline
+            var loadContentPipeline = 
+                from loadedFont in Content.TryLoad<SpriteFont>("Sprites/gameFont")
+                from setFontResult in SetGameFont(loadedFont)
+                from loadedMusic in Content.TryLoad<Song>("Music/bgm_menu")
+                from setMusicResult in SetMenuMusic(loadedMusic)
+                from gameWorld in _gameWorld
+                from loadedGameWorld in LoadGameWorldContent(gameWorld)
+                select loadedGameWorld;
 
-                loadPipeline.ThrowIfFailed();
-
-            Either<IFailure, SpriteFont> LoadGameFont() 
-                => TryLoadContent<SpriteFont>("Sprites/gameFont", Content);
+                loadContentPipeline.ThrowIfFailed();
 
             Either<IFailure, Unit> SetGameFont(SpriteFont font) 
                 => Ensure(() => _font = font);
             
-            Either<IFailure, Song> LoadMenuMusic() 
-                => TryLoadContent<Song>("Music/bgm_menu", Content);
-
             Either<IFailure, Unit> SetMenuMusic(Song song)
                 => Ensure(()=>_menuMusic = song);
 
-            Either<IFailure, Unit> LoadGameWorldContent() =>
-                from world in _gameWorld
+            Either<IFailure, GameWorld> LoadGameWorldContent(GameWorld world) =>
                 from load in world.LoadContent(levelNumber: _currentLevel, 100, 0)
-                select Nothing;
+                select world;
         }
 
-        private Either<IFailure, T> TryLoadContent<T>(string assetName, ContentManager content) => EnsureWithReturn(() 
-            => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
+        
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
@@ -270,25 +264,15 @@ namespace MazerPlatformer
         {
             // Execute the update pipeline
             var updatePipeline = 
-                 from active in Ensure(UpdateActiveUiComponents)
+                 from updateActiveUiComponents in Ensure(() => UserInterface.Active.Update(gameTime))
                  from gameCommands in _gameCommands
-                 from updatedCommands in UpdateGameCommands(gameCommands) // get input
-                 from stateMachine in UpdateStateMachine() // NB: game world is updated by PlayingGameState
-                 from result in UpdateBase()
-                    select Nothing;
+                 from updatedGameCommandsResult in Ensure(() => gameCommands.Update(gameTime)) // get input
+                 from stateMachineResult in Ensure(() => _gameStateMachine.Update(gameTime))// NB: game world is updated by PlayingGameState
+                 from baseUpdateResult in Ensure(() => base.Update(gameTime))
+                 select Nothing;
 
             updatePipeline.ThrowIfFailed();
-
-            Either<IFailure, Unit> UpdateGameCommands(CommandManager gameCommands) =>
-                from result in Ensure(() => gameCommands.Update(gameTime))
-                select Nothing;
-
-            Either<IFailure, Unit> UpdateStateMachine() => Ensure(()=>_gameStateMachine.Update(gameTime));
-            Either<IFailure, Unit> UpdateBase() => Ensure(()=>base.Update(gameTime));
-            void UpdateActiveUiComponents()
-            {
-                UserInterface.Active.Update(gameTime);
-            }
+            
         }
 
         /// <summary>
@@ -299,12 +283,13 @@ namespace MazerPlatformer
         {
             var drawPipeline = from drawResult in Ensure(() => base.Draw(gameTime))
                 from clearResult in ClearGraphicsDevice()
-                from beginSpriteResult in BeginSpriteBatch()
-                from drawGameWorldResult in DrawGameWorld()
-                from statResult in DrawPlayerStatistics()
-                from gameStatsResult in PrintGameStatistics(gameTime).IgnoreFailure()
-                from spriteBatch in EndSpriteBatch()
-                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatch))
+                from spriteBatch in _spriteBatch
+                from beginSpriteResult in BeginSpriteBatch(spriteBatch)
+                from drawGameWorldResult in DrawGameWorld(spriteBatch)
+                from statResult in DrawPlayerStatistics(spriteBatch)
+                from gameStatsResult in PrintGameStatistics(spriteBatch, gameTime).IgnoreFailure()
+                from spriteBatchAfterEnd in EndSpriteBatch(spriteBatch)
+                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatchAfterEnd))
                 select Nothing;
 
             drawPipeline.ThrowIfFailed();
@@ -312,15 +297,14 @@ namespace MazerPlatformer
             // Local functions
 
             // See how we transform the input and return the output that was modified or in 
-            Either<IFailure, SpriteBatch> EndSpriteBatch() =>
-                from spriteBatch in _spriteBatch
+            Either<IFailure, SpriteBatch> EndSpriteBatch(SpriteBatch spriteBatch) =>
                 from result in Ensure(spriteBatch.End)
                 select spriteBatch;
 
-            Either<IFailure, Unit> PrintGameStatistics(GameTime time) =>
+            Either<IFailure, Unit> PrintGameStatistics(SpriteBatch spriteBatch, GameTime time) =>
                 !IsPlaying() || !Diganostics.ShowPlayerStats
                     ? ShortCircuitFailure.Create("Not need").ToEitherFailure<Unit>()
-                    : _spriteBatch.EnsuringMap(spriteBatch =>
+                    : Ensure(()=>
                     {
                         var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
                         // Consider making GameObjectCount private and getting the info via an event instead
@@ -338,32 +322,28 @@ namespace MazerPlatformer
                             new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240), Color.White);
                         spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}",
                             new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270), Color.White);
-                        return Nothing;
                     });
 
-            Either<IFailure, Unit> DrawPlayerStatistics() =>
-                _spriteBatch.EnsuringMap(spriteBatch =>
-                {
-                    var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                    spriteBatch.DrawString(_font, $"Level: {_currentLevel}",
-                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
-                    spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}",
-                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
-                    spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}",
-                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
-                    return Nothing;
-                });
+            Either<IFailure, Unit> DrawPlayerStatistics(SpriteBatch spriteBatch) => Ensure(() =>
+            {
+                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+                spriteBatch.DrawString(_font, $"Level: {_currentLevel}",
+                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
+                spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}",
+                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
+                spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}",
+                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
 
-            Either<IFailure, Unit> DrawGameWorld() =>
+            });
+
+            Either<IFailure, Unit> DrawGameWorld(SpriteBatch spriteBatch) =>
                 from world in _gameWorld
-                from spriteBatch in _spriteBatch
                 from draw in world.Draw(spriteBatch)
                 select Nothing;
 
-            Either<IFailure, SpriteBatch> BeginSpriteBatch()
+            Either<IFailure, SpriteBatch> BeginSpriteBatch(SpriteBatch spriteBatch)
             {
-                return from spriteBatch in _spriteBatch
-                    from result in Ensure(() => spriteBatch.Begin())
+                return from result in Ensure(() => spriteBatch.Begin())
                     select spriteBatch;
             }
 
