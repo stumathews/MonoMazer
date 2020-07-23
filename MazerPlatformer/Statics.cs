@@ -8,6 +8,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
@@ -172,7 +173,7 @@ namespace MazerPlatformer
         /// <param name="arg"></param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> EnsureUpdateWithReturn<T>(T arg, Action<T> action)
+        public static Either<IFailure, T> EnsureUpdateWithReturn<T>(T arg, Action action)
             => action.TryThis<T>(arg, true);
 
         public static Either<L, T> EnsureWithReturn3<L, T>(Func<T> action, L left) where L : IFailure
@@ -226,12 +227,12 @@ namespace MazerPlatformer
             => new Try<T>(() => returnArg? arg : action(arg))
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
-        public static Either<IFailure, T> TryThis<T>(this Action<T> action, T arg, bool returnArg = false)
+        public static Either<IFailure, T> TryThis<T>(this Action action, T arg, bool returnArg = false)
             => new Try<T>(() =>
                 {
                     if (returnArg)
                         return arg;
-                    action(arg);
+                    action();
                     return arg;
                 })
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
@@ -310,6 +311,9 @@ namespace MazerPlatformer
                 ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
                 : either.Value;
         }
+
+        public static Either<IFailure, T> TryLoad<T>(this ContentManager content, string assetName) => EnsureWithReturn(()
+            => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}"));
 
         [PureFunction]
         public static bool ToggleSetting(ref bool setting) 
