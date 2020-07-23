@@ -105,7 +105,7 @@ namespace MazerPlatformer
         internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) => Ensure(() =>
         {
             // Prepare a new level
-            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager,
+            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, 
                 levelNumber, _random);
             _level.OnLoad += OnLevelLoad;
 
@@ -150,12 +150,12 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
             // Hook up the Player events to the external world ie game UI
-            Level.Player.OnStateChanged += state => Ensure(() => OnPlayerStateChanged?.Invoke(state)); // want to know when the player's state changes
-            Level.Player.OnDirectionChanged += direction => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction)); // want to know when the player's direction changes
-            Level.Player.OnCollisionDirectionChanged += direction => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction)); // want to know when player collides
-            Level.Player.OnGameObjectComponentChanged += (thisObject, name, type, oldValue, newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue)); // want to know when the player's components change
+            Level.Player.OnStateChanged += OnPlayerOnOnStateChanged; // want to know when the player's state changes
+            Level.Player.OnDirectionChanged += OnPlayerOnOnDirectionChanged; // want to know when the player's direction changes
+            Level.Player.OnCollisionDirectionChanged += OnPlayerOnOnCollisionDirectionChanged; // want to know when player collides
+            Level.Player.OnGameObjectComponentChanged += OnPlayerOnOnGameObjectComponentChanged; // want to know when the player's components change
             Level.Player.OnCollision += PlayerOnOnCollision;
-            Level.Player.OnPlayerSpotted += (sender, args) => _level.PlayPlayerSpottedSound();
+            Level.Player.OnPlayerSpotted += OnPlayerOnOnPlayerSpotted;
 
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
@@ -163,10 +163,8 @@ namespace MazerPlatformer
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Value.Initialize();
-                gameObject.Value.OnCollision +=
-                    new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
-                gameObject.Value.OnGameObjectComponentChanged +=
-                    ValueOfGameObjectComponentChanged; // be informed about this objects component update
+                gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
+                gameObject.Value.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component update
 
                 // Every object will have access to the player
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.Player, Level.Player));
@@ -174,20 +172,27 @@ namespace MazerPlatformer
                 // every object will have access to the game world
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
+
+            Either<IFailure, Unit> OnPlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => OnPlayerStateChanged?.Invoke(state));
+            Either<IFailure, Unit> OnPlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> OnPlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> OnPlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
+            Either<IFailure, Unit> OnPlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
         });
 
         /// <summary>
         /// Change my health component to be affected by the hit points of the other object
         /// </summary>
         /// <param name="thePlayer"></param>
-        /// <param name="otherObject"></param>
+        /// <param name="otherGameObject"></param>
         /// <returns></returns>
         private Either<IFailure, Unit> PlayerOnOnCollision(Option<GameObject> thePlayer, Option<GameObject> otherGameObject)
         {
             return from player in thePlayer.ToEither(NotFound.Create("Player not found"))
                 from gameObject in otherGameObject.ToEither(NotFound.Create("Other not found"))
-                from isNpc in Require(gameObject, () => gameObject.Type != GameObjectType.Npc, "Must be NPC")
-                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType).ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                from isNpc in Must(gameObject, () => gameObject.Type == GameObjectType.Npc, "Must be NPC")
+                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType)
+                                                .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
                 from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
                 from collisionResult in ActOnTypeCollision(npcType, player, gameObject)
                 select collisionResult;
@@ -198,7 +203,7 @@ namespace MazerPlatformer
                 if (type == Npc.NpcTypes.Enemy)
                     return from newHealth in DetermineNewHealth(player, otherObject)
                            from updatedOk in UpdatePlayerHealth(newHealth)
-                           from satisfied in Require(newHealth, () => (int)newHealth > 0)
+                           from satisfied in  Must(newHealth, () => (int)newHealth <= 0)
                            from diedResult in PlayerDied(newHealth)
                            select Nothing;
 

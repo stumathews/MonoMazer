@@ -20,8 +20,9 @@ namespace MazerPlatformer
         public const string PlayerId = "Player";
 
         public delegate Either<IFailure, Unit> DeathInfo(List<Component> playersComponents);
+        public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
 
-        public event EventHandler OnPlayerSpotted;
+        public event PlayerSpottedInfo OnPlayerSpotted;
 
         public Player(int x, int y, int width, int height, AnimationInfo animationInfo) : base(x, y, PlayerId, width, height, GameObjectType.Player) 
             => AnimationInfo = animationInfo;
@@ -50,6 +51,6 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 
             => NudgeOutOfCollision();
 
-        public void Seen() => OnPlayerSpotted?.Invoke(this, null);
+        public void Seen() => OnPlayerSpotted?.Invoke(this);
     }
 }
