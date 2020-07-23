@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using GameLib.EventDriven;
@@ -12,6 +13,7 @@ using Microsoft.Xna.Framework.Input;
 using GeonBit.UI;
 using GeonBit.UI.Entities;
 using LanguageExt;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
 using static MazerPlatformer.Statics;
@@ -20,18 +22,18 @@ namespace MazerPlatformer
 {
     public class Mazer : Game
     {
-        private SpriteBatch _spriteBatch;
+        private Either<IFailure, SpriteBatch> _spriteBatch = UninitializedFailure.Create<SpriteBatch>(nameof(_spriteBatch));
 
         public static SpriteFont GetGameFont() => _font;
         
-        private Song _menuMusic; // does this really have to be public
+        private Song _menuMusic;
         private static SpriteFont _font;
 
         // Top level game commands such as start, quit, resume etc
-        private CommandManager _gameCommands;
+        private Either<IFailure, CommandManager> _gameCommands = UninitializedFailure.Create<CommandManager>(nameof(_gameCommands));
 
         // GameWorld, contains, updates and manages the player, npc, pickups and level details - Its distinct from the UI of the game (it has events the UI can subscribe to)
-        private Either<IFailure, GameWorld> _gameWorld;
+        private Either<IFailure, GameWorld> _gameWorld = UninitializedFailure.Create<GameWorld>(nameof(_gameWorld));
 
         // Top level game states such as Pause, Playing etc
         private FSM _gameStateMachine;
@@ -46,10 +48,11 @@ namespace MazerPlatformer
         // Our game is divided into rooms
         private const int NumCols = 10;
         private const int NumRows = 10;
-        private int _currentLevel = 1;       // We start with level 1
-        private int _playerPoints = 0;      // UI shows player starts off with no points on the screen
+
+        private int _currentLevel = 1;    // We start with level 1
+        private int _playerPoints = 0;    // UI shows player starts off with no points on the screen
         private int _playerHealth = 0;    // UI shows player has 100 health on screen initially - this can be loaded from a level file later
-        private int _playerPickups = 0;     // number of pickups the player as recieved
+        private int _playerPickups = 0;   // number of pickups the player as recieved
 
         /* In game statistics that we get from the game world, we show for testing purposes in the UI */
         private int _numGameCollisionsEvents;
@@ -65,24 +68,32 @@ namespace MazerPlatformer
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
+
+        // Dont listen to re-sharper, this is used!
         private bool _playerDied = false;
         
         public Mazer()
         {
-            var initiation = 
-                from setupGraphicsDeviceOk in SetupGraphicsDevice()
-                from createInfrastructureResult in CreateInfrastructure()
+            // Setup Hardware initialization pipeline 
+            var infrastructureInitializationPipeline = 
+                from graphics in SetupGraphicsDevice()
+                from software in CreateInfrastructure()
                 select Nothing;
 
-            initiation.ThrowIfFailed();
+            // Pipeline needs to have no errors
+            infrastructureInitializationPipeline.ThrowIfFailed();
 
             Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
             {
-                // TODO: All these constructors can create invalid objects, consider using smart constructors
-                _gameCommands = new CommandManager(); // can't change as this is an external lib
-                _gameStateMachine = new FSM(this); // can't change as this is an external lib
-                _spriteBatch = new SpriteBatch(GraphicsDevice); // can't change as this is an external lib
-                _gameWorld = GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
+                _gameCommands = new CommandManager();
+                _gameStateMachine = new FSM(this);
+                _spriteBatch = new SpriteBatch(GraphicsDevice);
+
+                // Internal game infrastructure Objects
+                _gameWorld = 
+                    from spriteBatch in _spriteBatch
+                    from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, spriteBatch)
+                    select createdWorld;
                 _pauseState = new PauseState(this); 
                 _playingState = new PlayingGameState(this);
 
@@ -90,10 +101,23 @@ namespace MazerPlatformer
                 IsFixedTimeStep = false;
             }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
 
-            Either<IFailure, Unit> SetupGraphicsDevice() => Ensure(() =>
+            Either<IFailure, GraphicsDevice> SetupGraphicsDevice() => EnsureWithReturn(() =>
             {
-                var graphics = new GraphicsDeviceManager(this) { PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width, PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height };
+                var graphics = new GraphicsDeviceManager(this)
+                {
+                    GraphicsProfile = GraphicsProfile.Reach,
+                    HardwareModeSwitch = false,
+                    IsFullScreen = false,
+                    PreferMultiSampling = false,
+                    PreferredBackBufferFormat = SurfaceFormat.Color,
+                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                    PreferredDepthStencilFormat = DepthFormat.None,
+                    SupportedOrientations = DisplayOrientation.Default,
+                    SynchronizeWithVerticalRetrace = false,
+                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+                };
                 graphics.ApplyChanges();
+                return GraphicsDevice;
             }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
         }
 
@@ -106,8 +130,8 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             var loadPipeline = 
-                from font in LoadGameFont()
-                from set in SetGameFont(font)
+                from loadedFont in LoadGameFont()
+                from setResult in SetGameFont(loadedFont)
                 from music in LoadMenuMusic()
                 from setMusic in SetMenuMusic(music)
                 from world in LoadGameWorldContent()
@@ -116,13 +140,13 @@ namespace MazerPlatformer
                 loadPipeline.ThrowIfFailed();
 
             Either<IFailure, SpriteFont> LoadGameFont() 
-                => TryLoadContent<SpriteFont>("Sprites/gameFont");
+                => TryLoadContent<SpriteFont>("Sprites/gameFont", Content);
 
-            Either<IFailure, Unit> SetGameFont(SpriteFont font) => Ensure(() 
-                => _font = font);
+            Either<IFailure, Unit> SetGameFont(SpriteFont font) 
+                => Ensure(() => _font = font);
             
             Either<IFailure, Song> LoadMenuMusic() 
-                => TryLoadContent<Song>("Music/bgm_menu");
+                => TryLoadContent<Song>("Music/bgm_menu", Content);
 
             Either<IFailure, Unit> SetMenuMusic(Song song)
                 => Ensure(()=>_menuMusic = song);
@@ -133,8 +157,8 @@ namespace MazerPlatformer
                 select Nothing;
         }
 
-        private Either<IFailure, T> TryLoadContent<T>(string assetName) => EnsureWithReturn(() 
-            => Content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
+        private Either<IFailure, T> TryLoadContent<T>(string assetName, ContentManager content) => EnsureWithReturn(() 
+            => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}") );
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
@@ -144,64 +168,69 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            var initializePipeline = from init in Ensure(() => base.Initialize())
-                from initUi in InitializeUi()
+            // This sort of thing makes sense if you're making a copy of the game world on each method call
+            // which would be pure...
+            var initializePipeline = 
+                from init in Ensure(() => base.Initialize())
+                from initializeUi in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor)) // the from variable can silently name the anonymous function!
                 from setupMenuUi in SetupMenuUi()
                 from stateMachine in InitializeGameStateMachine()
-                from gameWorld in InitializeGameWorld()
-                from commands in SetupGameCommands()
-                from connectUi in ConnectGameWorldToUi()
-                select Nothing;
+                from gameWorld in _gameWorld // we have no choice but to fetch state from Game because we're not in a pure function that can receive its arguments.
+                from gameCommands in _gameCommands // same as above
+                from initGameWorld in InitializeGameWorld(gameWorld)
+                from gameWorldWithCommands in SetupGameCommands(gameCommands)
+                from connectedGameWorld in ConnectGameWorldToUi(gameWorld)
+                select connectedGameWorld;
 
             initializePipeline.ThrowIfFailed();
 
-            /* local funcs */
-            Either<IFailure, Unit> InitializeGameWorld() => _gameWorld.EnsuringBind(world => world.Initialize());
+            // This is not pure because we cannot be certain that gameWorld wont change...that is unless we copy it( ++overhead but we need reliability )
+            Either<IFailure, GameWorld> InitializeGameWorld(GameWorld gameWorld) =>
+                from init in gameWorld.Initialize()
+                select gameWorld;
 
-            Either<IFailure, GameWorld> SetupGameCommands() => EnsureWithReturn(() =>
+            Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
             {
-                _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-                _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
-                _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-                _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
-                _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-                _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-                _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-                _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-                _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-                _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-                _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-                _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-                _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-                _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
-                _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
-                _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
-                _gameCommands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time));
-                return _gameWorld.ThrowIfFailed();
+                commands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
+                commands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
+                commands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
+                commands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
+                commands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
+                commands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
+                commands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
+                commands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
+                commands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
+                commands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
+                commands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
+                commands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel).ThrowIfFailed());
+                commands.AddKeyUpCommand(Keys.X, (time) => Ensure(MediaPlayer.Pause).ThrowIfFailed());
+                commands.AddKeyUpCommand(Keys.Z, (time) => Ensure(MediaPlayer.Resume).ThrowIfFailed());
+                commands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel).ThrowIfFailed()); // Cheat: complete current level!
+                commands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel).ThrowIfFailed());
+                commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time).ThrowIfFailed());
+                return commands;
             });
 
-            Either<IFailure, Unit> ConnectGameWorldToUi() => Ensure(() =>
-            {
-                _gameWorld.Map(gameWorld =>
-                {
-                    /* Connect the UI to the game world */
-                    gameWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
-                    gameWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
-                    gameWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
-                    gameWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
-                    gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-                    gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-                    gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-                    gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
-                    gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
-                    return Nothing;
-                });
-            });
-
-            Either<IFailure, Unit> InitializeUi()
-                => Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor));
+            Either<IFailure, GameWorld> ConnectGameWorldToUi(GameWorld gameWorld) 
+                => from connectedGameWorld in EnsureWithReturn(gameWorld, (theWorld) =>
+                    {
+                        /* Connect the UI to the game world */
+                        theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
+                        theWorld.OnPlayerStateChanged += (state) => Ensure(() => _characterState = state);
+                        theWorld.OnPlayerDirectionChanged += (direction) => Ensure(() => _characterDirection = direction);
+                        theWorld.OnPlayerCollisionDirectionChanged += (direction) => Ensure(() => _characterCollisionDirection = direction);
+                        theWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+                        theWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+                        theWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+                        theWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
+                        theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+                        return theWorld;
+                    })
+                    select connectedGameWorld;
         }
 
+        // called by game world
+        // Interesting thing to note about this function is that if we return a failure, the sender would react to that by it using ThrowOfFailed() - very interesting. We dont 
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
             from points in levelDetails.Player.Components
                 .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
@@ -242,14 +271,18 @@ namespace MazerPlatformer
             // Execute the update pipeline
             var updatePipeline = 
                  from active in Ensure(UpdateActiveUiComponents)
-                 from gameCommands in UpdateGameCommands() // get input
+                 from gameCommands in _gameCommands
+                 from updatedCommands in UpdateGameCommands(gameCommands) // get input
                  from stateMachine in UpdateStateMachine() // NB: game world is updated by PlayingGameState
                  from result in UpdateBase()
                     select Nothing;
 
             updatePipeline.ThrowIfFailed();
 
-            Either<IFailure, Unit> UpdateGameCommands() => Ensure(()=>_gameCommands.Update(gameTime));
+            Either<IFailure, Unit> UpdateGameCommands(CommandManager gameCommands) =>
+                from result in Ensure(() => gameCommands.Update(gameTime))
+                select Nothing;
+
             Either<IFailure, Unit> UpdateStateMachine() => Ensure(()=>_gameStateMachine.Update(gameTime));
             Either<IFailure, Unit> UpdateBase() => Ensure(()=>base.Update(gameTime));
             void UpdateActiveUiComponents()
@@ -270,102 +303,84 @@ namespace MazerPlatformer
                 from drawGameWorldResult in DrawGameWorld()
                 from statResult in DrawPlayerStatistics()
                 from gameStatsResult in PrintGameStatistics(gameTime).IgnoreFailure()
-                from endResult in EndSpriteBatch()
-                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(_spriteBatch))
+                from spriteBatch in EndSpriteBatch()
+                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatch))
                 select Nothing;
 
             drawPipeline.ThrowIfFailed();
 
             // Local functions
 
-            Either<IFailure, Unit> EndSpriteBatch()
-            {
-                _spriteBatch.End();
-                return Nothing;
-            }
-            
-            Either<IFailure, Unit> PrintGameStatistics(GameTime time)
-            {
-                if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats)
-                    return ShortCircuitFailure.Create("Not need").ToEitherFailure<Unit>();
+            // See how we transform the input and return the output that was modified or in 
+            Either<IFailure, SpriteBatch> EndSpriteBatch() =>
+                from spriteBatch in _spriteBatch
+                from result in Ensure(spriteBatch.End)
+                select spriteBatch;
 
-                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                // Consider making GameObjectCount private and getting the info via an event instead
-                _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
-                    Color.White);
-                _spriteBatch.DrawString(_font,
-                    $"Frame rate(ms): {time.ElapsedGameTime.TotalMilliseconds}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Player State: {_characterState}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
-                    Color.White);
-                return Nothing.ToEither();
-            }
+            Either<IFailure, Unit> PrintGameStatistics(GameTime time) =>
+                !IsPlaying() || !Diganostics.ShowPlayerStats
+                    ? ShortCircuitFailure.Create("Not need").ToEitherFailure<Unit>()
+                    : _spriteBatch.EnsuringMap(spriteBatch =>
+                    {
+                        var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+                        // Consider making GameObjectCount private and getting the info via an event instead
+                        spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90), Color.White);
+                        spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120), Color.White);
+                        spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150), Color.White);
+                        spriteBatch.DrawString(_font, $"Frame rate(ms): {time.ElapsedGameTime.TotalMilliseconds}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180), Color.White);
+                        spriteBatch.DrawString(_font, $"Player State: {_characterState}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210), Color.White);
+                        spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240), Color.White);
+                        spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}",
+                            new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270), Color.White);
+                        return Nothing;
+                    });
 
-            Either<IFailure, Unit> DrawPlayerStatistics() => Ensure(() =>
-            {
-                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                _spriteBatch.DrawString(_font, $"Level: {_currentLevel}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
-                _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
-                _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}",
-                    new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
-            });
+            Either<IFailure, Unit> DrawPlayerStatistics() =>
+                _spriteBatch.EnsuringMap(spriteBatch =>
+                {
+                    var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
+                    spriteBatch.DrawString(_font, $"Level: {_currentLevel}",
+                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
+                    spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}",
+                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
+                    spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}",
+                        new Vector2(leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
+                    return Nothing;
+                });
 
             Either<IFailure, Unit> DrawGameWorld() =>
                 from world in _gameWorld
-                from draw in world.Draw(_spriteBatch)
+                from spriteBatch in _spriteBatch
+                from draw in world.Draw(spriteBatch)
                 select Nothing;
 
-            Either<IFailure, Unit> BeginSpriteBatch()
+            Either<IFailure, SpriteBatch> BeginSpriteBatch()
             {
-                return Ensure(() => _spriteBatch.Begin());
+                return from spriteBatch in _spriteBatch
+                    from result in Ensure(() => spriteBatch.Begin())
+                    select spriteBatch;
             }
 
             Either<IFailure, Unit> ClearGraphicsDevice()
             {
-                GraphicsDevice.Clear(_currentGameState == GameStates.Playing
+                GraphicsDevice.Clear(IsPlaying()
                         ? Color.CornflowerBlue
                         : Color.Silver);
                 return Nothing;
             }
-
-            Either<IFailure, Unit> DrawPlayerStats(SpriteBatch spriteBatch) => Ensure(() =>
-            {
-                var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-                _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
-                    Color.White);
-
-                _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
-                    Color.White);
-                _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
-                        leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
-                    Color.White);
-            });
         }
 
         private Either<IFailure, Unit> ProgressToLevel(int level) 
             => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
 
         /// <summary>
-        /// Start a new levl
+        /// Start a new level
         /// </summary>
         /// <param name="level"></param>
         /// <param name="isFreshStart"></param>
@@ -610,7 +625,8 @@ namespace MazerPlatformer
             _gameStateMachine.Initialise(_pauseState.Name);
         });
         
-        private static Either<IFailure, Unit> EnableAllDiagnostics() => Ensure(() =>
+        [PureFunction]
+        private static Unit EnableAllDiagnostics()
         {
             Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
             Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
@@ -618,7 +634,8 @@ namespace MazerPlatformer
             Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
             Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
             Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
-        });
+            return Nothing;
+        }
 
         private Either<IFailure, Unit> OnEscapeKeyReleased(GameTime time) =>
             IsPlaying() 
@@ -715,5 +732,16 @@ namespace MazerPlatformer
 
                 _numGameCollisionsEvents++;
             });
+    }
+
+    internal class UninitializedFailure : IFailure
+    {
+        public UninitializedFailure(string what)
+        {
+            Reason = what;
+        }
+        public string Reason { get; set; }
+        public static IFailure Create(string what) => new UninitializedFailure(what);
+        public static Either<IFailure, T> Create<T>(string what) => new UninitializedFailure(what);
     }
 }
