@@ -228,13 +228,16 @@ namespace MazerPlatformer
             => SetCharacterDirection(dir);
 
         // both call into external libs
-        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
-            => base.Draw(spriteBatch)
-                .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
+        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
+            from baseDraw in base.Draw(spriteBatch)
+            from animationDraw in Ensure(() => Animation.Draw(spriteBatch))
+            select Nothing;
 
         // both call into external libs
-        public override Either<IFailure, Unit> Update(GameTime gameTime) 
-            => base.Update(gameTime)
-                .Bind(unit => Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y)));
+        public override Either<IFailure, Unit> Update(GameTime gameTime) =>
+            from baseUpdate in base.Update(gameTime)
+            from animationUpdate in Ensure(() =>
+                Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y))
+            select Nothing;
     }
 }
