@@ -12,6 +12,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Timers;
 using GameLib.EventDriven;
 using LanguageExt;
+using LanguageExt.SomeHelp;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Statics;
 using Delegate = System.Delegate;
@@ -64,9 +65,23 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
-            int rows, int cols, SpriteBatch spriteBatch) => EnsureWithReturn(()
-            => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
+        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+             => TestForValidationFailures(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
+                .Match(
+                    None: () => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch),
+                    Some: failure => failure.ToEitherFailure<GameWorld>());
+
+
+        private static Option<IFailure> TestForValidationFailures(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
+            int rows, int cols, SpriteBatch spriteBatch)
+        {
+            // trivial validations
+            if (contentManager == null) return NotFound.Create("Content Manager is null").ToSome();
+            if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToSome();
+            if(spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToSome();
+            if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToSome();
+            return Option<IFailure>.None;
+        }
 
         private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
