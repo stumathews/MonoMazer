@@ -199,28 +199,24 @@ namespace MazerPlatformer
 
             Either<IFailure, Unit> ActOnTypeCollision(Npc.NpcTypes type, GameObject player, GameObject otherObject)
             {
-                // deal damage
-                if (type == Npc.NpcTypes.Enemy)
-                    return from newHealth in DetermineNewHealth(player, otherObject)
-                           from updatedOk in UpdatePlayerHealth(newHealth)
-                           from satisfied in  Must(newHealth, () => (int)newHealth <= 0)
-                           from diedResult in PlayerDied(newHealth)
-                           select Nothing;
-
-                // pickup points
-                if (type == Npc.NpcTypes.Pickup)
-                    return from newPoints in DetermineNewLevelPoints(player, otherObject)
-                           from updatedOk in UpdatePlayerPoints(newPoints)
-                           select Nothing;
-
-                return Nothing.ToEither();
-
-                Either<IFailure, object> UpdatePlayerPoints(int levelPoints)
-                    => player.UpdateComponentByType(Component.ComponentType.Points, levelPoints);
-
-                Either<IFailure, object> UpdatePlayerHealth(int newHealth)
-                    => player.UpdateComponentByType(Component.ComponentType.Health, newHealth);
-
+                switch (type)
+                {
+                    // deal damage
+                    case Npc.NpcTypes.Enemy:
+                        return from newHealth in DetermineNewHealth(player, otherObject)
+                            from updatePlayerHealth in player.UpdateComponentByType(Component.ComponentType.Health, newHealth) 
+                            from satisfied in  Must(newHealth, () => (int)newHealth <= 0)
+                            from diedResult in PlayerDied(newHealth)
+                            select Nothing;
+                    // pickup points
+                    case Npc.NpcTypes.Pickup:
+                        return from newPoints in DetermineNewLevelPoints(player, otherObject)
+                               from updatePlayerPoints in player.UpdateComponentByType(Component.ComponentType.Points, newPoints)
+                               select Nothing;
+                    default: 
+                        return Nothing;
+                }
+                
                 Either<IFailure, Unit> PlayerDied(object newHealth) => Ensure(() =>
                 {
                     _level.PlayLoseSound();
@@ -229,20 +225,20 @@ namespace MazerPlatformer
                 });
             }
 
-            Either<IFailure, int> DetermineNewLevelPoints(GameObject thePlayer1, GameObject gameObject1)
-                => from pickupPointsComponent in gameObject1.FindComponentByType(Component.ComponentType.Points)
-                    .ToEither(NotFound.Create("Could not find hit-point component"))
-                   from myPointsComponent in thePlayer1.FindComponentByType(Component.ComponentType.Points)
-                   .ToEither(NotFound.Create("Could not find hit-point component"))
+            Either<IFailure, int> DetermineNewLevelPoints(GameObject player, GameObject gameObject)
+                => from pickupPointsComponent in gameObject.FindComponentByType(Component.ComponentType.Points)
+                                                 .ToEither(NotFound.Create("Could not find hit-point component"))
+                   from myPointsComponent in player.FindComponentByType(Component.ComponentType.Points)
+                                             .ToEither(NotFound.Create("Could not find hit-point component"))
                    let myPoints = (int)myPointsComponent.Value
                    let pickupPoints = (int)pickupPointsComponent.Value
                    select myPoints + pickupPoints;
 
-            Either<IFailure, int> DetermineNewHealth(GameObject gameObject, GameObject otherObject1)
-                => from hitPointsComponent in otherObject1.FindComponentByType(Component.ComponentType.HitPoints)
-                    .ToEither(NotFound.Create("Could not find hit-point component"))
-                   from healthComponent in gameObject.FindComponentByType(Component.ComponentType.Health)
-                   .ToEither(NotFound.Create("Could not find health component"))
+            Either<IFailure, int> DetermineNewHealth(GameObject gameObject1, GameObject otherObject2)
+                => from hitPointsComponent in otherObject2.FindComponentByType(Component.ComponentType.HitPoints)
+                                              .ToEither(NotFound.Create("Could not find hit-point component"))
+                   from healthComponent in gameObject1.FindComponentByType(Component.ComponentType.Health)
+                                              .ToEither(NotFound.Create("Could not find health component"))
                    let myHealth = (int)healthComponent.Value
                    let hitPoints = (int)hitPointsComponent.Value
                    select myHealth - hitPoints;
