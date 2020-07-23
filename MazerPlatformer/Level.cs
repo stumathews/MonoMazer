@@ -293,7 +293,8 @@ namespace MazerPlatformer
                 {
                     for (var i = 0; i < levelNpc.Count; i++)
                     {
-                        var npc = NPCBuilder.CreateNpc(rooms, levelNpc.SpriteFile,
+                        var randomRoom = rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
+                        var npc = NPCBuilder.CreateNpc(randomRoom, levelNpc.SpriteFile,
                             levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
                             levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
                             levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,

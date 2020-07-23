@@ -31,7 +31,7 @@ namespace MazerPlatformer
         }
 
         // can convert this into a Option<Npc>
-        public Npc CreateNpc(List<Room> rooms, string assetName, 
+        public Npc CreateNpc(Room randomRoom, string assetName, 
             int frameWidth = AnimationInfo.DefaultFrameWidth, 
             int frameHeight = AnimationInfo.DefaultFrameHeight,
             int frameCount = AnimationInfo.DefaultFrameCount, 
@@ -39,9 +39,7 @@ namespace MazerPlatformer
             int moveStep = 3)
         {
             var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
-
-            var randomRoom = rooms[Level.RandomGenerator.Next(0, Rows * Cols)];
-
+            
             var npc = new Npc((int)randomRoom.GetCentre().X,
                             (int)randomRoom.GetCentre().Y,
                             Guid.NewGuid().ToString(), 
@@ -73,10 +71,13 @@ namespace MazerPlatformer
             int numPirates = DefaultNumPirates;
             int numDodos = DefaultNumDodos;
             int numPickups = DefaultNumPickups;
+            var randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+
             // Add some enemy pirates
             for (int i = 0; i < numPirates; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\pirate{_random.Next(1, 4)}");
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\pirate{_random.Next(1, 4)}");
                 npc.AddComponent(Component.ComponentType.HitPoints, 40);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -85,7 +86,8 @@ namespace MazerPlatformer
             // Add some Enemy Dodos - more dangerous!
             for (var i = 0; i < numDodos; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
                 npc.AddComponent(Component.ComponentType.HitPoints, 40);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
@@ -95,7 +97,8 @@ namespace MazerPlatformer
 
             for (var i = 0; i < numPickups; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(Component.ComponentType.Points, 10);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -103,7 +106,8 @@ namespace MazerPlatformer
 
             for (var i = 0; i < numPickups; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(Component.ComponentType.Points, 20);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -111,7 +115,8 @@ namespace MazerPlatformer
 
             for (var i = 0; i < numPickups; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(Component.ComponentType.Points, 30);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
@@ -119,11 +124,14 @@ namespace MazerPlatformer
 
             for (var i = 0; i < numPickups; i++)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
+                randomRoom = GetRandomRoom(level.Rows, level.Cols, rooms, level);
+                var npc = this.CreateNpc(randomRoom, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
                 npc.AddComponent(Component.ComponentType.Points, 40);
                 npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
                 npcs.Add(npc);
             }
         });
+
+        private Room GetRandomRoom(int Rows, int cols, List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
     }
 }
