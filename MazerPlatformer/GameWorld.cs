@@ -14,6 +14,7 @@ using GameLib.EventDriven;
 using LanguageExt;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Statics;
+using Delegate = System.Delegate;
 
 namespace MazerPlatformer
 {
@@ -291,7 +292,7 @@ namespace MazerPlatformer
             Rows = _level.Rows;
             _roomWidth = _level.RoomWidth;
             _roomHeight = _level.RoomHeight;
-            OnLoadLevel?.Invoke(details);
+            OnLoadLevel?.Invoke(details); // We wont worry if our subscribers had a problem with the details we have them so no .ThrowIfFailed() but we could do if we wanted to reverse this logic!
         });
 
         public Either<IFailure, Unit> StartOrResumeLevelMusic() 
