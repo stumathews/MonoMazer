@@ -404,6 +404,22 @@ namespace MazerPlatformer
                             Right: eitherData 
                                 => eitherData.Match( Left: failure => failure.ToEitherFailure<T>(),
                                                 Right: t => t.ToEither()));
+        public static Either<IFailure, Unit> EnsuringBind(Func<Either<IFailure, Unit>> action) =>
+            action.TryThis()
+                .Match(
+                    Left: failure => failure.ToEitherFailure<Unit>(), 
+                    Right: unit => unit.Match(
+                        Left:failure => failure.ToEitherFailure<Unit>(),
+                        Right: unit1 => unit1));
+
+        public static Either<IFailure, R> EnsuringBind<R>(Func<Either<IFailure, R>> action) =>
+            action.TryThis()
+                .Match(
+                    Left: failure => failure.ToEitherFailure<R>(),
+                    Right: unit => unit.Match(
+                        Left: failure => failure.ToEitherFailure<R>(),
+                        Right: unit1 => unit1));
+
         /// <summary>
         /// Cancels remaining pipeline if condition is met
         /// </summary>
