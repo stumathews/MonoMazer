@@ -142,6 +142,9 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
 
+        public static Either<IFailure, T> Ensure<T>(T arg, Action<T> action)
+            => action.TryThis<T>(arg);
+
         /// <summary>
         /// Ensures code that might throw exceptions doesn't and returns IFailure instead.
         /// This is so that we know exactly outcomes a function can have ie IFailure or Unit
@@ -158,6 +161,19 @@ namespace MazerPlatformer
 
         public static Either<L, T> EnsureWithReturn<L, T>(Func<T> action, L left)
             => action.TryThis<L, T>(left);
+
+        public static Either<IFailure, T> EnsureWithReturn<T>(T arg, Func<T, T> action, bool returnInput = false)
+            => action.TryThis<T>(arg, returnInput);
+
+        /// <summary>
+        /// Returns the argument that is modified by the supplied function
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="arg"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static Either<IFailure, T> EnsureUpdateWithReturn<T>(T arg, Action<T> action)
+            => action.TryThis<T>(arg, true);
 
         public static Either<L, T> EnsureWithReturn3<L, T>(Func<T> action, L left) where L : IFailure
             => action.TryThis3<L, T>(left);
@@ -202,7 +218,29 @@ namespace MazerPlatformer
             => new Try<Unit>(() => { action(); return new Unit(); })
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
-        public static Either<IFailure, T> TryThis<T>(this Func<T> action)
+        public static Either<IFailure, T> TryThis<T>(this Action<T> action, T arg)
+            => new Try<T>(() => { action(arg); return default(T); })
+                .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
+
+        public static Either<IFailure, T> TryThis<T>(this Func<T,T> action, T arg, bool returnArg = false)
+            => new Try<T>(() => returnArg? arg : action(arg))
+                .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
+
+        public static Either<IFailure, T> TryThis<T>(this Action<T> action, T arg, bool returnArg = false)
+            => new Try<T>(() =>
+                {
+                    if (returnArg)
+                        return arg;
+                    action(arg);
+                    return arg;
+                })
+                .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
+
+        public static Either<L, T> TryThis<L,T>(this Func<T, T> action, T arg, L left)
+            => new Try<T>(() => action(arg))
+                .Match(unit => unit.ToEither<L,T>(), exception =>  left);
+
+       public static Either<IFailure, T> TryThis<T>(this Func<T> action)
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
@@ -210,11 +248,15 @@ namespace MazerPlatformer
                         : unit.ToEither(),
                     exception => new ExternalLibraryFailure(exception));
 
+
+
         public static Either<L, Unit> TryThis<L>(this Action action, L failure)
         => new Try<Unit>(() => { action(); return Nothing; })
             .Match(
                 unit => unit.ToEither<L, Unit>(),
                 exception => failure);
+
+
 
         public static Either<L, T> TryThis<L, T>(this Func<T> action, L failure)
             => new Try<T>(() => action())
@@ -224,6 +266,7 @@ namespace MazerPlatformer
                         : unit.ToEither<L, T>(),
                     exception => failure);
 
+        
         public static Either<IFailure, T> TryThis2<T>(this Func<T> action, IFailure failure)
             => new Try<T>(() => action())
                 .Match(
@@ -254,6 +297,13 @@ namespace MazerPlatformer
 
         public static T ThrowIfNone<T>(this Option<T> option, IFailure failure)
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
+
+        public static Either<IFailure,R> Call<R>(this Either<IFailure,R>? either)
+        {
+            return either == null
+                ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
+                : either.Value;
+        }
 
         [PureFunction]
         public static bool ToggleSetting(ref bool setting) 
