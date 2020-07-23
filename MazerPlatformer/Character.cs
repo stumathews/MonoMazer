@@ -161,7 +161,8 @@ namespace MazerPlatformer
         // I can do unique things when my state changes
         private Either<IFailure, Unit> OnMyStateChanged(CharacterStates state) => Ensure(() =>
         {
-            if (state == CharacterStates.Idle) Animation.Idle = true;
+            if (state == CharacterStates.Idle) 
+                Animation.Idle = true;
         });
 
         private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction) => Ensure(() =>
