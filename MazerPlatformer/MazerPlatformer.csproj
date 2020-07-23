@@ -53,6 +53,7 @@
     <Compile Include="Diganostics.cs" />
     <Compile Include="Failures\ExceptionFailure.cs" />
     <Compile Include="Failures\ExternalLibraryFailure.cs" />
+    <Compile Include="Failures\InvalidDataFailure.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GameWorld.cs" />
     <Compile Include="IFailure.cs" />
