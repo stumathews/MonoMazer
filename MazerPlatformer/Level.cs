@@ -358,7 +358,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetNumPickups(int numPickups) => Ensure(() => { NumPickups = numPickups; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
             Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
-            List<Room> MakeLevelRooms() => MakeRooms(removeRandomSides: Diganostics.RandomSides).ThrowIfFailed();
+            List<Room> MakeLevelRooms() => MakeRooms(removeRandomSides: Diagnostics.RandomSides).ThrowIfFailed();
 
             Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>
             {

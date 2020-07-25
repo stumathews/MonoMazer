@@ -1,6 +1,6 @@
 ﻿namespace MazerPlatformer
 {
-    public static class Diganostics
+    public static class Diagnostics
     {
         public static bool DrawLines = true;
         public static bool DrawGameObjectBounds;

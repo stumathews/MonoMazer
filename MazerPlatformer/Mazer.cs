@@ -185,16 +185,16 @@ namespace MazerPlatformer
 
             Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
             {
-                commands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-                commands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-                commands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-                commands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-                commands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-                commands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-                commands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-                commands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-                commands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-                commands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
+                commands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diagnostics.DrawTop));
+                commands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diagnostics.DrawBottom));
+                commands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diagnostics.DrawRight));
+                commands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diagnostics.DrawLeft));
+                commands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diagnostics.DrawGameObjectBounds));
+                commands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diagnostics.DrawSquareSideBounds));
+                commands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diagnostics.DrawLines));
+                commands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diagnostics.DrawCentrePoint));
+                commands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diagnostics.DrawMaxPoint));
+                commands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diagnostics.DrawObjectInfoText));
                 commands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
                 commands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel).ThrowIfFailed());
                 commands.AddKeyUpCommand(Keys.X, (time) => Ensure(MediaPlayer.Pause).ThrowIfFailed());
@@ -302,7 +302,7 @@ namespace MazerPlatformer
                 select spriteBatch;
 
             Either<IFailure, Unit> PrintGameStatistics(SpriteBatch spriteBatch, GameTime time) =>
-                !IsPlayingGame() || !Diganostics.ShowPlayerStats
+                !IsPlayingGame() || !Diagnostics.ShowPlayerStats
                     ? ShortCircuitFailure.Create("Not need to print game statistics").ToEitherFailure<Unit>()
                     : Ensure(()=>
                     {
@@ -593,12 +593,12 @@ namespace MazerPlatformer
         [PureFunction]
         private static Unit EnableAllDiagnostics()
         {
-            Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
-            Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
-            Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
-            Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
-            Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
-            Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
+            Diagnostics.DrawMaxPoint = !Diagnostics.DrawMaxPoint;
+            Diagnostics.DrawSquareSideBounds = !Diagnostics.DrawSquareSideBounds;
+            Diagnostics.DrawSquareBounds = !Diagnostics.DrawSquareBounds;
+            Diagnostics.DrawGameObjectBounds = !Diagnostics.DrawGameObjectBounds;
+            Diagnostics.DrawObjectInfoText = !Diagnostics.DrawObjectInfoText;
+            Diagnostics.ShowPlayerStats = !Diagnostics.ShowPlayerStats;
             return Nothing;
         }
 

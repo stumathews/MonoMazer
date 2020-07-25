@@ -183,22 +183,22 @@ namespace MazerPlatformer
 
         // Draw the centre point of the object
         protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch)
-            => EnsureIf(Diganostics.DrawCentrePoint, () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
+            => EnsureIf(Diagnostics.DrawCentrePoint, () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
                 .IgnoreFailure();
 
         // Draw the max point (lower right point)
         protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
+            => EnsureIf(Diagnostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
                 .IgnoreFailure();
 
         // Draw the bounding box
         protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
-            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
                 .IgnoreFailure();
 
         // Draw the bounding sphere
         protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
-            => EnsureIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
                 .IgnoreFailure();
 
         // Draw all the diagnostics together
@@ -211,7 +211,7 @@ namespace MazerPlatformer
         // All game objects can ask to draw some text over it if it wants
         // dependency on Mazer for game font ok.
         public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
-            DoIfReturn(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () => DrawText(spriteBatch))
+            DoIfReturn(!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText, () => DrawText(spriteBatch))
                 .Bind(unit => DrawObjectDiagnostics(spriteBatch))
                 .IgnoreFailure();
 

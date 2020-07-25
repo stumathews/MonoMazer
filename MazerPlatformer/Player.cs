@@ -41,7 +41,7 @@ namespace MazerPlatformer
         {
             base.Draw(spriteBatch);
 
-            if (Diganostics.DrawPlayerRectangle)
+            if (Diagnostics.DrawPlayerRectangle)
                 spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray);
 
             return new Unit();

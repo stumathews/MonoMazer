@@ -129,49 +129,49 @@ namespace MazerPlatformer
             switch (side)
             {
                 case Side.Top:
-                    if (Diganostics.DrawTop)
+                    if (Diagnostics.DrawTop)
                     {
-                        if (Diganostics.DrawLines && HasSide(side))
+                        if (Diagnostics.DrawLines && HasSide(side))
                             SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(),
                                 _rectDetails.GetBy(), _wallProperties[side].Color, WallThickness);
 
-                        if (Diganostics.DrawSquareSideBounds)
+                        if (Diagnostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
 
                     break;
                 case Side.Right:
-                    if (Diganostics.DrawRight)
+                    if (Diagnostics.DrawRight)
                     {
-                        if (Diganostics.DrawLines && HasSide(side))
+                        if (Diagnostics.DrawLines && HasSide(side))
                             SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(),
                                 _rectDetails.GetCy(), _wallProperties[side].Color, WallThickness);
 
-                        if (Diganostics.DrawSquareSideBounds)
+                        if (Diagnostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
 
                     break;
                 case Side.Bottom:
-                    if (Diganostics.DrawBottom)
+                    if (Diagnostics.DrawBottom)
                     {
-                        if (Diganostics.DrawLines && HasSide(side))
+                        if (Diagnostics.DrawLines && HasSide(side))
                             SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(),
                                 _rectDetails.GetDy(), _wallProperties[side].Color, WallThickness);
 
-                        if (Diganostics.DrawSquareSideBounds)
+                        if (Diagnostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
 
                     break;
                 case Side.Left:
-                    if (Diganostics.DrawLeft)
+                    if (Diagnostics.DrawLeft)
                     {
-                        if (Diganostics.DrawLines && HasSide(side))
+                        if (Diagnostics.DrawLines && HasSide(side))
                             SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(),
                                 _rectDetails.GetAy(), _wallProperties[side].Color, WallThickness);
 
-                        if (Diganostics.DrawSquareSideBounds)
+                        if (Diagnostics.DrawSquareSideBounds)
                             SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
                     }
 
@@ -181,7 +181,7 @@ namespace MazerPlatformer
                     throw new ArgumentOutOfRangeException(nameof(side), side, null);
             }
 
-            if (Diganostics.DrawSquareBounds) /* should be the same as bounding box*/
+            if (Diagnostics.DrawSquareBounds) /* should be the same as bounding box*/
                 SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
         });
 

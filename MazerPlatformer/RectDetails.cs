@@ -6,7 +6,7 @@ namespace Assets
 {
     public class RectDetails
     {
-        private Rectangle _rect;
+        private readonly Rectangle _rect;
 
         public Rectangle Rectangle => _rect;
         
