@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Assets;
@@ -58,7 +59,7 @@ namespace MazerPlatformer
         /// <param name="spriteBatch"></param>
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
-        public Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col) 
+        private Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col) 
             : base(x:x, y: y, id: Guid.NewGuid().ToString(), width: width, height: height, type: GameObjectType.Room)
         {
             SpriteBatch = spriteBatch;
@@ -99,6 +100,11 @@ namespace MazerPlatformer
             _wallProperties.Add(Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds));
             _wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
         }
+
+        public static Either<IFailure,Room> Create(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col)
+            => EnsureWithReturn(()=> new Room(x, y, width, height, spriteBatch, roomNumber, row, col));
+
+        
 
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
         {
