@@ -12,10 +12,10 @@ namespace Assets
 
         public Rectangle Rectangle => _rect;
         
-        public RectDetails(int X, int Y, int w, int h)
+        public RectDetails(int x, int y, int w, int h)
         {
-            _rect.X = X;
-            _rect.Y = Y;
+            _rect.X = x;
+            _rect.Y = y;
             _rect.Width = w;
             _rect.Height = h;
         }
@@ -38,7 +38,5 @@ namespace Assets
         public Point B() => new Point(GetBx(), GetBy());
         public Point C() => new Point(GetCx(), GetCy());
         public Point D() => new Point(GetDx(), GetDy());
-
-        
     }
 }
