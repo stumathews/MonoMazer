@@ -131,7 +131,7 @@ namespace MazerPlatformer
         {
             _unloading = true;
             _gameObjects.Clear();
-            _level.UnLoad(); // TODO: I/O
+            _level.Unload(); // TODO: I/O
             _unloading = false;
             _removeWallTimer.Stop();
         });
