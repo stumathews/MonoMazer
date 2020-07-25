@@ -31,8 +31,12 @@ namespace MazerPlatformer
         // By default the NPC start off  in the Deciding state
         public NpcStates NpcState { get; set; } = NpcStates.Deciding;
         
-        public Npc(int x, int y, string id, int width, int height, GameObjectType type, AnimationInfo animationInfo, int moveStep = 3) : base(x, y, id, width, height, type, moveStep) 
+        private Npc(int x, int y, string id, int width, int height, GameObjectType type, AnimationInfo animationInfo, int moveStep = 3) : base(x, y, id, width, height, type, moveStep) 
             => AnimationInfo = animationInfo;
+
+        public static Either<IFailure, Npc> Create(int x, int y, string id, int width, int height, GameObjectType type,
+            AnimationInfo animationInfo, int moveStep = 3)
+            => EnsureWithReturn(()=> new Npc(x, y, id, width, height, type, animationInfo, moveStep));
 
         public override Either<IFailure, Unit> Initialize() 
             => base.Initialize().Iter(unit =>
