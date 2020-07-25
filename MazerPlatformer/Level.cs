@@ -279,53 +279,120 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="rooms"></param>
         /// <param name="levelFile"></param>
-        /// <param name="NPCBuilder"></param>
+        /// <param name="npcBuilder"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder NPCBuilder, Level level) => EnsureWithReturn(() =>
+        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsureWithReturn(() =>
         {
+            // build up a list of characters (aka npcs)
             var characters = new List<Npc>();
 
             // Load NPC details from file
-            if (Level.Npcs != null && Level.Npcs.Count > 0)
+            if (Npcs != null && Npcs.Count > 0)
             {
                 foreach (var levelNpc in levelFile.Npcs)
                 {
                     for (var i = 0; i < levelNpc.Count; i++)
                     {
-                        var randomRoom = rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
-                        var npc = NPCBuilder.CreateNpc(randomRoom, levelNpc.SpriteFile,
-                                levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                                levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                                levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                                levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
-                            .Iter(npc1 =>
-                            {
-                                // Attach components onto the NPC
-                                foreach (var component in levelNpc.Components)
-                                    npc1.AddComponent(component.Type, component.Value);
+                        npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
+                                            levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                                            levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                                            levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
+                                            levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
+                            .Bind(AttachComponents)
+                            .Bind(AddNpc);
 
-                                characters.Add(npc1);
-                            });
+                        Either<IFailure, Npc> AttachComponents(Npc npc1)
+                        {
+                            // Attach components onto the NPC
+                            foreach (var component in levelNpc.Components) 
+                                npc1.AddComponent(component.Type, component.Value);
+                            return npc1;
+                        }
 
-
+                        Either<IFailure, Unit> AddNpc(Npc npc) => Ensure(action: () => { characters.Add(npc); });
                     }
                 }
             }
             else
             {
                 // Make default set of NPCs if we don't have a level definition file
-                NPCBuilder.GenerateDefaultNpcSet(rooms, characters, level);
+                npcBuilder.GenerateDefaultNpcSet(rooms, characters, level).ThrowIfFailed();
             }
 
             return characters;
         });
 
+        private static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
+
         /// <summary>
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Either<IFailure, Dictionary<string, GameObject>> Load(int? playerHealth = null, int? playerScore = null) => EnsureWithReturn(() =>
+        public Either<IFailure, Dictionary<string, GameObject>> Load(int? playerHealth = null, int? playerScore = null)
+        {
+            return
+                from levelFile in GetLevelFile(playerHealth, playerScore)
+                from setLevelFile in SetLevelFile(LevelFile)
+                from levelMusic in LoadLevelMusic()
+                from sound in LoadSoundEffects()
+                from rooms in MakeLevelRooms().ToEither()
+                from roomsSet in SetRooms(rooms)
+                from gameObjectsWithRooms in AddRoomsToGameObjects()
+                from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, ContentManager)
+                from setPLayer in SetPlayer(player)
+                from gameObjectsWithPlayer in AddToLevelGameObjects(Player.Id, player)
+                from npcs in MakeNpCs(_rooms, LevelFile, new CharacterBuilder(ContentManager, Rows, Cols), this)
+                from setNPCs in SetNPCs(npcs)
+                from gameObjectsWithNpcs in AddNpcsToGameObjects(npcs)
+                from setNumPickups in SetNumPickups(npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)))
+                from raise in RaiseOnLoad(levelFile)
+                select gameObjectsWithNpcs;
+            
+
+            Either<IFailure, Unit> SetRooms(List<Room> rooms) => Ensure(() => { _rooms = rooms; });
+            Either<IFailure, Unit> SetPlayer(Player player) => Ensure(() => { Player = player; });
+            Either<IFailure, Unit> SetNPCs(List<Npc> npcs) => Ensure(() => { Npcs = npcs; });
+            Either<IFailure, Unit> SetNumPickups(int numPickups) => Ensure(() => { NumPickups = numPickups; });
+            Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
+            Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
+            List<Room> MakeLevelRooms() => MakeRooms(removeRandomSides: Diganostics.RandomSides).ThrowIfFailed();
+
+            Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>
+            {
+                _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
+                _playerSpottedSound = ContentManager.Load<SoundEffect>("Music/29_noise");
+                _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
+            });
+
+            Either<IFailure, Unit> LoadLevelMusic() => Ensure(() =>
+            {
+                if (!string.IsNullOrEmpty(LevelFile.Music))
+                    _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
+            });
+
+            Either<IFailure, Dictionary<string, GameObject>> AddRoomsToGameObjects() => EnsureWithReturn(() =>
+            {
+                foreach (var room in _rooms)
+                    AddToLevelGameObjects(room.Id, room);
+                return _levelGameObjects;
+            });
+
+            Either<IFailure, Dictionary<string, GameObject>> AddNpcsToGameObjects(List<Npc> npcs) => EnsureWithReturn(() =>
+            {
+                foreach (var npc in npcs)
+                    AddToLevelGameObjects(npc.Id, npc);
+                return _levelGameObjects;
+            });
+
+            Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
+            {
+                _levelGameObjects.Add(id, gameObject);
+                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _levelGameObjects.Count());
+            });
+        }
+
+        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore1) => EnsureWithReturn(() =>
         {
             if (File.Exists(LevelFileName))
             {
@@ -336,75 +403,38 @@ namespace MazerPlatformer
                 Cols = LevelFile.Cols ?? Cols;
                 RoomWidth = ViewPortWidth / Cols;
                 RoomHeight = ViewPortHeight / Rows;
-                if (playerHealth.HasValue && playerScore.HasValue)
+
+                if (i.HasValue && playerScore1.HasValue)
                 {
                     // If we're continuing on, then dont load the players vitals from file - use provided:
-                    SetPlayerVitalComponents(LevelFile.Player.Components, playerHealth.Value, playerScore.Value);
+                    SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore1.Value);
                 }
+
+                return LevelFile;
             }
-            else
+
+            // Initialize a default level file if one did not exist. This represents an auto generated level
+            return new LevelDetails
             {
-                // Initialize a default level file if one did not exist. This represents an auto generated level
-                LevelFile = new LevelDetails
-                {
-                    Player = new LevelPlayerDetails(),
-                    Components = new List<Component>(),
-                    Rows = Rows,
-                    Cols = Cols,
-                    SpriteHeight = AnimationInfo.DefaultFrameHeight,
-                    SpriteWidth = AnimationInfo.DefaultFrameWidth,
-                    MoveStep = 3,
-                    SpriteFrameCount = AnimationInfo.DefaultFrameCount,
-                    SpriteFrameTime = AnimationInfo.DefaultFrameTime,
-                    Music = @"Music\bgm_action_1", // Level Music
-                    Sound1 = @"Music\28_jingle", // Pickup sound
-                    Sound2 = @"Music\29_noise", // Enemy seen player
-                    Sound3 = @"Music\64_lose2", // Player died
-                    SpriteFile = @"Sprites\dark_soldier-sword" // Default Sprite file for any character not found
-                };
-            }
-
-            // Load up the level music
-            if (!string.IsNullOrEmpty(LevelFile.Music))
-                _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
-
-            // Load up the sound effects
-            _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
-            _playerSpottedSound = ContentManager.Load<SoundEffect>("Music/29_noise");
-            _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
-
-            // NPC builder....
-            var _npcBuilder = new CharacterBuilder(ContentManager, Rows, Cols);
-
-            // Make the room objects in the level
-            _rooms = MakeRooms(removeRandomSides: Diganostics.RandomSides).ThrowIfFailed();
-            foreach (var room in _rooms)
-                AddToLevelGameObjects(room.Id, room);
-
-            // Make Player
-            Player = MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], LevelFile, ContentManager).ThrowIfFailed();
-            AddToLevelGameObjects(Player.PlayerId, Player);
-
-            // Make the NPCs for the level
-            Npcs = MakeNpCs(_rooms, LevelFile, _npcBuilder, this).ThrowIfFailed();
-
-            // Tally up number on Npcs for latter use
-            NumPickups = Npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup));
-
-            foreach (var npc in Npcs)
-                AddToLevelGameObjects(npc.Id, npc);
-
-            OnLoad?.Invoke(LevelFile);
-            return _levelGameObjects;
+                Player = new LevelPlayerDetails(),
+                Components = new List<Component>(),
+                Rows = Rows,
+                Cols = Cols,
+                SpriteHeight = AnimationInfo.DefaultFrameHeight,
+                SpriteWidth = AnimationInfo.DefaultFrameWidth,
+                MoveStep = 3,
+                SpriteFrameCount = AnimationInfo.DefaultFrameCount,
+                SpriteFrameTime = AnimationInfo.DefaultFrameTime,
+                Music = @"Music\bgm_action_1", // Level Music
+                Sound1 = @"Music\28_jingle", // Pickup sound
+                Sound2 = @"Music\29_noise", // Enemy seen player
+                Sound3 = @"Music\64_lose2", // Player died
+                SpriteFile = @"Sprites\dark_soldier-sword" // Default Sprite file for any character not found
+            };
         });
 
 
-        private Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
-        {
-            _levelGameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false,
-                runningTotalCount: _levelGameObjects.Count());
-        });
+        
 
         /// <summary>
         /// Get the room objects in the level
@@ -412,18 +442,19 @@ namespace MazerPlatformer
         /// <returns>list of rooms created in the level</returns>
         public Either<IFailure, List<Room>> GetRooms() => EnsureWithReturn(() => _rooms);
 
-        public Either<IFailure, Unit> UnLoad() => Ensure(() =>
+        public Either<IFailure, Unit> Unload() => Ensure(() =>
         {
             if (!File.Exists(LevelFileName))
-                Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs);
+                Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs).ThrowIfFailed();
+
             Player.Dispose();
+            
             foreach (var npc in Npcs) npc.Dispose();
             foreach (var room in _rooms) room.Dispose();
         });
 
         // Save the level information including NPcs and Player info
-        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player,
-            string levelFileName, List<Npc> npcs) => Ensure(() =>
+        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs) => Ensure(() =>
         {
             if (!shouldSave)
                 return;
