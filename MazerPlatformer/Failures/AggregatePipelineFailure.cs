@@ -18,5 +18,6 @@ namespace MazerPlatformer
             Reason = sb.ToString();
         }
         public string Reason { get; set; }
+        public static IFailure Create(IEnumerable<IFailure> failures) => new AggregatePipelineFailure(failures);
     }
 }

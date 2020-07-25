@@ -66,12 +66,30 @@ namespace MazerPlatformer
         /// <summary>
         /// Reduces multiple failures into one failure ie aggregates it
         /// </summary>
-        /// <param name="failures"></param>
+        /// <param name="eithers"></param>
         /// <returns></returns>
-        public static Either<IFailure, T> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> failures, T left)
+        public static Either<IFailure, T> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> eithers, T left)
         {
-            var failed = failures.Lefts().ToList();
-            return failed.Any() ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() : left.ToEither();
+            var failed = eithers.Lefts().ToList();
+            return failed.Any() 
+                ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() 
+                : left.ToEither();
+        }
+
+        /// <summary>
+        /// Returns either an AggregatePipelineFailure or the orignal list of eithers
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="eithers"></param>
+        /// <returns></returns>
+        public static Either<IFailure, IEnumerable<Either<IFailure, T>>> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> eithers)
+        {
+            var es = eithers.ToList();
+            var failed = es.Lefts().ToList();
+
+            return failed.Any() 
+                ? AggregatePipelineFailure.Create(failed).ToEitherFailure<IEnumerable<Either<IFailure, T>>>() 
+                : es.AsEnumerable().ToEither();
         }
 
         public static Either<IFailure, Unit> AggregateUnitFailures(this IEnumerable<Either<IFailure, Unit>> failures)
@@ -430,6 +448,9 @@ namespace MazerPlatformer
         public static Either<IFailure, T> Must<T>(T arg, Func<bool> func, IFailure customFailure = null) 
             => !func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
 
+        public static Either<IFailure, T> MustBe<T>(T arg, Func<bool> func, IFailure customFailure = null)
+            => func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
+
         /// <summary>
         /// Fali if the condition is not met
         /// </summary>
@@ -438,7 +459,7 @@ namespace MazerPlatformer
         /// <param name="func"></param>
         /// <param name="conditionNotMetMessage"></param>
         /// <returns></returns>
-      
+
         public static Either<IFailure, T> Must<T>(T arg, Func<bool> func, string conditionNotMetMessage)
             => !func() ? ConditionNotSatisfiedFailure.Create(conditionNotMetMessage).ToEitherFailure<T>() : arg.ToEither();
 
