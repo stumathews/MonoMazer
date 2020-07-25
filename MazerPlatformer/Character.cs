@@ -59,27 +59,35 @@ namespace MazerPlatformer
 
         public override Either<IFailure, Unit> Initialize()
         {
-            base.Initialize();
+            return 
+                from init in base.Initialize()
+                from registerEvents in RegisterEvents()
+                from setInitialDirection in SetInitialDirection()
+                from animation in InitializeAnimation()
+                select Nothing;
 
-            // We detect our down collisions
-            OnCollision += HandleCharacterCollision;
+            Either<IFailure, Unit> RegisterEvents() => Ensure(() =>
+            {
+                // We detect our down collisions
+                OnCollision += HandleCharacterCollision;
 
-            // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
-            // Should we remove this functionality?
-            OnStateChanged += OnMyStateChanged;
+                // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
+                // Should we remove this functionality?
+                OnStateChanged += OnMyStateChanged;
+            });
 
-            // We start of facing down
-            CurrentDirection = CharacterDirection.Down;
-            Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
+            Either<IFailure, Unit> SetInitialDirection() => Ensure(() => {
+                // We start of facing down
+                CurrentDirection = CharacterDirection.Down;
 
-            // Initialize the characters animation
-            return EnsureWithReturn( () =>
+                Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
+            });
+
+            Either<IFailure, Unit> InitializeAnimation() => Ensure(() =>
             {
                 Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth,
-                    AnimationInfo.FrameHeight,
-                    AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping,
-                    AnimationInfo.FrameTime);
-                return Nothing;
+                    AnimationInfo.FrameHeight, AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale,
+                    AnimationInfo.Looping, AnimationInfo.FrameTime);
             });
         }
 
