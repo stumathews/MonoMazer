@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.Remoting.Messaging;
+using LanguageExt;
+using MazerPlatformer;
 using Microsoft.Xna.Framework;
 
 namespace Assets
@@ -17,19 +19,20 @@ namespace Assets
             _rect.Width = w;
             _rect.Height = h;
         }
-        public int GetAx(){ return _rect.X; }
-        public int GetAy(){ return _rect.Y; }
-        public int GetBx(){ return GetAx()+_rect.Width;}
-        public int GetBy(){ return GetAy();}
-        public int GetCx(){ return GetBx();}
-        public  int GetCy(){ return GetBy()+_rect.Height;}
-        public int GetDx(){ return GetAx();}
-        public int GetDy(){ return GetAy()+_rect.Height;}
+        
+        public int GetAx() => Statics.EnsureWithReturn(() => _rect.X).ThrowIfFailed();
+        public int GetAy() => Statics.EnsureWithReturn(() =>_rect.Y).ThrowIfFailed();
 
-        public int GetAB() { return GetBx() - GetAx(); }
+        public int GetBx() => GetAx() +_rect.Width;
+        public int GetBy() => GetAy();
+        public int GetCx() => GetBx();
+        public int GetCy() => GetBy() + _rect.Height;
+        public int GetDx() => GetAx();
+        public int GetDy() => GetAy() +_rect.Height;
+        public int GetAB() => GetBx() - GetAx();
         public int GetCD() => GetCx() - GetDx();
         public int GetBC() => GetCy() - GetBy();
-        public int GetAD() => GetDy() - GetAy();
+        public int GetAD() => GetDy() -GetAy();
 
         public Point A() => new Point(GetAx(), GetAy());
         public Point B() => new Point(GetBx(), GetBy());
