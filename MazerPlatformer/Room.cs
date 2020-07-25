@@ -101,8 +101,17 @@ namespace MazerPlatformer
             _wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
         }
 
-        public static Either<IFailure,Room> Create(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col)
-            => EnsureWithReturn(()=> new Room(x, y, width, height, spriteBatch, roomNumber, row, col));
+        public static Either<IFailure, Room> Create(int x, int y, int width, int height, SpriteBatch spriteBatch,
+            int roomNumber, int row, int col)
+            => IsValid(x, y, width, height, spriteBatch, roomNumber, row, col)
+                ? EnsureWithReturn(() => new Room(x, y, width, height, spriteBatch, roomNumber, row, col))
+                : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
+
+        public static bool IsValid(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col)
+        {
+            var anyNegative = new int[] {x, y, width, height}.Any(o => o < 0);
+            return !anyNegative && spriteBatch != null && col >= 0 && row >= 0;
+        }
 
         
 
