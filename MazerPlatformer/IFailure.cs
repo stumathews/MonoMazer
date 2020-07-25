@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace MazerPlatformer
 {
     /// <summary>
-    /// 
+    /// Represents a failure for some reason
     /// </summary>
     public interface IFailure
     {

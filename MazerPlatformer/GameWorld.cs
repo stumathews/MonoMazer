@@ -70,11 +70,9 @@ namespace MazerPlatformer
                 .Match(
                     None: () => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch),
                     Some: failure => failure.ToEitherFailure<GameWorld>());
-
-
+        
         // Trivial validation for smart constructor
-        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
-            int rows, int cols, SpriteBatch spriteBatch)
+        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToSome();
@@ -461,11 +459,12 @@ namespace MazerPlatformer
         }
 
         // What to do specifically when a room registers a collision
-        private static void OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics)
+        private static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side,
+            SideCharacteristic sideCharacteristics) => Ensure(() =>
         {
-            if(otherObject.Type == GameObjectType.Player)
+            if (otherObject.Type == GameObjectType.Player)
                 room.RemoveSide(side);
-        }
+        });
 
 
         // Inform the Game world that the up button was pressed, make the player idle
