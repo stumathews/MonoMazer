@@ -113,18 +113,15 @@ namespace MazerPlatformer
             var anyNegative = new int[] {x, y, width, height}.Any(o => o < 0);
             return !anyNegative && spriteBatch != null && col >= 0 && row >= 0;
         }
-
         
-
-        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
-        {
-            base.Draw(spriteBatch);
-            DrawSide(Side.Top);
-            DrawSide(Side.Right);
-            DrawSide(Side.Bottom);
-            DrawSide(Side.Left);
-            return Nothing;
-        }
+        // Draw pipeline for drawing a Room
+        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
+            from baseDraw in base.Draw(spriteBatch)
+            from topDraw in DrawSide(Side.Top)
+            from rightDraw in DrawSide(Side.Right)
+            from bottomDraw in DrawSide(Side.Bottom)
+            from leftDraw in DrawSide(Side.Left)
+            select Nothing;
 
         private Either<IFailure, Unit> DrawSide(Side side) => Ensure(() =>
         {
