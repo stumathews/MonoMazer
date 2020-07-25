@@ -152,8 +152,6 @@ namespace MazerPlatformer
                 select world;
         }
 
-        
-
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
         /// This is where it can query for any required services and load any non-graphic
@@ -228,17 +226,29 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
             from points in levelDetails.Player.Components
                 .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
-                .EnsuringMap(AssignPlayerPoints)
+                .Map(AssignPlayerPoints)
             from health in levelDetails.Player.Components
                 .SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
-                .EnsuringMap(AssignPlayerHealth)
+                .Map(AssignPlayerHealth)
             select Nothing;
 
-        private int AssignPlayerHealth(Component component) 
-            => _playerHealth = (int)component.Value;
+        private Either<IFailure, int> AssignPlayerHealth(Component component)
+        {
+            Either<IFailure, int> SetPlayerHealth(int value) => _playerHealth = value;
 
-        private int AssignPlayerPoints(Component component) 
-            => _playerPoints = (int)component.Value;
+            return from value in TryCastToT<int>(component.Value)
+                from set in SetPlayerHealth(value)
+                select set;
+        }
+
+        private Either<IFailure, int> AssignPlayerPoints(Component component)
+        {
+            Either<IFailure, int> SetPlayerPoints(int value) => _playerPoints = value;
+
+            return from value in TryCastToT<int>(component.Value)
+                from set in SetPlayerPoints(value)
+                select set;
+        }
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
