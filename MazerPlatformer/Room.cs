@@ -30,7 +30,7 @@ namespace MazerPlatformer
             /*Left*/ true
         };
 
-        public delegate void WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
+        public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
 
         public event WallInfo OnWallCollision;
 
