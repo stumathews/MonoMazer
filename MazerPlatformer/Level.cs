@@ -493,7 +493,7 @@ namespace MazerPlatformer
 
                             yield return
                                 from type in npc.GetNpcType().ToEither(NotFound.Create("Could not find Npc Type in NPC components"))
-                                let details = CreateLevelNpcDetails(type)
+                                from details in CreateLevelNpcDetails(type)
                                 from copy in CopyAnimationInfo(npc, details)
                                 from add in AddNpcDetailsToLevelFile(levelFile, details)
                                 from added in AddToSeen(seenAssets, npcByAssetFile)
@@ -503,7 +503,7 @@ namespace MazerPlatformer
                 }
             };
 
-            LevelNpcDetails CreateLevelNpcDetails(Npc.NpcTypes type)
+            Either<IFailure, LevelNpcDetails> CreateLevelNpcDetails(Npc.NpcTypes type) => EnsureWithReturn(() =>
             {
                 var details = new LevelNpcDetails
                 {
@@ -511,9 +511,9 @@ namespace MazerPlatformer
                     Count = CharacterBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
                 };
                 return details;
-            }
+            });
 
-            void CopyOrUpdateComponents(Character @from, LevelCharacterDetails to)
+            Either<IFailure, Unit> CopyOrUpdateComponents(Character @from, LevelCharacterDetails to) => Ensure(() =>
             {
                 if (to.Components == null)
                     to.Components = new List<Component>();
@@ -521,7 +521,7 @@ namespace MazerPlatformer
                 foreach (var component in @from.Components)
                 {
                     // We dont want to serialize any GameWorld References or Player references that a NPC might have
-                    if (component.Type == ComponentType.GameWorld || component.Type == ComponentType.Player) 
+                    if (component.Type == ComponentType.GameWorld || component.Type == ComponentType.Player)
                         continue;
 
                     var found = to.Components.SingleOrFailure(x => x.Type == component.Type).ThrowIfFailed();
@@ -535,9 +535,9 @@ namespace MazerPlatformer
                         found.Value = component.Value;
                     }
                 }
-            }
+            });
 
-            Either<IFailure, Unit> CopyAnimationInfo(Character @from, LevelCharacterDetails to) => Ensure(() =>
+            Either<IFailure, Unit> CopyAnimationInfo(Character @from, LevelCharacterDetails to) => EnsuringBind(() =>
             {
                 to.SpriteHeight = @from.AnimationInfo.FrameHeight;
                 to.SpriteWidth = @from.AnimationInfo.FrameWidth;
@@ -545,7 +545,7 @@ namespace MazerPlatformer
                 to.SpriteFrameCount = @from.AnimationInfo.FrameCount;
                 to.SpriteFrameTime = @from.AnimationInfo.FrameTime;
                 to.MoveStep = 3;
-                CopyOrUpdateComponents(@from, to);
+                return CopyOrUpdateComponents(@from, to);
             });
 
             Either<IFailure, Unit> AddNpcDetailsToLevelFile(LevelDetails levelDetails, LevelNpcDetails details) =>
