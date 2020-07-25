@@ -331,13 +331,13 @@ namespace MazerPlatformer
         /// <returns></returns>
         public Either<IFailure, Dictionary<string, GameObject>> Load(int? playerHealth = null, int? playerScore = null)
         {
-            return
+            var loadPipeline =
                 from levelFile in GetLevelFile(playerHealth, playerScore)
                 from setLevelFile in SetLevelFile(LevelFile)
                 from levelMusic in LoadLevelMusic()
-                from sound in LoadSoundEffects()
+                from soundEffectsLoaded in LoadSoundEffects()
                 from rooms in MakeLevelRooms().ToEither()
-                from roomsSet in SetRooms(rooms)
+                from setRooms in SetRooms(rooms)
                 from gameObjectsWithRooms in AddRoomsToGameObjects()
                 from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, ContentManager)
                 from setPLayer in SetPlayer(player)
@@ -348,7 +348,9 @@ namespace MazerPlatformer
                 from setNumPickups in SetNumPickups(npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)))
                 from raise in RaiseOnLoad(levelFile)
                 select gameObjectsWithNpcs;
-            
+
+            return loadPipeline;
+
 
             Either<IFailure, Unit> SetRooms(List<Room> rooms) => Ensure(() => { _rooms = rooms; });
             Either<IFailure, Unit> SetPlayer(Player player) => Ensure(() => { Player = player; });
@@ -365,10 +367,11 @@ namespace MazerPlatformer
                 _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
             });
 
-            Either<IFailure, Unit> LoadLevelMusic() => Ensure(() =>
+            Either<IFailure, Song> LoadLevelMusic() => EnsureWithReturn(() =>
             {
                 if (!string.IsNullOrEmpty(LevelFile.Music))
                     _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
+                return _levelMusic;
             });
 
             Either<IFailure, Dictionary<string, GameObject>> AddRoomsToGameObjects() => EnsureWithReturn(() =>
@@ -454,55 +457,60 @@ namespace MazerPlatformer
         });
 
         // Save the level information including NPcs and Player info
-        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs) => Ensure(() =>
+        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs)
         {
             if (!shouldSave)
-                return;
+                    return ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>();
 
             // If we have no NPC info in our level file, save auto generated NPCs into save file (Allows us to modify it later too)
             if (npcs.Count == 0)
+                AddCurrentNPCsToLevelFile(npcs).ThrowIfFailed();
+
+            return SaveLevelFile();
+
+            Either<IFailure, Unit> SaveLevelFile()
             {
-                var seenAssets = new System.Collections.Generic.HashSet<string>();
-                foreach (var item in npcs.GroupBy(o => o.AnimationInfo.AssetFile))
-                {
-                    foreach (var npc in item)
-                    {
-                        if (seenAssets.Contains(item.Key)) break;
-
-                        npc.GetNpcType().Iter(type =>
-                        {
-                            var details = new LevelNpcDetails
-                            {
-                                NpcType = type,
-                                Count = CharacterBuilder
-                                    .DefaultNumPirates // template level file saves 5 of each type of npc
-                            };
-                            CopyAnimationInfo(npc, details);
-
-                            levelFile.Npcs.Add(details);
-                            seenAssets.Add(item.Key);
-                        });
-
-                    }
-                }
+                // Save Player info into level file
+                return 
+                    from copy in CopyAnimationInfo(player, levelFile?.Player ?? new LevelPlayerDetails())
+                    from saved in Ensure(() => GameLib.Files.Xml.SerializeObject(levelFileName, levelFile))
+                    select Nothing;
             }
 
-            // Save Player info into level file
-            CopyAnimationInfo(player, levelFile?.Player ?? new LevelPlayerDetails());
-
-            // IO could fail
-            GameLib.Files.Xml.SerializeObject(levelFileName, levelFile);
-
-            /* Local functions */
-            void CopyAnimationInfo(Character @from, LevelCharacterDetails to)
+            Either<IFailure, IEnumerable<Either<IFailure,LevelNpcDetails>>> AddCurrentNPCsToLevelFile(List<Npc> list)
             {
-                to.SpriteHeight = from.AnimationInfo.FrameHeight;
-                to.SpriteWidth = from.AnimationInfo.FrameWidth;
-                to.SpriteFile = from.AnimationInfo.AssetFile;
-                to.SpriteFrameCount = from.AnimationInfo.FrameCount;
-                to.SpriteFrameTime = from.AnimationInfo.FrameTime;
-                to.MoveStep = 3;
-                CopyOrUpdateComponents(@from, to);
+                return AddNpcsToLevelFile(list).AggregateFailures();
+
+                IEnumerable<Either<IFailure, LevelNpcDetails>> AddNpcsToLevelFile(IEnumerable<Npc> characters)
+                {
+                    var seenAssets = new System.Collections.Generic.HashSet<string>();
+
+                    foreach (var npcByAssetFile in characters.GroupBy(o => o.AnimationInfo.AssetFile))
+                    {
+                        foreach (var npc in npcByAssetFile)
+                        {
+                            if (seenAssets.Contains(npcByAssetFile.Key)) break;
+
+                            yield return
+                                from type in npc.GetNpcType().ToEither(NotFound.Create("Could not find Npc Type in NPC components"))
+                                let details = CreateLevelNpcDetails(type)
+                                from copy in CopyAnimationInfo(npc, details)
+                                from add in AddNpcDetailsToLevelFile(levelFile, details)
+                                from added in AddToSeen(seenAssets, npcByAssetFile)
+                                select details;
+                        }
+                    }
+                }
+            };
+
+            LevelNpcDetails CreateLevelNpcDetails(Npc.NpcTypes type)
+            {
+                var details = new LevelNpcDetails
+                {
+                    NpcType = type,
+                    Count = CharacterBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
+                };
+                return details;
             }
 
             void CopyOrUpdateComponents(Character @from, LevelCharacterDetails to)
@@ -513,22 +521,41 @@ namespace MazerPlatformer
                 foreach (var component in @from.Components)
                 {
                     // We dont want to serialize any GameWorld References or Player references that a NPC might have
-                    if (component.Type != ComponentType.GameWorld && component.Type != ComponentType.Player)
+                    if (component.Type == ComponentType.GameWorld || component.Type == ComponentType.Player) 
+                        continue;
+
+                    var found = to.Components.SingleOrDefault(x => x.Type == component.Type);
+                    if (found == null)
                     {
-                        var found = to.Components.SingleOrDefault(x => x.Type == component.Type);
-                        if (found == null)
-                        {
-                            to.Components.Add(component);
-                        }
-                        else
-                        {
-                            //update
-                            found.Value = component.Value;
-                        }
+                        to.Components.Add(component);
+                    }
+                    else
+                    {
+                        //update
+                        found.Value = component.Value;
                     }
                 }
             }
-        });
+
+            Either<IFailure, Unit> CopyAnimationInfo(Character @from, LevelCharacterDetails to) => Ensure(() =>
+            {
+                to.SpriteHeight = @from.AnimationInfo.FrameHeight;
+                to.SpriteWidth = @from.AnimationInfo.FrameWidth;
+                to.SpriteFile = @from.AnimationInfo.AssetFile;
+                to.SpriteFrameCount = @from.AnimationInfo.FrameCount;
+                to.SpriteFrameTime = @from.AnimationInfo.FrameTime;
+                to.MoveStep = 3;
+                CopyOrUpdateComponents(@from, to);
+            });
+
+            Either<IFailure, Unit> AddNpcDetailsToLevelFile(LevelDetails levelDetails, LevelNpcDetails details) =>
+                Ensure(() => { levelDetails.Npcs.Add(details); });
+
+            Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets,
+                IGrouping<string, Npc> npcByAssetFile)
+                => EnsuringBind<bool>(() => seenAssets.Add(npcByAssetFile.Key)
+                    .FailIfTrue(InvalidDataFailure.Create("Could not added")));
+        }
 
         public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
             => Player.SetPlayerVitals(health, points);
