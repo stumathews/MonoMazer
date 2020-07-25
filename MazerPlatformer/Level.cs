@@ -392,7 +392,7 @@ namespace MazerPlatformer
             });
         }
 
-        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore1) => EnsureWithReturn(() =>
+        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsureWithReturn(() =>
         {
             if (File.Exists(LevelFileName))
             {
@@ -404,10 +404,10 @@ namespace MazerPlatformer
                 RoomWidth = ViewPortWidth / Cols;
                 RoomHeight = ViewPortHeight / Rows;
 
-                if (i.HasValue && playerScore1.HasValue)
+                if (i.HasValue && playerScore.HasValue)
                 {
                     // If we're continuing on, then dont load the players vitals from file - use provided:
-                    SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore1.Value);
+                    SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
                 }
 
                 return LevelFile;
