@@ -67,6 +67,9 @@ namespace MazerPlatformer
 
         public delegate void DisposingInfo(GameObject theObject);
 
+        /// <summary>
+        /// Let me know that we are disposing
+        /// </summary>
         public event DisposingInfo OnDisposing;
 
         protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
@@ -221,6 +224,8 @@ namespace MazerPlatformer
             spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
         });
 
+        #endregion
+
         // Specific game objects need to initialize themselves
         public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
@@ -233,7 +238,7 @@ namespace MazerPlatformer
                 : null);
         });
 
-        #endregion
+        
 
         protected virtual void Dispose(bool disposing)
         {
