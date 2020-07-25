@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using static MazerPlatformer.Component;
+using static MazerPlatformer.Statics;
 
 
 namespace MazerPlatformer
@@ -51,6 +52,6 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 
             => NudgeOutOfCollision();
 
-        public void Seen() => OnPlayerSpotted?.Invoke(this);
+        public Either<IFailure, Unit> Seen() => Ensure(()=> OnPlayerSpotted?.Invoke(this));
     }
 }

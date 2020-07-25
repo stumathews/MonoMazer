@@ -56,7 +56,7 @@ namespace MazerPlatformer
                 return Npc.MoveInDirection(Npc.CurrentDirection, gameTime);
             });
 
-            bool ChangeDirection(bool sameCol, bool sameRow, GameWorld gameWorld, Player player, int myRow, int playerRow, int myCol, int playerCol)
+            Either<IFailure, bool> ChangeDirection(bool sameCol, bool sameRow, GameWorld gameWorld, Player player, int myRow, int playerRow, int myCol, int playerCol) => EnsureWithReturn(() =>
             {
                 var changeDirection = !sameCol || !sameRow;
                 var playerSeen = false;
@@ -80,7 +80,7 @@ namespace MazerPlatformer
                 }
 
                 return playerSeen;
-            }
+            });
 
             bool ChangeDirectionIfHitRoom(Room npcRoom, int playerRow, int myRow, int playerCol, int myCol, GameWorld gameWorld, Player player)
             {
@@ -90,7 +90,7 @@ namespace MazerPlatformer
                     var sameCol = playerCol == myCol;
 
                     // Reports if player was seen when changing direction
-                    return ChangeDirection(sameCol, sameRow, gameWorld, player, myRow, playerRow, myCol, playerCol);
+                    return ChangeDirection(sameCol, sameRow, gameWorld, player, myRow, playerRow, myCol, playerCol).ThrowIfFailed();
                 }
 
                 return false;
