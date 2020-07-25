@@ -392,7 +392,7 @@ namespace MazerPlatformer
                 if (gameObject.Type == gameObject2.Type)
                     return;
 
-                if (gameObject2.IsCollidingWith(gameObject1))
+                if (gameObject2.IsCollidingWith(gameObject1).ThrowIfFailed())
                 {
                     gameObject2.CollisionOccuredWith(gameObject1);
                     gameObject1.CollisionOccuredWith(gameObject2);

@@ -204,10 +204,10 @@ namespace MazerPlatformer
         }
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
-        public override bool IsCollidingWith(GameObject otherObject)
+        public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
         {
             var collision = false;
-            foreach(var item in _wallProperties)
+            foreach (var item in _wallProperties)
             {
                 Side side = item.Key;
                 SideCharacteristic thisWallProperty = item.Value;
@@ -221,8 +221,9 @@ namespace MazerPlatformer
                     //RemoveSide(side);
                 }
             }
+
             return collision;
-        }
+        });
 
         public Either<IFailure, Unit> RemoveSide(Side side)
         {

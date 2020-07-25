@@ -120,23 +120,23 @@ namespace MazerPlatformer
         });
 
         // Every object can check if its colliding with another object's bounding box
-        public virtual bool IsCollidingWith(GameObject otherObject)
+        public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
         {
             if (otherObject == null || otherObject.Id == Id) return false;
-            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
+            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
             otherObject.IsColliding = IsColliding;
-            
+
             return IsColliding;
-        }
+        });
 
         // Not sure this is a good as it could be because the Game world is what calls this 
         // as its the game world is what checks for collisions
-        public virtual void CollisionOccuredWith(GameObject otherObject)
+        public virtual Either<IFailure, Unit> CollisionOccuredWith(GameObject otherObject) => Ensure(() =>
         {
             var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
             IsColliding = true;
             handler?.Invoke(this, otherObject);
-        }
+        });
 
         
 
