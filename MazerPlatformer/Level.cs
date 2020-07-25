@@ -524,7 +524,7 @@ namespace MazerPlatformer
                     if (component.Type == ComponentType.GameWorld || component.Type == ComponentType.Player) 
                         continue;
 
-                    var found = to.Components.SingleOrDefault(x => x.Type == component.Type);
+                    var found = to.Components.SingleOrFailure(x => x.Type == component.Type).ThrowIfFailed();
                     if (found == null)
                     {
                         to.Components.Add(component);
