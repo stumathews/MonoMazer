@@ -37,7 +37,7 @@ namespace MazerPlatformer
 
         private readonly Dictionary<Side, SideCharacteristic> _wallProperties = new Dictionary<Side, SideCharacteristic>();
 
-        private readonly RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
+        private RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
 		
         public Room RoomAbove { get; set; }
         public Room RoomBelow { get; set; }
@@ -66,12 +66,13 @@ namespace MazerPlatformer
             RoomNumber = roomNumber;
             Col = col;
             Row = row;
+        }
 
-            //TODO: We should ensure that this constructor can't throw exceptions
-
+        private static Either<IFailure, Unit> InitializeBounds(Room room) => Ensure(() =>
+        {
             // This allows for reasoning about rectangles in terms of points A, B, C, D
-            _rectDetails = new RectDetails(X, Y, Width, Height);
-
+            room._rectDetails = new RectDetails(room.X, room.Y, room.Width, room.Height);
+            
             /* Walls have collision bounds that don't change */
 
             /* 
@@ -86,25 +87,25 @@ namespace MazerPlatformer
 				 CD = Bottom
 				 AD = Left  
 			*/
-
-
             /* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidesWith() override */
-            var topBounds = new Rectangle(x: _rectDetails.GetAx(), y: _rectDetails.GetAy(), width: _rectDetails.GetAB(), height: 1);
-            var bottomBounds = new Rectangle(x: _rectDetails.GetDx(), y: _rectDetails.GetDy(), width: _rectDetails.GetCD(), height: 1);
-            var rightBounds = new Rectangle(x: _rectDetails.GetBx(), y:_rectDetails.GetBy(),  height: _rectDetails.GetBC(), width: 1 );
-            var leftBounds = new Rectangle(x:_rectDetails.GetAx(), y:_rectDetails.GetAy(), height: _rectDetails.GetAD(), width: 1);
+            var topBounds = new Rectangle(x: room._rectDetails.GetAx(), y: room._rectDetails.GetAy(), width: room._rectDetails.GetAB(), height: 1);
+            var bottomBounds = new Rectangle(x: room._rectDetails.GetDx(), y: room._rectDetails.GetDy(), width: room._rectDetails.GetCD(), height: 1);
+            var rightBounds = new Rectangle(x: room._rectDetails.GetBx(), y: room._rectDetails.GetBy(), height: room._rectDetails.GetBC(), width: 1);
+            var leftBounds = new Rectangle(x: room._rectDetails.GetAx(), y: room._rectDetails.GetAy(), height: room._rectDetails.GetAD(), width: 1);
 
             /* Walls each have specific colors, bounds, and potentially other configurable characteristics in the game */
-            _wallProperties.Add(Side.Top, new SideCharacteristic(Color.Black, topBounds));
-            _wallProperties.Add(Side.Right, new SideCharacteristic(Color.Black, rightBounds));
-            _wallProperties.Add(Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds));
-            _wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
-        }
+            room._wallProperties.Add(Side.Top, new SideCharacteristic(Color.Black, topBounds));
+            room._wallProperties.Add(Side.Right, new SideCharacteristic(Color.Black, rightBounds));
+            room._wallProperties.Add(Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds));
+            room._wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
+        });
 
         public static Either<IFailure, Room> Create(int x, int y, int width, int height, SpriteBatch spriteBatch,
             int roomNumber, int row, int col)
             => IsValid(x, y, width, height, spriteBatch, roomNumber, row, col)
-                ? EnsureWithReturn(() => new Room(x, y, width, height, spriteBatch, roomNumber, row, col))
+                ? from room in EnsureWithReturn(() => new Room(x, y, width, height, spriteBatch, roomNumber, row, col))
+                  from initializeBounds in InitializeBounds(room)
+                  select room
                 : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
 
         public static bool IsValid(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col)

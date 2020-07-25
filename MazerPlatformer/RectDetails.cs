@@ -8,7 +8,7 @@ namespace Assets
 {
     public class RectDetails
     {
-        private readonly Rectangle _rect;
+        private readonly Rectangle _rect; //struct
 
         public Rectangle Rectangle => _rect;
         
