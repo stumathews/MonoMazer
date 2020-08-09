@@ -42,7 +42,10 @@ namespace ImmutableTests
             set => _items.Assign(value);
         }
 
-        private static readonly ValueStack2< List<Item>> _immutableItems = new ValueStack2<List<Item>>();
+        /// <summary>
+        /// Restricts read-access to field if the field is locked, only giving access to version that locked
+        /// </summary>
+        private static readonly ValueStack2<List<Item>> _immutableItems = new ValueStack2<List<Item>>();
         public Either<IFailure, List<Item>> ImmutableItems
         {
             get => _immutableItems.ReadLatest(GetCurrentVersion());
@@ -250,10 +253,10 @@ namespace ImmutableTests
             // Now can the orignal version access it as its still unlocked
             Assert.AreEqual(false, stuart.Resolve().ImmutableItems.IsLeft);
              
+            // Convention: if you're going to write to the values, lock access
             // Ask for exclusive access, as we're going to modify next line
             Assert.AreEqual(false, stuart.Lock().IsLeft);
-            
-            //loophole modification via get()
+           
             stuart.Resolve().ImmutableItems.Map(items =>
             {
                 items.Add(new Item("Crown", 2000));
@@ -262,6 +265,7 @@ namespace ImmutableTests
 
             // Should now be locked to orignal again as on access the lock was aquired
             Assert.AreEqual(false, stuart.Resolve().ImmutableItems.IsLeft);
+            
 
             // Make sure stuart3 cant access it because lock is still unlocked (loophole circumvented aquiring lock)
             Assert.AreEqual(true, stuart3.Resolve().ImmutableItems.IsLeft);

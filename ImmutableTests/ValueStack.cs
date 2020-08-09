@@ -37,6 +37,14 @@ namespace ImmutableTests
         private int _latestPointer = 0;
         private bool _locked;
         private int[] _lockedBy;
+        private readonly bool _forceLockOnAccessIfUnlocked;
+        private readonly bool _noForceOverwiteLock;
+
+        public ValueStack2(bool forceLockOnAccessIfUnlocked = false, bool noForceOverwiteLock = false)
+        {
+            _forceLockOnAccessIfUnlocked = forceLockOnAccessIfUnlocked;
+            _noForceOverwiteLock = noForceOverwiteLock;
+        }
 
         public int Assign(T newItem)
         {
@@ -47,9 +55,9 @@ namespace ImmutableTests
 
         public Either<IFailure, Unit> Lock<T>(Version<T> version)
         {
-            //if (_locked)
-              //  return LockedFailure.Create($"Already Locked").ToEitherFailure<Unit>();
-
+            if (_locked && !VersionsAreSame(_lockedBy, version.Spec) && _noForceOverwiteLock)
+                return NotCheckedOut.Create("NoForceOverwiteLock enabled: must explicitly unlock before locking").ToEitherFailure<Unit>();
+            // Take over ownership of the access to stack
             _lockedBy = version.Spec;
             _locked = true;
             return new Unit();
@@ -84,10 +92,13 @@ namespace ImmutableTests
 
         public Either<IFailure,T> ReadLatest(Version<Person> currentVersion)
         {
-            var result = _locked && !VersionsAreSame(currentVersion.Spec, _lockedBy)
-                ? NotCheckedOut.Create("Locked").ToEitherFailure<T>()
+            // If unlocked then the first process to access the field will aquire the lock
+            if (!_locked && _forceLockOnAccessIfUnlocked)
+                Lock(currentVersion);
+
+            return _locked && !VersionsAreSame(currentVersion.Spec, _lockedBy)
+                ? NotCheckedOut.Create($"Locked by {_lockedBy}").ToEitherFailure<T>()
                 : _values[_latestPointer];
-            return result;
         }
 
     }
