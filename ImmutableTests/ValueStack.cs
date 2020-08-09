@@ -6,7 +6,13 @@ using MazerPlatformer;
 
 namespace ImmutableTests
 {
-    public class ValueStack<T>
+
+    public interface IValueStack
+    {
+        void SetLatestPointer(int pointer);
+    }
+
+    public class ValueStack<T> : IValueStack
     {
         readonly List<T> _values = new List<T>();
         private int _latestPointer = 0;

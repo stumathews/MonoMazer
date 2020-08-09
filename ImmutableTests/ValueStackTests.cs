@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using LanguageExt;
 using MazerPlatformer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -63,6 +65,7 @@ namespace ImmutableTests
         /// <param name="age"></param>
         /// <param name="name"></param>
         /// <param name="items"></param>
+        /// <param name="immutableItems"></param>
         /// <returns>A version of the person with the specified attributes</returns>
         public static Version<Person> Create(int age, string name, List<Item> items, List<Item> immutableItems)
         {
@@ -281,5 +284,108 @@ namespace ImmutableTests
 
         }
 
+        public class NewObject
+        {
+            static Dictionary<string, StackDescriptor> _stacks = new Dictionary<string, StackDescriptor>();
+
+            public static int AddStackWithInitialValue<T>((string name, T value) attribute)
+            {
+                _stacks.Add(attribute.name, new StackDescriptor(new ValueStack<T>(), typeof(T))); ;
+                return GetValueStack<T>(attribute.name).Assign(attribute.value);
+            }
+
+            private static ValueStack<T> GetValueStack<T>(string name)
+            {
+                var stackDescriptor = _stacks[name];
+                ValueStack<T> stack = stackDescriptor.valueStack as ValueStack<T>;
+                return stack;
+            }
+            public T Get<T>(string name) 
+                => (T) GetValueStack<object>(name).ReadLatest();
+
+            public int Set<T>(string name, T value) 
+                => GetValueStack<object>(name).Assign(value);
+
+            public int Set<T>((string name, T value) pair) 
+                => GetValueStack<T>(pair.name).Assign(pair.value);
+
+            public Version2<NewObject> SetMany(params (string name, object value)[] valueStacks)
+            {
+                (int, string)[] spec = new (int, string)[valueStacks.Length];
+                for (var index = 0; index < valueStacks.Length; index++)
+                {
+                    var valueStack = valueStacks[index];
+                    spec[index] = (GetValueStack<object>(valueStack.name).Assign(valueStack.value), valueStack.name);
+                }
+
+                return new Version2<NewObject>(spec, new NewObjectBuilder());
+            }
+
+            public static Version2<NewObject> Create(params (string name, object value)[] valueStacks)
+            {
+                (int,string)[] spec = new (int, string)[valueStacks.Length];
+                for (var index = 0; index < valueStacks.Length; index++)
+                {
+                    var valueStack = valueStacks[index];
+                    spec[index] = (AddStackWithInitialValue(valueStack), valueStack.name);
+                }
+
+                return new Version2<NewObject>(spec, new NewObjectBuilder());
+            }
+
+            public class NewObjectBuilder : IBuilder2<NewObject>
+            {
+                public NewObject Build((int, string)[] spec)
+                {
+                    for (int i = 0; i < spec.Length; i++)
+                    {
+                        var stackDescriptor = _stacks[spec[i].Item2];
+                        var stack = stackDescriptor.valueStack as IValueStack;
+                        stack.SetLatestPointer(spec[0].Item1);
+                    }
+                    return new NewObject();
+                }
+            }
+        }
+
+        public class StackDescriptor
+        {
+            public StackDescriptor(object valueStack, Type stackType)
+            {
+                this.valueStack = valueStack;
+                this.stackType = stackType;
+            }
+            public object valueStack;
+            public Type stackType;
+        }
+
+
+        [TestMethod]
+        public void FieldBuilderTests()
+        {
+            // Setup a new Object and define its initial version-able fields and values
+            Version2<NewObject> initialVersion = NewObject.Create(("age", 33), ("name", "stuart"), ("money", 22.5f));
+
+            // Fetching them ok?
+            Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
+            Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
+
+            // Make a new version
+            var nextVersion2 = initialVersion.Resolve().SetMany(("age", 100), ("name", "stuart mathews"), ("money", 44.8f));
+
+            // Fecthing them ok
+            Assert.AreEqual(100, nextVersion2.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart mathews", nextVersion2.Resolve().Get<string>("name"));
+            Assert.AreEqual(44.8f, nextVersion2.Resolve().Get<float>("money"));
+
+            // Still can fetch the orignal ok?
+            Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
+            Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
+        }
+
     }
+
+    
 }
