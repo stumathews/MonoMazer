@@ -111,12 +111,11 @@ namespace MazerPlatformer
         public static Player Player { get; private set; }
         public static List<Npc> Npcs { get; private set; }
         
-        public Either<IFailure, Unit> PlaySong() => Ensure(() 
-            =>
-            {
-                MediaPlayer.IsRepeating = true;
-                MediaPlayer.Play(_levelMusic);
-            });
+        public Either<IFailure, Unit> PlaySong() => Ensure(() =>
+        {
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Play(_levelMusic);
+        });
         public Either<IFailure, Unit> PlaySound1() => Ensure(()=> _jingleSoundEffect.CreateInstance().Play());
         public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(()=> _playerSpottedSound.CreateInstance().Play());
         public Either<IFailure, Unit> PlayLoseSound() => Ensure(() => _loseSound.CreateInstance().Play());

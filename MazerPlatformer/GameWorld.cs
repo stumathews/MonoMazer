@@ -134,10 +134,8 @@ namespace MazerPlatformer
             _removeWallTimer.Stop();
         });
 
-        public Either<IFailure, Unit> SaveLevel() => Ensure(() =>
-        {
-            Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, Level.Npcs);
-        });
+        public Either<IFailure, Unit> SaveLevel() 
+            => Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, Level.Npcs);
 
         /// <summary>
         /// The game world will listen events raised by game objects
@@ -487,7 +485,6 @@ namespace MazerPlatformer
 
             var isSameRow = obj1Row == obj2Row;
             var isSameCol = obj1Col == obj2Col;
-
             if (isSameRow)
             {
                 var (greater, smaller) = GetMaxMinRange(obj2Col, obj1Col)
