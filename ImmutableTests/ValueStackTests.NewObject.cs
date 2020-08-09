@@ -69,6 +69,7 @@ namespace ImmutableTests
 
                     _stacks.Keys.CopyTo(keys, 0);
 
+                    // Loop through the stacks we've been asked to set
                     if (i < valueStacks.Length)
                     {
                         var (name, value) = valueStacks[i];
@@ -78,6 +79,7 @@ namespace ImmutableTests
                     }
                     else
                     {
+                        // And include the existing stacks that were not set but should be included in the version spec
                         spec[i] = isLockable
                             ? (GetValueStack3<object>(keys[i]).Assign(), keys[i]) 
                             :(GetValueStack<object>(keys[i]).Assign(), keys[i]);

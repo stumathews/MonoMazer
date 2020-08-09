@@ -318,7 +318,7 @@ namespace ImmutableTests
             // This version should not be able to set it;
             Assert.AreEqual(true, nextVersion2.Resolve().GetImmutable<int>("age").IsLeft);
 
-            // Originator should be able to set it
+            // Originator should be able to set it...todo
         }
 
     }
