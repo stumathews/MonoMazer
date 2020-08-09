@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using LanguageExt;
@@ -158,7 +157,7 @@ namespace ImmutableTests
     }
 
     [TestClass]
-    public class ValueStackTests
+    public partial class ValueStackTests
     {
 
         [TestMethod]
@@ -284,87 +283,15 @@ namespace ImmutableTests
 
         }
 
-        public class NewObject
-        {
-            static Dictionary<string, StackDescriptor> _stacks = new Dictionary<string, StackDescriptor>();
-
-            public static int AddStackWithInitialValue<T>((string name, T value) attribute)
-            {
-                _stacks.Add(attribute.name, new StackDescriptor(new ValueStack<T>(), typeof(T))); ;
-                return GetValueStack<T>(attribute.name).Assign(attribute.value);
-            }
-
-            private static ValueStack<T> GetValueStack<T>(string name)
-            {
-                var stackDescriptor = _stacks[name];
-                ValueStack<T> stack = stackDescriptor.valueStack as ValueStack<T>;
-                return stack;
-            }
-            public T Get<T>(string name) 
-                => (T) GetValueStack<object>(name).ReadLatest();
-
-            public int Set<T>(string name, T value) 
-                => GetValueStack<object>(name).Assign(value);
-
-            public int Set<T>((string name, T value) pair) 
-                => GetValueStack<T>(pair.name).Assign(pair.value);
-
-            public Version2<NewObject> SetMany(params (string name, object value)[] valueStacks)
-            {
-                (int, string)[] spec = new (int, string)[valueStacks.Length];
-                for (var index = 0; index < valueStacks.Length; index++)
-                {
-                    var valueStack = valueStacks[index];
-                    spec[index] = (GetValueStack<object>(valueStack.name).Assign(valueStack.value), valueStack.name);
-                }
-
-                return new Version2<NewObject>(spec, new NewObjectBuilder());
-            }
-
-            public static Version2<NewObject> Create(params (string name, object value)[] valueStacks)
-            {
-                (int,string)[] spec = new (int, string)[valueStacks.Length];
-                for (var index = 0; index < valueStacks.Length; index++)
-                {
-                    var valueStack = valueStacks[index];
-                    spec[index] = (AddStackWithInitialValue(valueStack), valueStack.name);
-                }
-
-                return new Version2<NewObject>(spec, new NewObjectBuilder());
-            }
-
-            public class NewObjectBuilder : IBuilder2<NewObject>
-            {
-                public NewObject Build((int, string)[] spec)
-                {
-                    for (int i = 0; i < spec.Length; i++)
-                    {
-                        var stackDescriptor = _stacks[spec[i].Item2];
-                        var stack = stackDescriptor.valueStack as IValueStack;
-                        stack.SetLatestPointer(spec[0].Item1);
-                    }
-                    return new NewObject();
-                }
-            }
-        }
-
-        public class StackDescriptor
-        {
-            public StackDescriptor(object valueStack, Type stackType)
-            {
-                this.valueStack = valueStack;
-                this.stackType = stackType;
-            }
-            public object valueStack;
-            public Type stackType;
-        }
-
 
         [TestMethod]
         public void FieldBuilderTests()
         {
             // Setup a new Object and define its initial version-able fields and values
-            Version2<NewObject> initialVersion = NewObject.Create(("age", 33), ("name", "stuart"), ("money", 22.5f));
+            Version2<NewObject> initialVersion = NewObject.Create(
+                ("age", 33),
+                ("name", "stuart"),
+                ("money", 22.5f));
 
             // Fetching them ok?
             Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
@@ -383,9 +310,21 @@ namespace ImmutableTests
             Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
             Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
             Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
+
+            // Should be able to make a lockable field
+            Assert.AreEqual(false, nextVersion2.Resolve().MakeLockableField("age", new StackOptions()).IsLeft);
+            var result = initialVersion.Resolve().SetMany(("age", 0));
+            
+            // This version should not be able to set it;
+            Assert.AreEqual(true, nextVersion2.Resolve().GetImmutable<int>("age").IsLeft);
+
+            // Originator should be able to set it
         }
 
     }
 
-    
+    public class StackOptions
+    {
+        private bool IsLockableField { get; set; }
+    }
 }

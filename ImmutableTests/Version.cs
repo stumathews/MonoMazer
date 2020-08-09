@@ -34,10 +34,8 @@ namespace ImmutableTests
             return Equals((Version<T>) obj);
         }
 
-        public override int GetHashCode()
-        {
-            return _spec.GetHashCode();
-        }
+        public override int GetHashCode() 
+            => _spec.GetHashCode();
 
         // Build the version of the object
         public T Resolve() => _builder.Build(_spec);
@@ -55,35 +53,35 @@ namespace ImmutableTests
             _builder = builder;
         }
 
-        public override string ToString()
+        public override string ToString() 
+            => string.Join(",", Spec.Select((tuple, i) => $"{tuple.Item2}=>{tuple.Item1}"));
+
+        public (int, string)[] Spec => _spec;
+        
+        // Build the version of the object
+        public T Resolve() 
+            => _builder.Build(_spec);
+    }
+
+    public class Version3<T>
+    {
+        // This represents the version of the object
+        private readonly (int, string)[] _spec;
+        private readonly IBuilder2<T> _builder;
+
+        public Version3((int, string)[] spec, IBuilder2<T> builder)
         {
-            return string.Join(",", Spec.Select((tuple, i) => $"{tuple.Item2}=>{tuple.Item1}"));
+            _spec = spec;
+            _builder = builder;
         }
+
+        public override string ToString()
+            => string.Join(",", Spec.Select((tuple, i) => $"{tuple.Item2}=>{tuple.Item1}"));
 
         public (int, string)[] Spec => _spec;
 
-        protected bool Equals(Version2<T> other)
-        {
-            return _spec.Equals(other._spec);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Version2<T>)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return _spec.GetHashCode();
-        }
-
         // Build the version of the object
         public T Resolve()
-        {
-            return _builder.Build(_spec);
-        }
+            => _builder.Build(_spec);
     }
 }
