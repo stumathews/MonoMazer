@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Net.Sockets;
 using LanguageExt;
 using MazerPlatformer;
 
@@ -53,9 +54,11 @@ namespace ImmutableTests
             //    });
             //}
 
-            public Either<IFailure, object> GetImmutable<T>(string name)
+            public Either<IFailure, T> GetImmutable<T>(string name)
             {
-                return GetValueStack3<object>(name).ReadLatest(GetCurrentSpec());
+                return from data in GetValueStack3<object>(name).ReadLatest(GetCurrentSpec())
+                    from result in Statics.TryCastToT<T>(data)
+                    select result;
             }
 
             public Version3<NewObject> SetMany(params (string name, object value)[] valueStacks)
@@ -147,9 +150,10 @@ namespace ImmutableTests
                     // Only lockable fields have options
                     return LockedFailure.Create("Already a lockable field").ToEitherFailure<Unit>();
                 }
-                // For now until out stack is orderd, we cant get them out in order so lets just repalce everything 
-                // when we make a field loackable
-                var newStack = new ValueStack3<object>();
+
+                // For now until out stack is orderd, we cant get them out in order so lets just replace everything 
+                // when we make a field lockable
+                var newStack = new ValueStack3<object>(stackOptions);
                 stackDescriptor.valueStack = newStack;
                 stackDescriptor._options = stackOptions;
                 return new Unit();

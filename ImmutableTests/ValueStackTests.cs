@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using GameLibFramework.Animation;
 using LanguageExt;
 using MazerPlatformer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -311,14 +312,7 @@ namespace ImmutableTests
             Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
             Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
 
-            // Should be able to make a lockable field
-            Assert.AreEqual(false, nextVersion2.Resolve().MakeLockableField("age", new StackOptions()).IsLeft);
-            var result = initialVersion.Resolve().SetMany(("age", 0));
             
-            // This version should not be able to set it;
-            Assert.AreEqual(true, nextVersion2.Resolve().GetImmutable<int>("age").IsLeft);
-
-            // Originator should be able to set it...todo
         }
 
         [TestMethod]
@@ -326,6 +320,7 @@ namespace ImmutableTests
         {
             // Setup a new Object and define its initial version-able fields and values
             Version2<NewObject> initialVersion = NewObject.Create(
+                
                 ("age", 33),
                 ("name", "stuart"),
                 ("money", 22.5f));
@@ -347,12 +342,23 @@ namespace ImmutableTests
             Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
             Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
             Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
-        }
 
+            // Should be able to make a lockable field
+            Assert.AreEqual(false, nextVersion2.Resolve().MakeLockableField("age", new StackOptions()).IsLeft);
+            var result = initialVersion.Resolve().SetMany(("age", 0));
+
+            // This version should not be able to set it, as its locked automatically by initialVersion
+            Assert.AreEqual(true, nextVersion2.Resolve().GetImmutable<int>("age").IsLeft);
+
+            // Originator should be able to set it..
+            Assert.AreEqual(false, initialVersion.Resolve().GetImmutable<int>("age").IsLeft);
+        }
+        
     }
 
     public class StackOptions
     {
-        private bool IsLockableField { get; set; }
+        public bool ForceLockOnAccessIfUnlocked { get; set; }
+        public bool NoForceOverwriteLock { get; set; }
     }
 }
