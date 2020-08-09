@@ -107,8 +107,13 @@ namespace ImmutableTests
                 return spec;
             }
 
+            public static void PurgeCache() => _stacks.Clear();
+
             public static Version2<NewObject> Create(params (string name, object value)[] valueStacks)
             {
+                if(_stacks.Count > 0)
+                    PurgeCache();
+
                 (int,string)[] spec = new (int, string)[valueStacks.Length];
                 for (var index = 0; index < valueStacks.Length; index++)
                 {

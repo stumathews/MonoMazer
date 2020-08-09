@@ -321,6 +321,34 @@ namespace ImmutableTests
             // Originator should be able to set it...todo
         }
 
+        [TestMethod]
+        public void LockAbleNewObjectFields()
+        {
+            // Setup a new Object and define its initial version-able fields and values
+            Version2<NewObject> initialVersion = NewObject.Create(
+                ("age", 33),
+                ("name", "stuart"),
+                ("money", 22.5f));
+
+            // Fetching them ok?
+            Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
+            Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
+
+            // Make a new version
+            var nextVersion2 = initialVersion.Resolve().SetMany(("age", 100), ("name", "stuart mathews"), ("money", 44.8f));
+
+            // Fecthing them ok
+            Assert.AreEqual(100, nextVersion2.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart mathews", nextVersion2.Resolve().Get<string>("name"));
+            Assert.AreEqual(44.8f, nextVersion2.Resolve().Get<float>("money"));
+
+            // Still can fetch the orignal ok?
+            Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age"));
+            Assert.AreEqual("stuart", initialVersion.Resolve().Get<string>("name"));
+            Assert.AreEqual(22.5, initialVersion.Resolve().Get<float>("money"));
+        }
+
     }
 
     public class StackOptions
