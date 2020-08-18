@@ -40,7 +40,7 @@ namespace ImmutableTests
             => _values[_latestPointer];
     }
 
-    public class ValueStack2<T>
+    public class LockableValueStack<T>
     {
         readonly List<T> _values = new List<T>();
         private int _latestPointer = 0;
@@ -49,7 +49,7 @@ namespace ImmutableTests
         private readonly bool _forceLockOnAccessIfUnlocked;
         private readonly bool _noForceOverwiteLock;
 
-        public ValueStack2(bool forceLockOnAccessIfUnlocked = false, bool noForceOverwiteLock = false)
+        public LockableValueStack(bool forceLockOnAccessIfUnlocked = false, bool noForceOverwiteLock = false)
         {
             _forceLockOnAccessIfUnlocked = forceLockOnAccessIfUnlocked;
             _noForceOverwiteLock = noForceOverwiteLock;
@@ -112,7 +112,7 @@ namespace ImmutableTests
 
     }
 
-    public class ValueStack3<T> : IValueStack
+    public class LockableValueStack2<T> : IValueStack
     {
         readonly List<T> _values = new List<T>();
         private int _latestPointer = 0;
@@ -120,7 +120,7 @@ namespace ImmutableTests
         private (int, string)[] _lockedBy;
         private Option<StackOptions> _options;
 
-        public ValueStack3(Option<StackOptions> options)
+        public LockableValueStack2(Option<StackOptions> options)
         {
             _options = options;
         }
@@ -207,6 +207,52 @@ namespace ImmutableTests
                 ? NotCheckedOut.Create($"Locked by {_lockedBy}").ToEitherFailure<T>()
                 : _values[_latestPointer];
         }
+
+    }
+
+    public class VersionedValueStack<T> : IValueStack
+    {
+        private readonly List<T> _values = new List<T>();
+        private int _latestPointer;
+        private Dictionary<int, (int, string)[]> _acl = new Dictionary<int, (int, string)[]>();
+        private Option<StackOptions> _options;
+        private readonly string _name;
+
+        public VersionedValueStack(Option<StackOptions> options, string name)
+        {
+            _options = options;
+            _name = name;
+        }
+
+        public int Assign(T newItem, (int, string)[] spec)
+        {
+            _values.Add(newItem);
+            _latestPointer = _values.Count-1;
+            _acl.Add(_latestPointer, spec);
+            return _latestPointer;
+        }
+
+        private bool VersionsAreSame((int, string)[] one, (int, string)[] two)
+            => one.SequenceEqual(two);
+
+        public int Assign()
+            => _values.Count - 1;
+
+        public void SetLatestPointer(int pointer)
+            => _latestPointer = pointer;
+
+        public int GetLatestPointer() 
+            => _latestPointer;
+
+        public Either<IFailure, T> Read(int pointer, (int, string)[] spec)
+            => _acl.ContainsKey(pointer) && VersionsAreSame(_acl[pointer], spec)
+                ? _values[pointer]
+                : NotCheckedOut.Create($"Exclusively owned by version by {_acl[pointer]}").ToEitherFailure<T>();
+
+        public Either<IFailure, T> ReadLatest( (int, string)[] spec)
+            => _acl.ContainsKey(_latestPointer) && VersionsAreSame(_acl[_latestPointer], spec)
+                ? _values[_latestPointer]
+                : NotCheckedOut.Create($"Exclusively owned by version by {_acl[_latestPointer]}").ToEitherFailure<T>();
 
     }
 

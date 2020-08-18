@@ -47,7 +47,7 @@ namespace ImmutableTests
         /// <summary>
         /// Restricts read-access to field if the field is locked, only giving access to version that locked
         /// </summary>
-        private static readonly ValueStack2<List<Item>> _immutableItems = new ValueStack2<List<Item>>();
+        private static readonly LockableValueStack<List<Item>> _immutableItems = new LockableValueStack<List<Item>>();
         public Either<IFailure, List<Item>> ImmutableItems
         {
             get => _immutableItems.ReadLatest(GetCurrentVersion());
@@ -352,13 +352,44 @@ namespace ImmutableTests
 
             // Originator should be able to set it..
             Assert.AreEqual(false, initialVersion.Resolve().GetImmutable<int>("age").IsLeft);
+
+            // Currently this design allows only one or another user from accessing the values in a lockable field.
+            // This is effectively like checking out a branch - another branch cannot be used until its checked out, or in this case
+            // is locked by a new user, effectively making the previous users unable to access the field it could before.
+            // This does two things: 1) it makes access mutually exclusive and may help with concurrency issues ie sharing the same data (cant as one or the other has access to it)
+            // 2) Clearly signals that the previous owner cannot access and change the field now that its been locked by a new user.( new locks are stolen on first user by a user)
+            // Onwers can only mutate the field if the own the lock.This does not prevent the new owner mutating a data in the field that the previous owner relies on,
+            // only the at previous owner can't change it now, because the new user is assumed to be dependant on it.
+
+            // What would be preferable if the specific value was lockable not just the field. Meaning the value would be immutable to others not just the field. 
+            // This way previous owner's values cannot be accessed at all.
+            // youd need to store a owner for the value in the value stack, and prevent access to the value of the owner was not correct
+            // Owners of the locks could still mutate the data but no one else can.
+
+
         }
-        
+
+        [TestMethod]
+        public void VersionedValueStackTest()
+        {
+            //Version3<NewObject2> initialVersion = NewObject2.Create(("age", 33), ("name", "stuart"), ("money", 22.5f));
+            //Version3<NewObject2> version1 = initialVersion.Resolve().SetMany(("age", 34));
+
+            //Assert.AreEqual(33, initialVersion.Resolve().Get<int>("age").ThrowIfFailed());
+            //Assert.AreEqual(34, version1.Resolve().Get<int>("age").ThrowIfFailed());
+
+            //version1.Resolve().MakeVersionedField("age", new StackOptions {IsVersionedValueStack = true});
+            //version1.Resolve().SetMany(("age", 99));
+            //Assert.AreEqual(version1.Resolve().Get<int>("age").ThrowIfFailed(), 99);
+        }
+
     }
 
     public class StackOptions
     {
         public bool ForceLockOnAccessIfUnlocked { get; set; }
         public bool NoForceOverwriteLock { get; set; }
+        public bool IsVersionedValueStack { get; set; }
+        public bool IsLockableStack { get; set; }
     }
 }
