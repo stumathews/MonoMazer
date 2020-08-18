@@ -2,7 +2,7 @@
 {
     public class ConditionNotSatisfiedFailure : IFailure
     {
-        public ConditionNotSatisfiedFailure(string caller)
+        public ConditionNotSatisfiedFailure(string caller = "Caller not captured")
         {
             Reason = $"Condition not satisfied. Caller: {caller}";
         }

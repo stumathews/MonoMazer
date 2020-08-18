@@ -350,8 +350,7 @@ namespace MazerPlatformer
                 then();
                 return Nothing.ToEither();
             }
-            var stackTrace = new StackTrace();
-            return new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
+            return new ConditionNotSatisfiedFailure();
         }
 
         /// <summary>
@@ -362,8 +361,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
         {
-            var stackTrace = new StackTrace();
-            return condition ? Ensure(then).Bind(unit => Nothing.ToEither()) : new ConditionNotSatisfiedFailure(stackTrace.GetFrame(1).GetMethod().Name);
+            return condition ? Ensure(then).Bind(unit => Nothing.ToEither()) : new ConditionNotSatisfiedFailure();
         }
 
         /// <summary>
