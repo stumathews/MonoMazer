@@ -181,6 +181,13 @@ namespace MazerPlatformer
         public static Either<L, T> EnsureWithReturn<L, T>(Func<T> action, L left)
             => action.TryThis<L, T>(left);
 
+        public static Either<IFailure, T> UnWrap<T>(this Either<IFailure, Either<IFailure, T>> wrapped) =>
+            wrapped.Match(
+                Left: failure => failure.ToEitherFailure<T>(),
+                Right: inner => inner.Match(
+                    Left: failure => failure.ToEitherFailure<T>(),
+                    Right: unit => unit.ToEither()));
+
         public static Either<IFailure, T> EnsureWithReturn<T>(T arg, Func<T, T> action, bool returnInput = false)
             => action.TryThis<T>(arg, returnInput);
 
