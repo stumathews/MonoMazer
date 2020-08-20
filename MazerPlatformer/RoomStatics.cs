@@ -45,14 +45,11 @@ namespace MazerPlatformer
 
 
             /* Walls each have specific colors, bounds, and potentially other configurable characteristics in the game */
-            return from top in room.AddWallCharacteristic(Room.Side.Top,
-                    new SideCharacteristic(Color.Black, topBounds))
-                from right in room.AddWallCharacteristic(Room.Side.Right,
-                    new SideCharacteristic(Color.Black, rightBounds))
-                from bottom in room.AddWallCharacteristic(Room.Side.Bottom,
-                    new SideCharacteristic(Color.Black, bottomBounds))
-                from left in room.AddWallCharacteristic(Room.Side.Left,
-                    new SideCharacteristic(Color.Black, leftBounds))
+            return 
+                from top in room.AddWallCharacteristic(Room.Side.Top, new SideCharacteristic(Color.Black, topBounds))
+                from right in room.AddWallCharacteristic(Room.Side.Right, new SideCharacteristic(Color.Black, rightBounds))
+                from bottom in room.AddWallCharacteristic(Room.Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds))
+                from left in room.AddWallCharacteristic(Room.Side.Left, new SideCharacteristic(Color.Black, leftBounds))
                 select new Unit();
 
         }, InvalidCastFailure.Create("Problem occured in InitializeBounds"))
