@@ -9,6 +9,12 @@ namespace MazerPlatformer
         public Color Color;
         public readonly Rectangle Bounds;
 
+        // Required for serialization
+        public SideCharacteristic()
+        {
+            
+        }
+
         public SideCharacteristic(Color color, Rectangle bounds)
         {
             Bounds = bounds;

@@ -57,7 +57,7 @@ namespace MazerPlatformer
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
         public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
             => IsValid(x, y, width, height, roomNumber, row, col)
-                    ? from room in Statics.EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
+                    ? from room in EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
                         from initializeBounds in InitializeBounds(room)
                             select room
                     : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
@@ -102,7 +102,23 @@ namespace MazerPlatformer
             return collision;
         });
 
-        public Either<IFailure, Unit> AddWallCharacteristic(Side side, SideCharacteristic characteristic) => Ensure(() => _wallProperties.Add(side, characteristic));
+        // First genuine pure function
+        [PureFunction]
+        public Either<IFailure, SideCharacteristic> AddWallCharacteristic(Side side, SideCharacteristic characteristic)
+        {
+            // copy characteristic, change it and then return the copy
+            return  
+               from copy in characteristic.Copy()
+               from result in AddSideCharacteristic(copy)
+                select copy;
+
+            // use copy and modify it and return copy to caller
+            Either<IFailure, SideCharacteristic> AddSideCharacteristic(SideCharacteristic sideCharacteristic) => EnsureWithReturn(() =>
+            {
+                _wallProperties.Add(side, characteristic);
+                return sideCharacteristic;
+            });
+        }
 
         public Either<IFailure, Unit> RemoveSide(Side side)
         {
