@@ -14,6 +14,7 @@ using GameLib.EventDriven;
 using LanguageExt;
 using LanguageExt.SomeHelp;
 using Microsoft.Xna.Framework.Media;
+using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 using Delegate = System.Delegate;
 
@@ -29,11 +30,12 @@ namespace MazerPlatformer
         private ContentManager ContentManager { get; }
         private SpriteBatch SpriteBatch { get; }
 
-        private static int Rows { get; set; } // Rows Of rooms
-        private static int Cols { get; set; } // Columns of rooms
-        
-        private readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
-        private readonly Random _random = new Random();
+        private int Rows { get; set; } // Rows Of rooms
+        private int Cols { get; set; } // Columns of rooms
+
+        public readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+
+        private static readonly Random Random = new Random();
 
         /* Interface to the Outside world*/
         public event CollisionArgs OnGameWorldCollision;
@@ -65,24 +67,27 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
-             => Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
+        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth,
+            int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+            => Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
                 .Match(
                     None: () => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch),
                     Some: failure => failure.ToEitherFailure<GameWorld>());
-        
+
         // Trivial validation for smart constructor
-        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
+            int rows, int cols, SpriteBatch spriteBatch)
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToSome();
             if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToSome();
-            if(spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToSome();
+            if (spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToSome();
             if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToSome();
             return Option<IFailure>.None;
         }
 
-        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols,
+            SpriteBatch spriteBatch)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -93,18 +98,19 @@ namespace MazerPlatformer
             Cols = cols;
             SpriteBatch = spriteBatch;
         }
-        
+
         /// <summary>
         /// Load the Content of the game world ie levels and sounds etc
         /// Add Npcs
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) => Ensure(() =>
+        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null,
+            int? overridePlayerScore = null) => Ensure(() =>
         {
             // Prepare a new level
-            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, 
-                levelNumber, _random);
+            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber,
+                Random);
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
@@ -498,11 +504,11 @@ namespace MazerPlatformer
 
                 for (var i = 0; i < cropped.Count - 1; i++)
                 {
-                    var hasARightSide = cropped[i].HasSide(Room.Side.Right);
+                    var hasARightSide = HasSide(Room.Side.Right, cropped[i].HasSides);
                     if (hasARightSide) return false;
                     var rightRoomExists = cropped[i].RoomRight != null;
                     if (!rightRoomExists) return false;
-                    var rightHasLeft = cropped[i].RoomRight.HasSide(Room.Side.Left);
+                    var rightHasLeft = HasSide(Room.Side.Left, cropped[i].RoomRight.HasSides);
                     if (rightHasLeft) return false;
                 }
 
@@ -519,11 +525,11 @@ namespace MazerPlatformer
                     o.Row <= minMax.greater - 1).OrderBy(o => o.Y).ToList();
                 for (var i = 0; i < cropped.Count - 1; i++)
                 {
-                    var hasABottom = cropped[i].HasSide(Room.Side.Bottom);
+                    var hasABottom = HasSide(Room.Side.Bottom, cropped[i].HasSides);
                     if (hasABottom) return false;
                     var bottomRoomExists = cropped[i].RoomBelow != null;
                     if (!bottomRoomExists) return false;
-                    var bottomHasATop = cropped[i].RoomBelow.HasSide(Room.Side.Top);
+                    var bottomHasATop = HasSide(Room.Side.Top, cropped[i].RoomBelow.HasSides);
                     if (bottomHasATop) return false;
                 }
 

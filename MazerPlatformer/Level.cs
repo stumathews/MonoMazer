@@ -138,12 +138,6 @@ namespace MazerPlatformer
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
         public Either<IFailure, List<Room>> MakeRooms(bool removeRandomSides = false)
         {
-            Either<IFailure, Unit> AddToMaze(Room room, List<Room> maze) => Ensure(() =>
-            {
-                List<Room> rooms;
-                maze.Add(room);
-            });
-
             return EnsureWithReturn(() =>
             {
                 var mazeGrid = new List<Room>();
@@ -152,7 +146,7 @@ namespace MazerPlatformer
                 {
                     for (var col = 0; col < Cols; col++)
                     {
-                        mazeGrid.Add(Room.Create(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight, spriteBatch: SpriteBatch, roomNumber: (row * Cols) + col, row: row, col: col).ThrowIfFailed());
+                        mazeGrid.Add(Room.Create(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight, roomNumber: (row * Cols) + col, row: row, col: col).ThrowIfFailed());
                     }
                 }
 
@@ -189,20 +183,16 @@ namespace MazerPlatformer
                     currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
                     currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
 
-                    if (canRemoveAbove && currentRoom.HasSide(Room.Side.Top) &&
-                        mazeGrid[roomAboveIndex].HasSide(Room.Side.Bottom))
+                    if (canRemoveAbove &&  RoomStatics.HasSide(Room.Side.Top, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Bottom, mazeGrid[roomAboveIndex].HasSides))
                         removableSides.Add(Room.Side.Top);
 
-                    if (canRemoveBelow && currentRoom.HasSide(Room.Side.Bottom) &&
-                        mazeGrid[roomBelowIndex].HasSide(Room.Side.Top))
+                    if (canRemoveBelow && RoomStatics.HasSide(Room.Side.Bottom, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Top,mazeGrid[roomBelowIndex].HasSides))
                         removableSides.Add(Room.Side.Bottom);
 
-                    if (canRemoveLeft && currentRoom.HasSide(Room.Side.Left) &&
-                        mazeGrid[roomLeftIndex].HasSide(Room.Side.Right))
+                    if (canRemoveLeft && RoomStatics.HasSide(Room.Side.Left, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Right, mazeGrid[roomLeftIndex].HasSides))
                         removableSides.Add(Room.Side.Left);
 
-                    if (canRemoveRight && currentRoom.HasSide(Room.Side.Right) &&
-                        mazeGrid[roomRightIndex].HasSide(Room.Side.Left))
+                    if (canRemoveRight && RoomStatics.HasSide(Room.Side.Right, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Left, mazeGrid[roomRightIndex].HasSides))
                         removableSides.Add(Room.Side.Right);
 
                     // which of the sides should we remove for this square?

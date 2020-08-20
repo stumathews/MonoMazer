@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,45 +8,42 @@ using C3.XNA;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
-	/* A room is game object */
+
+    /* A room is game object */
 
     public class Room : GameObject
     {
         public enum Side { Bottom, Right, Top, Left }
-
-
         public const float WallThickness = 3.0f;
 
-        // Keeps track of which sides have been removed
-        private readonly bool[] _hasSide =
-        {
-            /*Top*/ true, 
-            /*Right*/ true,
+        public bool[] HasSides { get; } = {
+            /*Top*/ true,
+            /*Right*/
+                      true,
             /*Bottom*/ true,
             /*Left*/ true
         };
 
         public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
-
         public event WallInfo OnWallCollision;
-
         private readonly Dictionary<Side, SideCharacteristic> _wallProperties = new Dictionary<Side, SideCharacteristic>();
-
-        private RectDetails _rectDetails; // Contains definitions A,B,C,D for modeling a rectangle as a room
+        
+        public RectDetails Rectangle { get; set; } // Contains definitions A,B,C,D for modeling a rectangle as a room
 		
         public Room RoomAbove { get; set; }
         public Room RoomBelow { get; set; }
         public Room RoomRight { get; set; }
         public Room RoomLeft { get; set; }
 
-        private SpriteBatch SpriteBatch { get; }
         public int RoomNumber { get; }
         public int Col { get; }
         public int Row { get; }
+
 
         /// <summary>
         /// Conceptual model of a room, which is based on a square with potentially removable walls
@@ -59,162 +55,30 @@ namespace MazerPlatformer
         /// <param name="spriteBatch"></param>
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
-        private Room(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col) 
-            : base(x:x, y: y, id: Guid.NewGuid().ToString(), width: width, height: height, type: GameObjectType.Room)
+        public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
+            => IsValid(x, y, width, height, roomNumber, row, col)
+                    ? from room in Statics.EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
+                        from initializeBounds in InitializeBounds(room)
+                            select room
+                    : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
+
+        // ctor
+        private Room(int x, int y, int width, int height, int roomNumber, int row, int col) 
+            : base(x:x, y: y, id: $"{row}x{col}", width: width, height: height, type: GameObjectType.Room)
         {
-            SpriteBatch = spriteBatch;
             RoomNumber = roomNumber;
             Col = col;
             Row = row;
         }
 
-        private static Either<IFailure, Unit> InitializeBounds(Room room) => Ensure(() =>
-        {
-            // This allows for reasoning about rectangles in terms of points A, B, C, D
-            room._rectDetails = new RectDetails(room.X, room.Y, room.Width, room.Height);
-            
-            /* Walls have collision bounds that don't change */
-
-            /* 
-			  A Room is made up of points A,B,C,D:
-				  A------B
-				  |      |
-				  |      |
-				  |      |
-				  D------C
-				 AB = Top
-				 BC = Right
-				 CD = Bottom
-				 AD = Left  
-			*/
-            /* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidesWith() override */
-            var topBounds = new Rectangle(x: room._rectDetails.GetAx(), y: room._rectDetails.GetAy(), width: room._rectDetails.GetAB(), height: 1);
-            var bottomBounds = new Rectangle(x: room._rectDetails.GetDx(), y: room._rectDetails.GetDy(), width: room._rectDetails.GetCD(), height: 1);
-            var rightBounds = new Rectangle(x: room._rectDetails.GetBx(), y: room._rectDetails.GetBy(), height: room._rectDetails.GetBC(), width: 1);
-            var leftBounds = new Rectangle(x: room._rectDetails.GetAx(), y: room._rectDetails.GetAy(), height: room._rectDetails.GetAD(), width: 1);
-
-            /* Walls each have specific colors, bounds, and potentially other configurable characteristics in the game */
-            room._wallProperties.Add(Side.Top, new SideCharacteristic(Color.Black, topBounds));
-            room._wallProperties.Add(Side.Right, new SideCharacteristic(Color.Black, rightBounds));
-            room._wallProperties.Add(Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds));
-            room._wallProperties.Add(Side.Left, new SideCharacteristic(Color.Black, leftBounds));
-        });
-
-        public static Either<IFailure, Room> Create(int x, int y, int width, int height, SpriteBatch spriteBatch,
-            int roomNumber, int row, int col)
-            => IsValid(x, y, width, height, spriteBatch, roomNumber, row, col)
-                ? from room in EnsureWithReturn(() => new Room(x, y, width, height, spriteBatch, roomNumber, row, col))
-                  from initializeBounds in InitializeBounds(room)
-                  select room
-                : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
-
-        public static bool IsValid(int x, int y, int width, int height, SpriteBatch spriteBatch, int roomNumber, int row, int col)
-        {
-            var anyNegative = new int[] {x, y, width, height}.Any(o => o < 0);
-            return !anyNegative && spriteBatch != null && col >= 0 && row >= 0;
-        }
-        
-        // Draw pipeline for drawing a Room
+        // Draw pipeline for drawing a Room (all drawing operations must succeed - benefit)
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
             from baseDraw in base.Draw(spriteBatch)
-            from topDraw in DrawSide(Side.Top)
-            from rightDraw in DrawSide(Side.Right)
-            from bottomDraw in DrawSide(Side.Bottom)
-            from leftDraw in DrawSide(Side.Left)
+            from topDraw in DrawSide(Side.Top, _wallProperties, Rectangle, spriteBatch, HasSides)
+            from rightDraw in DrawSide(Side.Right, _wallProperties, Rectangle, spriteBatch, HasSides)
+            from bottomDraw in DrawSide(Side.Bottom, _wallProperties, Rectangle, spriteBatch, HasSides)
+            from leftDraw in DrawSide(Side.Left, _wallProperties, Rectangle, spriteBatch, HasSides)
             select Nothing;
-
-        private Either<IFailure, Unit> DrawSide(Side side) => Ensure(() =>
-        {
-            /* 
-			  A Room is made up of points A,B,C,D:
-				  A------B
-				  |      |
-				  |      |
-				  |      |
-				  D------C
-				 AB = Top
-				 BC = Right
-				 CD = Bottom
-				 AD = Left  
-			*/
-
-            /* Draws each side as a separate Line*/
-            switch (side)
-            {
-                case Side.Top:
-                    if (Diagnostics.DrawTop)
-                    {
-                        if (Diagnostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetAx(), _rectDetails.GetAy(), _rectDetails.GetBx(),
-                                _rectDetails.GetBy(), _wallProperties[side].Color, WallThickness);
-
-                        if (Diagnostics.DrawSquareSideBounds)
-                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
-                    }
-
-                    break;
-                case Side.Right:
-                    if (Diagnostics.DrawRight)
-                    {
-                        if (Diagnostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetBx(), _rectDetails.GetBy(), _rectDetails.GetCx(),
-                                _rectDetails.GetCy(), _wallProperties[side].Color, WallThickness);
-
-                        if (Diagnostics.DrawSquareSideBounds)
-                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
-                    }
-
-                    break;
-                case Side.Bottom:
-                    if (Diagnostics.DrawBottom)
-                    {
-                        if (Diagnostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetCx(), _rectDetails.GetCy(), _rectDetails.GetDx(),
-                                _rectDetails.GetDy(), _wallProperties[side].Color, WallThickness);
-
-                        if (Diagnostics.DrawSquareSideBounds)
-                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
-                    }
-
-                    break;
-                case Side.Left:
-                    if (Diagnostics.DrawLeft)
-                    {
-                        if (Diagnostics.DrawLines && HasSide(side))
-                            SpriteBatch.DrawLine(_rectDetails.GetDx(), _rectDetails.GetDy(), _rectDetails.GetAx(),
-                                _rectDetails.GetAy(), _wallProperties[side].Color, WallThickness);
-
-                        if (Diagnostics.DrawSquareSideBounds)
-                            SpriteBatch.DrawRectangle(_wallProperties[side].Bounds, Color.White, 2.5f);
-                    }
-
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(side), side, null);
-            }
-
-            if (Diagnostics.DrawSquareBounds) /* should be the same as bounding box*/
-                SpriteBatch.DrawRectangle(_rectDetails.Rectangle, Color.White, 2.5f);
-        });
-
-        // check to see if a side is missing or not
-        public bool HasSide(Side side)
-        {
-            switch (side)
-            {
-                case Side.Top: 
-                    return _hasSide[0];
-                case Side.Right:
-                    return _hasSide[1];
-                case Side.Bottom:
-                    return _hasSide[2];
-                case Side.Left:
-                    return _hasSide[3];
-                default:
-                    return false;
-            }
-        }
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
         public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
@@ -225,7 +89,7 @@ namespace MazerPlatformer
                 Side side = item.Key;
                 SideCharacteristic thisWallProperty = item.Value;
 
-                if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side))
+                if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side, HasSides))
                 {
                     Console.WriteLine($"{side} collided with object {otherObject.Id}");
                     thisWallProperty.Color = Color.White;
@@ -238,21 +102,23 @@ namespace MazerPlatformer
             return collision;
         });
 
+        public Either<IFailure, Unit> AddWallCharacteristic(Side side, SideCharacteristic characteristic) => Ensure(() => _wallProperties.Add(side, characteristic));
+
         public Either<IFailure, Unit> RemoveSide(Side side)
         {
             switch (side)
             {
                 case Side.Top:
-                    _hasSide[0] = false;
+                    HasSides[0] = false;
                     break;
                 case Side.Right:
-                    _hasSide[1] = false;
+                    HasSides[1] = false;
                     break;
                 case Side.Bottom:
-                    _hasSide[2] = false;
+                    HasSides[2] = false;
                     break;
                 case Side.Left:
-                    _hasSide[3] = false;
+                    HasSides[3] = false;
                     break;
                 default:
                     return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Unit>();
@@ -260,5 +126,6 @@ namespace MazerPlatformer
 
             return Nothing.ToEither<Unit>();
         }
+
     }
 }
