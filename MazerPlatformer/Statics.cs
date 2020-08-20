@@ -201,8 +201,8 @@ namespace MazerPlatformer
         public static Either<IFailure, T> EnsureUpdateWithReturn<T>(T arg, Action action)
             => action.TryThis<T>(arg, true);
 
-        public static Either<L, T> EnsureWithReturn3<L, T>(Func<T> action, L left) where L : IFailure
-            => action.TryThis3<L, T>(left);
+        public static Either<L, T> _ensuringBindReturn<L, T>(Func<T> action, L left) where L : IFailure
+            => action._ensuringBindTry<L, T>(left);
 
         public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action)
             => either.IfLeft(action);
@@ -301,7 +301,7 @@ namespace MazerPlatformer
                         : unit.ToEither(),
                     exception => failure.WithException(exception).ToEitherFailure<T>());
 
-        public static Either<L, T> TryThis3<L, T>(this Func<T> action, L failure) where L : IFailure
+        public static Either<L, T> _ensuringBindTry<L, T>(this Func<T> action, L failure) where L : IFailure
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
@@ -422,7 +422,7 @@ namespace MazerPlatformer
 
         public static Either<IFailure, T> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) 
             => either
-                    .Bind(f: right => EnsureWithReturn3(() => transformingFunction(right), TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
+                    .Bind(f: right => _ensuringBindReturn(() => transformingFunction(right), TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
                     .Match( Left: failure => failure.ToEitherFailure<T>(),
                             Right: eitherData 
                                 => eitherData.Match( Left: failure => failure.ToEitherFailure<T>(),
