@@ -161,24 +161,29 @@ namespace MazerPlatformer
         {
             // This sort of thing makes sense if you're making a copy of the game world on each method call
             // which would be pure...
-            var initializePipeline = 
-                from init in Ensure(() => base.Initialize())
-                from initializeUi in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor)) // the from variable can silently name the anonymous function!
-                from setupMenuUi in SetupMenuUi()
+            var initializePipeline =
+                from init in SuperInitialize()
+                from initializeUi in InitializeUi() // the from variable can silently name the anonymous function!
                 from stateMachine in InitializeGameStateMachine()
-                from gameWorld in _gameWorld // we have no choice but to fetch state from Game because we're not in a pure function that can receive its arguments.
-                from gameCommands in _gameCommands // same as above
-                from initGameWorld in InitializeGameWorld(gameWorld)
-                from gameWorldWithCommands in SetupGameCommands(gameCommands)
-                from connectedGameWorld in ConnectGameWorldToUi(gameWorld)
-                select connectedGameWorld;
+                from initGameWorld in InitializeGameWorld(_gameWorld, _gameCommands)
+                select initGameWorld;
 
             initializePipeline.ThrowIfFailed();
 
-            // This is not pure because we cannot be certain that gameWorld wont change...that is unless we copy it( ++overhead but we need reliability )
-            Either<IFailure, GameWorld> InitializeGameWorld(GameWorld gameWorld) =>
-                from init in gameWorld.Initialize()
-                select gameWorld;
+            Either<IFailure, Unit> InitializeUi() =>
+                from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
+                from setupMenuUi in SetupMenuUi()
+                select setupMenuUi;
+            
+             Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
+                 from world in gameWorld
+                 from commands in gameCommands
+                 from init in world.Initialize()
+                 from setup in SetupGameCommands(commands)
+                 from connectedGameWorld in ConnectGameWorldToUi(world)
+                 select connectedGameWorld;
+
+             Either<IFailure, Unit> SuperInitialize() => Ensure(() => base.Initialize());
 
             Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
             {
@@ -272,16 +277,24 @@ namespace MazerPlatformer
         protected override void Update(GameTime gameTime)
         {
             // Execute the update pipeline
+
             var updatePipeline = 
-                 from updateActiveUiComponents in Ensure(() => UserInterface.Active.Update(gameTime))
-                 from gameCommands in _gameCommands
-                 from updatedGameCommandsResult in Ensure(() => gameCommands.Update(gameTime)) // get input
-                 from stateMachineResult in Ensure(() => _gameStateMachine.Update(gameTime))// NB: game world is updated by PlayingGameState
-                 from baseUpdateResult in Ensure(() => base.Update(gameTime))
+                 from updateActiveUiComponents in UpdateUI()
+                 from updatedGameCommandsResult in UpdateCommands(_gameCommands) // get input
+                 from stateMachineResult in UpdateStateMachine(gameTime)// NB: game world is updated by PlayingGameState
+                 from baseUpdateResult in UpdateSuper(gameTime)
                  select Nothing;
 
             updatePipeline.ThrowIfFailed();
-            
+
+            Either<IFailure, Unit> UpdateSuper(GameTime time) => Ensure(() => base.Update(gameTime));
+            Either<IFailure, Unit> UpdateStateMachine(GameTime time) => Ensure(() => _gameStateMachine.Update(time));
+            Either<IFailure, Unit> UpdateUI() => Ensure(() => UserInterface.Active.Update(gameTime));
+            Either<IFailure, Unit> UpdateCommands(Either<IFailure, CommandManager> gameCommands) => gameCommands.EnsuringMap(commands =>
+            {
+                commands.Update(gameTime);
+                return Nothing;
+            });
         }
 
         /// <summary>
