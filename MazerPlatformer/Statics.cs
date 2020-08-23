@@ -57,7 +57,7 @@ namespace MazerPlatformer
                 return Option<Npc.NpcTypes>.None;
 
             return npc.FindComponentByType(Component.ComponentType.NpcType)
-                .Bind(component => string.IsNullOrEmpty(component.Value.ToString())
+                .Bind(component => String.IsNullOrEmpty(component.Value.ToString())
                     ? Option<string>.None
                     : component.Value.ToString())
                 .Bind(str => ParseEnum<Npc.NpcTypes>(str).ToOption());
@@ -213,7 +213,7 @@ namespace MazerPlatformer
                 either.IfFailed(action);
         }
 
-        public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn<IFailure, T>(()
+        public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn(()
             => (T)value, InvalidCastFailure.Default());
 
         [PureFunction]
@@ -230,6 +230,10 @@ namespace MazerPlatformer
 
         public static Either<L, bool> FailIfFalse<L>(this bool theBool, L theFailure)
             => theBool ? theBool.ToEither<L, bool>() : theFailure.ToEitherFailure<L, bool>();
+
+        public static Either<L, bool> FailIfFalse<L>(this Either<L, bool> theBool, L theFailure)
+            => theBool ? theBool.FailIfFalse(theFailure) : theFailure.ToEitherFailure<L, bool>();
+
 
         // contains I/O
         public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
@@ -248,7 +252,7 @@ namespace MazerPlatformer
             => new Try<T>(() => { action(arg); return default(T); })
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
-        public static Either<IFailure, T> TryThis<T>(this Func<T,T> action, T arg, bool returnArg = false)
+        public static Either<IFailure, T> TryThis<T>(this Func<T, T> action, T arg, bool returnArg = false)
             => new Try<T>(() => returnArg? arg : action(arg))
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
@@ -330,7 +334,7 @@ namespace MazerPlatformer
         public static T ThrowIfNone<T>(this Option<T> option, IFailure failure)
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
 
-        public static Either<IFailure,R> Call<R>(this Either<IFailure,R>? either)
+        public static Either<IFailure, R> Call<R>(this Either<IFailure, R>? either)
         {
             return either == null
                 ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
@@ -523,5 +527,9 @@ namespace MazerPlatformer
         public static Vector2 GetCentre(this GameObject gameObject) 
             => GetCentreImpure(gameObject).ThrowIfFailed();
 
+        public static bool DictValueEquals<K,V>(IDictionary<K,V> dic1, IDictionary<K, V> dic2)
+        {
+            return dic1.Count == dic2.Count && !dic1.Except(dic2).Any();
+        }
     }
 }

@@ -17,6 +17,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Component;
 using static MazerPlatformer.GameObject;
+using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
@@ -140,19 +141,11 @@ namespace MazerPlatformer
         {
             return EnsureWithReturn(() =>
             {
-                var mazeGrid = new List<Room>();
-               
-                for (var row = 0; row < Rows; row++)
-                {
-                    for (var col = 0; col < Cols; col++)
-                    {
-                        mazeGrid.Add(Room.Create(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight, roomNumber: (row * Cols) + col, row: row, col: col).ThrowIfFailed());
-                    }
-                }
+                var mazeGrid = RoomStatics.CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight);
 
                 var totalRooms = mazeGrid.Count;
 
-                // determine which sides can be removed and then randonly remove a number of them (using only the square objects - no drawing yet)
+                // determine which sides can be removed and then randomly remove a number of them (using only the square objects - no drawing yet)
                 for (var i = 0; i < totalRooms; i++)
                 {
                     var nextIndex = i + 1;
@@ -183,16 +176,16 @@ namespace MazerPlatformer
                     currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
                     currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
 
-                    if (canRemoveAbove &&  RoomStatics.HasSide(Room.Side.Top, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Bottom, mazeGrid[roomAboveIndex].HasSides))
+                    if (canRemoveAbove &&  HasSide(Room.Side.Top, currentRoom.HasSides) && HasSide(Room.Side.Bottom, mazeGrid[roomAboveIndex].HasSides))
                         removableSides.Add(Room.Side.Top);
 
-                    if (canRemoveBelow && RoomStatics.HasSide(Room.Side.Bottom, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Top,mazeGrid[roomBelowIndex].HasSides))
+                    if (canRemoveBelow && HasSide(Room.Side.Bottom, currentRoom.HasSides) && HasSide(Room.Side.Top,mazeGrid[roomBelowIndex].HasSides))
                         removableSides.Add(Room.Side.Bottom);
 
-                    if (canRemoveLeft && RoomStatics.HasSide(Room.Side.Left, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Right, mazeGrid[roomLeftIndex].HasSides))
+                    if (canRemoveLeft && HasSide(Room.Side.Left, currentRoom.HasSides) && HasSide(Room.Side.Right, mazeGrid[roomLeftIndex].HasSides))
                         removableSides.Add(Room.Side.Left);
 
-                    if (canRemoveRight && RoomStatics.HasSide(Room.Side.Right, currentRoom.HasSides) && RoomStatics.HasSide(Room.Side.Left, mazeGrid[roomRightIndex].HasSides))
+                    if (canRemoveRight && HasSide(Room.Side.Right, currentRoom.HasSides) && HasSide(Room.Side.Left, mazeGrid[roomRightIndex].HasSides))
                         removableSides.Add(Room.Side.Right);
 
                     // which of the sides should we remove for this square?
@@ -226,7 +219,11 @@ namespace MazerPlatformer
 
                 return mazeGrid;
             });
+
+            
         }
+
+
 
         /// <summary>
         /// Collate animation details about the player

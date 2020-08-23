@@ -109,12 +109,12 @@ namespace MazerPlatformer
             int? overridePlayerScore = null) => Ensure(() =>
         {
             // Prepare a new level
-            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber,
-                Random);
+            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random);
             _level.OnLoad += OnLevelLoad;
 
             // Make the level
-            var levelGameObjects = _level.Load(overridePlayerHealth, overridePlayerScore)
+            var levelGameObjects = _level
+                .Load(overridePlayerHealth, overridePlayerScore)
                 .Bind(AddToGameObjects);
 
             // We use the rooms locations for collisions detection optimizations later

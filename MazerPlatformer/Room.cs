@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Assets;
 using C3.XNA;
 using GameLibFramework.FSM;
 using LanguageExt;
@@ -55,15 +55,14 @@ namespace MazerPlatformer
         /// <param name="y">Top Left Y</param>
         /// <param name="width">Width of the room</param>
         /// <param name="height">Height of the room</param>
-        /// <param name="spriteBatch"></param>
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
         public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
-            => IsValid(x, y, width, height, roomNumber, row, col)
-                    ? from room in EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
-                        from initializedRoom in InitializeBounds(room)
-                            select initializedRoom
-                    : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
+            =>  from isValid in IsValid(x, y, width, height, roomNumber, row, col)
+                from room in EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
+                from initializedRoom in InitializeBounds(room)
+                select initializedRoom;
+                    
 
         // ctor
         private Room(int x, int y, int width, int height, int roomNumber, int row, int col) 
@@ -72,6 +71,9 @@ namespace MazerPlatformer
             RoomNumber = roomNumber;
             Col = col;
             Row = row;
+
+            // This allows for reasoning about rectangles in terms of points A, B, C, D
+            RectangleDetail = new RectDetails(x, y, width, height);
         }
 
         [JsonConstructor]
@@ -141,6 +143,47 @@ namespace MazerPlatformer
             }
 
             return Nothing.ToEither<Unit>();
+        }
+
+        protected bool Equals(Room other)
+        {
+            return 
+                   Enumerable.SequenceEqual(HasSides, other.HasSides) && 
+                   Equals(RectangleDetail, other.RectangleDetail) &&
+                   Equals(RoomAbove, other.RoomAbove) && 
+                   Equals(RoomBelow, other.RoomBelow) && 
+                   Equals(RoomRight, other.RoomRight) && 
+                   Equals(RoomLeft, other.RoomLeft) && 
+                   RoomNumber == other.RoomNumber && 
+                   Col == other.Col 
+                   && Row == other.Row &&
+                   DictValueEquals(WallProperties, other.WallProperties);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Room)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (WallProperties != null ? WallProperties.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HasSides != null ? HasSides.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RectangleDetail != null ? RectangleDetail.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RoomAbove != null ? RoomAbove.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RoomBelow != null ? RoomBelow.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RoomRight != null ? RoomRight.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RoomLeft != null ? RoomLeft.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ RoomNumber;
+                hashCode = (hashCode * 397) ^ Col;
+                hashCode = (hashCode * 397) ^ Row;
+                return hashCode;
+            }
         }
     }
 }

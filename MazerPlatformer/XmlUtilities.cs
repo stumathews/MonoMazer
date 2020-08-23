@@ -14,13 +14,13 @@ namespace MazerPlatformer
 {
     public static class ImmutableCopy
     {
-        public static Either<IFailure, T> Copy<T>(this T original)
+        public static Either<IFailure, T> DeepCloneXml<T>(this T original)
             => from xml in XmlUtilities<T>.ObjectToXml(original)
                 from copy in XmlUtilities<T>.XmlToObject(xml)
                 select copy;
 
         // This is probably faster than xml serializer but then i'll need to use [XmlSerialize] on my classes - not a trainsmash if xmlserializer is too slow
-        public static Either<IFailure, T> DeepClone<T>(this T obj) => Statics.EnsureWithReturn(() =>
+        public static Either<IFailure, T> DeepCloneBinary<T>(this T obj) => Statics.EnsureWithReturn(() =>
         {
             using (var ms = new MemoryStream())
             {
@@ -40,9 +40,19 @@ namespace MazerPlatformer
                 Console.WriteLine(SerializerSettings.TraceWriter);
                 //args.ErrorContext.Handled = true;
             },
+
         };
 
-        
+        private static Dictionary<int, object> CopyCache = new Dictionary<int, object>();
+
+        public static Option<T> FetchOrAdd<T>(this Dictionary<int, object> cache, int id, T obj)
+        {
+            if (cache.TryGetValue(id, out var found))
+            {
+                return Statics.TryCastToT<T>(found).ToOption();
+            }
+            return Option<T>.None;
+        }
 
         /// <summary>
         /// Perform a deep Copy of the object, using Json as a serialisation method.
@@ -50,19 +60,17 @@ namespace MazerPlatformer
         /// <typeparam name="T">The type of object being copied.</typeparam>
         /// <param name="source">The object instance to copy.</param>
         /// <returns>The copied object.</returns>
-        public static Either<IFailure, T> CloneJson<T>(this T source) => Statics.EnsureWithReturn(() =>
+        public static Either<IFailure, T> Copy<T>(this T source) => Statics.EnsureWithReturn(() =>
         {
             // Don't serialize a null object, simply return the default for that object
-            if (Object.ReferenceEquals(source, null))
+            if (ReferenceEquals(source, null))
             {
                 return InvalidCastFailure.Create("Cannot copy null").ToEitherFailure<T>();
             }
 
             var serialized = JsonConvert.SerializeObject(source, SerializerSettings);
             var deserialized = JsonConvert.DeserializeObject<T>(serialized).ToEither();
-            //return source.Equals(deserialized)
-            //    ? deserialized
-            //    : InvalidCastFailure.Create("deserialized is not the same as serialized").ToEitherFailure<T>();
+            var areEqual = deserialized.Match(Left: failure => false, Right: arg => arg.Equals(source));
             return deserialized;
         }).UnWrap();
     }

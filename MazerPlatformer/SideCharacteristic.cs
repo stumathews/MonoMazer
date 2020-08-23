@@ -17,6 +17,27 @@ namespace MazerPlatformer
             Bounds = bounds;
             Color = color;
         }
+
+        protected bool Equals(SideCharacteristic other)
+        {
+            return Color.Equals(other.Color) && Bounds.Equals(other.Bounds);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SideCharacteristic) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Color.GetHashCode() * 397) ^ Bounds.GetHashCode();
+            }
+        }
     }
     
 }
