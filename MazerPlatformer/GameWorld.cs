@@ -67,23 +67,19 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth,
-            int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
-            => Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
-                .Match(
-                    None: () => new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch),
-                    Some: failure => failure.ToEitherFailure<GameWorld>());
+        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch) => EnsuringBind(() 
+            => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
+               select new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
 
         // Trivial validation for smart constructor
-        private static Option<IFailure> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight,
-            int rows, int cols, SpriteBatch spriteBatch)
+        private static Either<IFailure, Unit> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             // trivial validations
-            if (contentManager == null) return NotFound.Create("Content Manager is null").ToSome();
-            if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToSome();
-            if (spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToSome();
-            if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToSome();
-            return Option<IFailure>.None;
+            if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();
+            if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToEitherFailure<Unit>();
+            if (spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToEitherFailure<Unit>();
+            if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToEitherFailure<Unit>();
+            return Nothing;
         }
 
         private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols,

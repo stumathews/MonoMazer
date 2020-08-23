@@ -90,10 +90,9 @@ namespace MazerPlatformer
                 _spriteBatch = new SpriteBatch(GraphicsDevice);
 
                 // Internal game infrastructure Objects
-                _gameWorld = 
-                    from spriteBatch in _spriteBatch
-                    from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, spriteBatch)
-                    select createdWorld;
+                _gameWorld = from spriteBatch in _spriteBatch
+                             from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, spriteBatch)
+                             select createdWorld;
                 _pauseState = new PauseState(this); 
                 _playingState = new PlayingGameState(this);
 

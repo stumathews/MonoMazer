@@ -108,14 +108,14 @@ namespace MazerPlatformer
                 Side side = item.Key;
                 SideCharacteristic thisWallProperty = item.Value;
 
-                if (otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) && HasSide(side, HasSides))
-                {
-                    Console.WriteLine($"{side} collided with object {otherObject.Id}");
-                    thisWallProperty.Color = Color.White;
-                    collision = true;
-                    OnWallCollision?.Invoke(this, otherObject, side, thisWallProperty);
-                    //RemoveSide(side);
-                }
+                if (!otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) || !HasSide(side, HasSides)) 
+                    continue;
+
+                Console.WriteLine($"{side} collided with object {otherObject.Id}");
+                thisWallProperty.Color = Color.White;
+                collision = true;
+                OnWallCollision?.Invoke(this, otherObject, side, thisWallProperty);
+                //RemoveSide(side);
             }
 
             return collision;
