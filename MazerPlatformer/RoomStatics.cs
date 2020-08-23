@@ -14,10 +14,10 @@ namespace MazerPlatformer
     // as well as easy to composed into Bind()/Map() calls
     public static class RoomStatics
     {
-        public static Either<IFailure, Unit> InitializeBounds(Room room) => Statics.EnsureWithReturn(() =>
+        public static Either<IFailure, Room> InitializeBounds(Room room) => Statics.EnsureWithReturn(() =>
         {
             // This allows for reasoning about rectangles in terms of points A, B, C, D
-            room.Rectangle = new RectDetails(room.X, room.Y, room.Width, room.Height);
+            room.RectangleDetail = new RectDetails(room.X, room.Y, room.Width, room.Height);
 
             /* Walls have collision bounds that don't change */
 
@@ -34,23 +34,25 @@ namespace MazerPlatformer
                  AD = Left  
             */
             /* Room does not use its bounding box by default to check for collisions - it uses its sides for that. see CollidesWith() override */
-            var topBounds = new Rectangle(x: room.Rectangle.GetAx(), y: room.Rectangle.GetAy(),
-                width: room.Rectangle.GetAB(), height: 1);
-            var bottomBounds = new Rectangle(x: room.Rectangle.GetDx(), y: room.Rectangle.GetDy(),
-                width: room.Rectangle.GetCD(), height: 1);
-            var rightBounds = new Rectangle(x: room.Rectangle.GetBx(), y: room.Rectangle.GetBy(),
-                height: room.Rectangle.GetBC(), width: 1);
-            var leftBounds = new Rectangle(x: room.Rectangle.GetAx(), y: room.Rectangle.GetAy(),
-                height: room.Rectangle.GetAD(), width: 1);
+            var topBounds = new Rectangle(x: room.RectangleDetail.GetAx(), y: room.RectangleDetail.GetAy(),
+                width: room.RectangleDetail.GetAB(), height: 1);
+            var bottomBounds = new Rectangle(x: room.RectangleDetail.GetDx(), y: room.RectangleDetail.GetDy(),
+                width: room.RectangleDetail.GetCD(), height: 1);
+            var rightBounds = new Rectangle(x: room.RectangleDetail.GetBx(), y: room.RectangleDetail.GetBy(),
+                height: room.RectangleDetail.GetBC(), width: 1);
+            var leftBounds = new Rectangle(x: room.RectangleDetail.GetAx(), y: room.RectangleDetail.GetAy(),
+                height: room.RectangleDetail.GetAD(), width: 1);
 
 
             /* Walls each have specific colors, bounds, and potentially other configurable characteristics in the game */
-            return 
-                from top in room.AddWallCharacteristic(Room.Side.Top, new SideCharacteristic(Color.Black, topBounds))
-                from right in room.AddWallCharacteristic(Room.Side.Right, new SideCharacteristic(Color.Black, rightBounds))
-                from bottom in room.AddWallCharacteristic(Room.Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds))
-                from left in room.AddWallCharacteristic(Room.Side.Left, new SideCharacteristic(Color.Black, leftBounds))
-                select new Unit();
+            return
+                from top in AddWallCharacteristic(room, Room.Side.Top, new SideCharacteristic(Color.Black, topBounds))
+                from right in AddWallCharacteristic(top, Room.Side.Right, new SideCharacteristic(Color.Black, rightBounds))
+                from bottom in AddWallCharacteristic(right, Room.Side.Bottom, new SideCharacteristic(Color.Black, bottomBounds))
+                from left in AddWallCharacteristic(bottom, Room.Side.Left, new SideCharacteristic(Color.Black, leftBounds))
+                let finalRoom = left
+                select finalRoom;
+
 
         }, InvalidCastFailure.Create("Problem occured in InitializeBounds"))
         .UnWrap();
@@ -153,6 +155,24 @@ namespace MazerPlatformer
                 default:
                     return false;
             }
+        }
+
+        [PureFunction]
+        public static Either<IFailure, Room> AddWallCharacteristic(Room room, Room.Side side, SideCharacteristic characteristic)
+        {
+            // copy characteristic, change it and then return the copy
+            return
+                from sideCharacteristic in characteristic.CloneJson()
+                from roomCopy in room.CloneJson()
+                from result in AddSideCharacteristic(roomCopy, side, sideCharacteristic)
+                select result;
+
+            // use copy and modify it and return copy to caller
+            Either<IFailure, Room> AddSideCharacteristic(Room theRoom, Room.Side theside,  SideCharacteristic sideCharacteristic) => Statics.EnsureWithReturn(() =>
+            {
+                theRoom.WallProperties.Add(theside, sideCharacteristic);
+                return theRoom;
+            });
         }
     }
 }

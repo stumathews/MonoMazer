@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 
 namespace MazerPlatformer
 {
@@ -10,11 +11,7 @@ namespace MazerPlatformer
         public readonly Rectangle Bounds;
 
         // Required for serialization
-        public SideCharacteristic()
-        {
-            
-        }
-
+        [JsonConstructor]
         public SideCharacteristic(Color color, Rectangle bounds)
         {
             Bounds = bounds;

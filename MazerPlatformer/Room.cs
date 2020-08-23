@@ -5,9 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Assets;
 using C3.XNA;
+using GameLibFramework.FSM;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
@@ -21,7 +23,7 @@ namespace MazerPlatformer
         public enum Side { Bottom, Right, Top, Left }
         public const float WallThickness = 3.0f;
 
-        public bool[] HasSides { get; } = {
+        public bool[] HasSides { get; set; } = {
             /*Top*/ true,
             /*Right*/
                       true,
@@ -31,9 +33,10 @@ namespace MazerPlatformer
 
         public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
         public event WallInfo OnWallCollision;
-        private readonly Dictionary<Side, SideCharacteristic> _wallProperties = new Dictionary<Side, SideCharacteristic>();
-        
-        public RectDetails Rectangle { get; set; } // Contains definitions A,B,C,D for modeling a rectangle as a room
+
+        public Dictionary<Side, SideCharacteristic> WallProperties = new Dictionary<Side, SideCharacteristic>();
+
+        public RectDetails RectangleDetail { get; set; } // Contains definitions A,B,C,D for modeling a rectangle as a room
 		
         public Room RoomAbove { get; set; }
         public Room RoomBelow { get; set; }
@@ -58,8 +61,8 @@ namespace MazerPlatformer
         public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
             => IsValid(x, y, width, height, roomNumber, row, col)
                     ? from room in EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
-                        from initializeBounds in InitializeBounds(room)
-                            select room
+                        from initializedRoom in InitializeBounds(room)
+                            select initializedRoom
                     : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(Create)}").ToEitherFailure<Room>();
 
         // ctor
@@ -71,20 +74,34 @@ namespace MazerPlatformer
             Row = row;
         }
 
+        [JsonConstructor]
+        private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, Room roomAbove, Room roomBelow, Room roomRight, Room roomLeft, int roomNumber, int col, int row)
+            : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
+        {
+            RectangleDetail = rectangleDetail;
+            RoomAbove = roomAbove;
+            RoomBelow = roomBelow;
+            RoomRight = roomRight;
+            RoomLeft = roomLeft;
+            RoomNumber = roomNumber;
+            Col = col;
+            Row = row;
+        }
+
         // Draw pipeline for drawing a Room (all drawing operations must succeed - benefit)
         public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
             from baseDraw in base.Draw(spriteBatch)
-            from topDraw in DrawSide(Side.Top, _wallProperties, Rectangle, spriteBatch, HasSides)
-            from rightDraw in DrawSide(Side.Right, _wallProperties, Rectangle, spriteBatch, HasSides)
-            from bottomDraw in DrawSide(Side.Bottom, _wallProperties, Rectangle, spriteBatch, HasSides)
-            from leftDraw in DrawSide(Side.Left, _wallProperties, Rectangle, spriteBatch, HasSides)
+            from topDraw in DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatch, HasSides)
+            from rightDraw in DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatch, HasSides)
+            from bottomDraw in DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatch, HasSides)
+            from leftDraw in DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatch, HasSides)
             select Nothing;
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
         public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
         {
             var collision = false;
-            foreach (var item in _wallProperties)
+            foreach (var item in WallProperties)
             {
                 Side side = item.Key;
                 SideCharacteristic thisWallProperty = item.Value;
@@ -102,23 +119,6 @@ namespace MazerPlatformer
             return collision;
         });
 
-        // First genuine pure function
-        [PureFunction]
-        public Either<IFailure, SideCharacteristic> AddWallCharacteristic(Side side, SideCharacteristic characteristic)
-        {
-            // copy characteristic, change it and then return the copy
-            return  
-               from copy in characteristic.Copy()
-               from result in AddSideCharacteristic(copy)
-                select copy;
-
-            // use copy and modify it and return copy to caller
-            Either<IFailure, SideCharacteristic> AddSideCharacteristic(SideCharacteristic sideCharacteristic) => EnsureWithReturn(() =>
-            {
-                _wallProperties.Add(side, characteristic);
-                return sideCharacteristic;
-            });
-        }
 
         public Either<IFailure, Unit> RemoveSide(Side side)
         {
@@ -142,6 +142,5 @@ namespace MazerPlatformer
 
             return Nothing.ToEither<Unit>();
         }
-
     }
 }

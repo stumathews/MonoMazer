@@ -8,6 +8,7 @@ using LanguageExt;
 using LanguageExt.SomeHelp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
 using static System.String;
 using static MazerPlatformer.Statics;
 
@@ -71,6 +72,31 @@ namespace MazerPlatformer
         /// Let me know that we are disposing
         /// </summary>
         public event DisposingInfo OnDisposing;
+
+
+        // Used only for JSON copying
+        [JsonConstructor]
+        protected GameObject(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components)
+        {
+            IsColliding = isColliding;
+            StateMachine = stateMachine ?? new FSM(this);
+            Type = type;
+            _boundingBox = boundingBox;
+            BoundingSphere = boundingSphere;
+            _maxPoint = maxPoint;
+            _centre = centre;
+            X = x;
+            Y = y;
+            Id = id;
+            Width = width;
+            Height = height;
+            InfoText = infoText;
+            SubInfoText = subInfoText;
+            Active = active;
+            StateTransitions = stateTransitions ?? new List<Transition>();
+            States = states ?? new List<State>();
+            Components = components ?? new List<Component>();
+        }
 
         protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
         {
