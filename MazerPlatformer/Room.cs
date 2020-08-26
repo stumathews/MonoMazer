@@ -37,11 +37,11 @@ namespace MazerPlatformer
         public Dictionary<Side, SideCharacteristic> WallProperties = new Dictionary<Side, SideCharacteristic>();
 
         public RectDetails RectangleDetail { get; set; } // Contains definitions A,B,C,D for modeling a rectangle as a room
-		
-        public Room RoomAbove { get; set; }
-        public Room RoomBelow { get; set; }
-        public Room RoomRight { get; set; }
-        public Room RoomLeft { get; set; }
+
+        public int RoomAbove;
+        public int RoomBelow;
+        public int RoomRight;
+        public int RoomLeft;
 
         public int RoomNumber { get; }
         public int Col { get; }
@@ -77,7 +77,7 @@ namespace MazerPlatformer
         }
 
         [JsonConstructor]
-        private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, Room roomAbove, Room roomBelow, Room roomRight, Room roomLeft, int roomNumber, int col, int row)
+        private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, int roomAbove, int roomBelow, int roomRight, int roomLeft, int roomNumber, int col, int row)
             : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
         {
             RectangleDetail = rectangleDetail;

@@ -10,6 +10,7 @@ using System.Xml;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
 using LanguageExt;
+using LanguageExt.SomeHelp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -91,6 +92,11 @@ namespace MazerPlatformer
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
+        public Option<Room> GetRoom(int index) 
+            => index >= 0 && index <= (Cols * Rows)
+                ? _rooms[index] 
+                : Option<Room>.None;
+
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event LevelLoadInfo OnLoad;
         public delegate Either<IFailure, Unit> LevelLoadInfo(LevelDetails details);
@@ -171,10 +177,10 @@ namespace MazerPlatformer
                     var currentRoom = mazeGrid[i];
                     var nextRoom = mazeGrid[nextIndex];
 
-                    currentRoom.RoomAbove = canRemoveAbove ? mazeGrid[roomAboveIndex] : null;
-                    currentRoom.RoomBelow = canRemoveBelow ? mazeGrid[roomBelowIndex] : null;
-                    currentRoom.RoomLeft = canRemoveLeft ? mazeGrid[roomLeftIndex] : null;
-                    currentRoom.RoomRight = canRemoveRight ? mazeGrid[roomRightIndex] : null;
+                    currentRoom.RoomAbove = roomAboveIndex;
+                    currentRoom.RoomBelow = roomBelowIndex;
+                    currentRoom.RoomLeft = roomLeftIndex;
+                    currentRoom.RoomRight = roomRightIndex;
 
                     if (canRemoveAbove &&  HasSide(Room.Side.Top, currentRoom.HasSides) && HasSide(Room.Side.Bottom, mazeGrid[roomAboveIndex].HasSides))
                         removableSides.Add(Room.Side.Top);

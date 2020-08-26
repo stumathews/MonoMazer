@@ -1,22 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Messaging;
-using System.Timers;
 using GameLib.EventDriven;
 using LanguageExt;
-using LanguageExt.SomeHelp;
-using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
-using Delegate = System.Delegate;
 
 namespace MazerPlatformer
 {
@@ -347,17 +339,22 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
             // Determine which room the game object is in
-            var col = ToRoomColumn(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to column number")); ;
-            var row = ToRoomRow(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to row  number")); ;
+            var col = ToRoomColumnFast(gameObject);
+            var row = ToRoomRowFast(gameObject);
             var roomNumber = ((row - 1) * Cols) + col - 1;
 
             // Only check for collisions with adjacent rooms or current room
-            if (roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1))
+            if (DoesRoomNumberExist(roomNumber,Cols, Rows))
             {
                 var roomIn = GetRoom(roomNumber).ThrowIfNone(NotFound.Create($"Room not found at room number {roomNumber}"));
-                var adjacentRooms = new List<Room>
-                    {roomIn.RoomAbove, roomIn.RoomBelow, roomIn.RoomLeft, roomIn.RoomRight};
-                var collisionRooms = new List<Room>();
+                var adjacentRooms = new List<Option<Room>> 
+                { 
+                    _level.GetRoom(roomIn.RoomAbove),
+                    _level.GetRoom(roomIn.RoomBelow),
+                    _level.GetRoom(roomIn.RoomLeft),
+                    _level.GetRoom(roomIn.RoomRight)
+                };
+                var collisionRooms = new List<Option<Room>>();
 
                 collisionRooms.AddRange(adjacentRooms);
                 collisionRooms.Add(roomIn);
@@ -365,16 +362,12 @@ namespace MazerPlatformer
                 if (roomIn.RoomNumber != roomNumber)
                     throw new ArgumentException("We didn't get the room number we expected!");
 
-                foreach (var room in collisionRooms.Where(room => room != null))
-                    NotifyIfColliding(gameObject, room);
+                // Check the rooms that this object is in and any adjacent rooms
+                collisionRooms.IterT(room => NotifyIfColliding(gameObject, room));
 
                 // Wait!, while we're in this room, are there any other objects in here that we might collide with? (Player, Pickups etc)
-                foreach (var other in activeGameObjects.Where(go => ToRoomColumn(go) == col && ToRoomRow(go) == row))
+                foreach (var other in activeGameObjects.Where(go => ToRoomColumnFast(go) == col && ToRoomRowFast(go) == row))
                     NotifyIfColliding(gameObject, other);
-
-                // Wait!, while we're in this room is it time to randomly removes some walls?
-                //RemoveRandomWall(roomIn, _removeWallTimer);
-
             }
             else
             {
@@ -402,22 +395,28 @@ namespace MazerPlatformer
             }
         });
 
-        public Option<Room> GetRoomIn(GameObject gameObject)
-        {
-            var col = ToRoomColumn(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to column number"));
-            var row = ToRoomRow(gameObject).ThrowIfNone(NotFound.Create($"Could not convert game object {gameObject} to row  number"));
-            var roomNumber = ((row - 1) * Cols) + col - 1;
-            return roomNumber >= 0 && roomNumber <= ((Rows * Cols) - 1) ? _rooms[roomNumber] : Option<Room>.None;
-        }
+        public Option<Room> GetRoomIn(GameObject gameObject) =>
+            from col in ToRoomColumn(gameObject)
+            from row in ToRoomRow(gameObject)
+            let roomNumber = ((row - 1) * Cols) + col - 1
+            let validity = DoesRoomNumberExist(roomNumber, Cols, Rows)
+            from isValid in Must(validity, () => validity == true, NotFound.Create($"{gameObject.Id} is not in a room!")).ToOption()
+            select _rooms[roomNumber]; // if we can copy rooms, this might be able to be made pure 
 
         private Option<Room> GetRoom(int roomNumber) => EnsureWithReturn(() 
             => _rooms[roomNumber]).ToOption();
 
-        public Option<int> ToRoomColumn(GameObject gameObject1) => EnsureWithReturn(() 
-            => (int) Math.Ceiling((float) gameObject1.X / _roomWidth)).ToOption();
+        public Option<int> ToRoomColumn(GameObject gameObject1) => EnsureWithReturn(()
+            =>ToRoomColumnFast(gameObject1)).ToOption();
 
         public Option<int> ToRoomRow(GameObject o1) => EnsureWithReturn(() 
-            => (int) Math.Ceiling((float) o1.Y / _roomHeight)).ToOption();
+            => ToRoomRowFast(o1)).ToOption();
+
+        public int ToRoomColumnFast(GameObject gameObject1)
+            => _roomWidth == 0 ? 0 : (int) Math.Ceiling((float) gameObject1.X / _roomWidth);
+
+        public int ToRoomRowFast(GameObject o1)
+            => _roomHeight == 0 ? 0 : (int) Math.Ceiling((float) o1.Y / _roomHeight);
 
         /// <summary>
         /// Deactivate objects that collided (will be removed before next update)
@@ -502,9 +501,9 @@ namespace MazerPlatformer
                 {
                     var hasARightSide = HasSide(Room.Side.Right, cropped[i].HasSides);
                     if (hasARightSide) return false;
-                    var rightRoomExists = cropped[i].RoomRight != null;
+                    var rightRoomExists = cropped[i].RoomRight > 0;
                     if (!rightRoomExists) return false;
-                    var rightHasLeft = HasSide(Room.Side.Left, cropped[i].RoomRight.HasSides);
+                    var rightHasLeft = _level.GetRoom(cropped[i].RoomRight).Match(None: () => false, Some: room => HasSide(Room.Side.Left, room.HasSides)); 
                     if (rightHasLeft) return false;
                 }
 
@@ -523,9 +522,9 @@ namespace MazerPlatformer
                 {
                     var hasABottom = HasSide(Room.Side.Bottom, cropped[i].HasSides);
                     if (hasABottom) return false;
-                    var bottomRoomExists = cropped[i].RoomBelow != null;
+                    var bottomRoomExists = cropped[i].RoomBelow > 0;
                     if (!bottomRoomExists) return false;
-                    var bottomHasATop = HasSide(Room.Side.Top, cropped[i].RoomBelow.HasSides);
+                    var bottomHasATop = _level.GetRoom(cropped[i].RoomBelow).Match(None: () => false, Some: room => HasSide(Room.Side.Top, room.HasSides));
                     if (bottomHasATop) return false;
                 }
 

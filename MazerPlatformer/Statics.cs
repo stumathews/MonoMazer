@@ -457,7 +457,7 @@ namespace MazerPlatformer
         public static Either<IFailure, T> Must<T>(T arg, Func<bool> func, IFailure customFailure = null) 
             => !func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
 
-        public static Either<IFailure, T> MustBe<T>(T arg, Func<bool> func, IFailure customFailure = null)
+        public static Either<IFailure, T> MustNotBe<T>(T arg, Func<bool> func, IFailure customFailure = null)
             => func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
 
         /// <summary>

@@ -219,5 +219,10 @@ namespace MazerPlatformer
 
             return room.ToEither();
         });
+
+        public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows)
+        {
+            return roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);
+        }
     }
 }
