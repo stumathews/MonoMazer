@@ -7,6 +7,7 @@ using static MazerPlatformer.GameObject;
 using System.Linq;
 using GameLib.EventDriven;
 using LanguageExt;
+using static MazerPlatformer.GameWorldStatics;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
@@ -313,9 +314,19 @@ namespace MazerPlatformer
             OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _gameObjects.Count());
         });
 
-        private Either<IFailure, Unit> RemoveFromGameObjects(string id) => Ensure(() =>
+        private Either<IFailure, Unit> RemoveFromGameObjects(string id)
+            => //setup pipeline to model declarative style
+            from gameObject in GetGameObject(_gameObjects, id)
+            from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, _gameObjects, OnGameObjectAddedOrRemoved)
+            from removePickup in RemovePickup(gameObject, _level)
+            from deactivateObjects in DeactivateObjects(gameObject,_gameObjects, id)
+            from clearLevel in ClearLevel(OnLevelCleared,_level)
+                select Nothing; // All pipelines return something
+
+        private Either<IFailure, Unit> RemoveFromGameObjectsOriginal(string id) => Ensure(() =>
         {
             var gameObject = _gameObjects[id];
+
             if (gameObject == null)
                 return;
 

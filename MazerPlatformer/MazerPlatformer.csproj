@@ -59,6 +59,7 @@
     <Compile Include="Failures\InvalidDataFailure.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GameWorld.cs" />
+    <Compile Include="GameWorldStatics.cs" />
     <Compile Include="IFailure.cs" />
     <Compile Include="Failures\InvalidCastFailure.cs" />
     <Compile Include="MovingState.cs" />

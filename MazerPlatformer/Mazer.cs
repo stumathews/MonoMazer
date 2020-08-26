@@ -92,7 +92,8 @@ namespace MazerPlatformer
                 // Internal game infrastructure Objects
                 _gameWorld = from spriteBatch in _spriteBatch
                              from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, spriteBatch)
-                             select createdWorld;
+                                select createdWorld;
+
                 _pauseState = new PauseState(this); 
                 _playingState = new PlayingGameState(this);
 
@@ -172,7 +173,13 @@ namespace MazerPlatformer
 
             Either<IFailure, Unit> InitializeUi() =>
                 from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
-                from setupMenuUi in SetupMenuUi()
+                from setupMenuUi in 
+                    from panels in CreatePanels()
+                    from setup in SetupMainMenuPanel()
+                    from instructions in SetupInstructionsPanel()
+                    from gameOver in SetupGameOverMenu()
+                    from addResult in AddPanelsToUi()
+                    select Nothing
                 select setupMenuUi;
             
              Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
@@ -236,23 +243,15 @@ namespace MazerPlatformer
                 .Map(AssignPlayerHealth)
             select Nothing;
 
-        private Either<IFailure, int> AssignPlayerHealth(Component component)
-        {
-            Either<IFailure, int> SetPlayerHealth(int value) => _playerHealth = value;
-
-            return from value in TryCastToT<int>(component.Value)
-                from set in SetPlayerHealth(value)
+        private Either<IFailure, int> AssignPlayerHealth(Component component) 
+            => from value in TryCastToT<int>(component.Value)
+                from set in (Either<IFailure, int>) (_playerHealth = value)
                 select set;
-        }
 
-        private Either<IFailure, int> AssignPlayerPoints(Component component)
-        {
-            Either<IFailure, int> SetPlayerPoints(int value) => _playerPoints = value;
-
-            return from value in TryCastToT<int>(component.Value)
-                from set in SetPlayerPoints(value)
-                select set;
-        }
+        private Either<IFailure, int> AssignPlayerPoints(Component component) 
+            => from value in TryCastToT<int>(component.Value)
+                from set in (Either<IFailure, int>) (_playerPoints = value)
+                    select set;
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -280,22 +279,31 @@ namespace MazerPlatformer
 
             var updatePipeline = 
                  from updateActiveUiComponents in UpdateUI()
-                 from updatedGameCommandsResult in UpdateCommands(_gameCommands) // get input
-                 from stateMachineResult in UpdateStateMachine(gameTime)// NB: game world is updated by PlayingGameState
+                 from updatedGameCommandsResult in UpdateCommands(_gameCommands, gameTime) // get input
+                 from set in _gameCommands = updatedGameCommandsResult
+                 from stateMachineResult in UpdateStateMachine(gameTime, _gameStateMachine)// NB: game world is updated by PlayingGameState
                  from baseUpdateResult in UpdateSuper(gameTime)
                  select Nothing;
 
             updatePipeline.ThrowIfFailed();
 
             Either<IFailure, Unit> UpdateSuper(GameTime time) => Ensure(() => base.Update(gameTime));
-            Either<IFailure, Unit> UpdateStateMachine(GameTime time) => Ensure(() => _gameStateMachine.Update(time));
             Either<IFailure, Unit> UpdateUI() => Ensure(() => UserInterface.Active.Update(gameTime));
-            Either<IFailure, Unit> UpdateCommands(Either<IFailure, CommandManager> gameCommands) => gameCommands.EnsuringMap(commands =>
+            Either<IFailure, CommandManager> UpdateCommands(Either<IFailure, CommandManager> gameCommands, GameTime time)
             {
-                commands.Update(gameTime);
-                return Nothing;
-            });
+                return 
+                    from manager in gameCommands
+                    select UpdateCommandManager(manager, time);
+
+                CommandManager UpdateCommandManager(CommandManager manager, GameTime theTime)
+                {
+                    manager.Update(theTime);
+                    return manager;
+                }
+            }
         }
+
+        private static Either<IFailure, Unit> UpdateStateMachine(GameTime time, FSM stateMachine) => Ensure(() => stateMachine.Update(time));
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -451,13 +459,6 @@ namespace MazerPlatformer
             => _gameOverPanel.Visible = true);
 
         // Creates the UI elements that the menu will use
-        private Either<IFailure, Unit> SetupMenuUi() =>
-            from panels in CreatePanels()
-            from setup in SetupMainMenuPanel()
-            from instructions in SetupInstructionsPanel()
-            from gameOver in SetupGameOverMenu()
-            from addResult in AddPanelsToUi()
-            select Nothing;
 
         private Either<IFailure, Unit> AddPanelsToUi() => Ensure(() =>
         {
