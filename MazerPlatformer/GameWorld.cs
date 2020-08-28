@@ -63,20 +63,8 @@ namespace MazerPlatformer
         public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch) => EnsuringBind(() 
             => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
                select new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
-
-        // Trivial validation for smart constructor
-        private static Either<IFailure, Unit> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
-        {
-            // trivial validations
-            if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();
-            if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToEitherFailure<Unit>();
-            if (spriteBatch == null) return InvalidDataFailure.Create("sprite batch invalid ").ToEitherFailure<Unit>();
-            if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToEitherFailure<Unit>();
-            return Nothing;
-        }
-
-        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols,
-            SpriteBatch spriteBatch)
+        
+        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -94,28 +82,15 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null,
-            int? overridePlayerScore = null) => Ensure(() =>
-        {
-            // Prepare a new level
-            _level = new Level(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random);
-            _level.OnLoad += OnLevelLoad;
-
-            // Make the level
-            var levelGameObjects = _level
-                .Load(overridePlayerHealth, overridePlayerScore)
-                .Bind(AddToGameObjects);
-
-            // We use the rooms locations for collisions detection optimizations later
-            _rooms = _level.GetRooms().ThrowIfFailed();
-
-            _removeWallTimer.Start();
-        });
-
-        private Either<IFailure, Unit> AddToGameObjects(Dictionary<string, GameObject> levelGameObjects)
-            => levelGameObjects
-                .Map(levelGameObject => AddToGameObjects(levelGameObject.Key, levelGameObject.Value))
-                .AggregateUnitFailures();
+        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
+            from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random, OnLoadLevel)
+            from gameWorldLevel in (Either<IFailure, Level>)(_level = newLevel) //set the game world's level
+            from levelObjects in gameWorldLevel.Load(overridePlayerHealth, overridePlayerScore)
+            from added in AddToGameWorld(levelObjects, _gameObjects, OnGameObjectAddedOrRemoved)
+            from levelRooms in newLevel.GetRooms()
+            from setGameWorldRooms in (Either<IFailure,List<Room>>)(_rooms = levelRooms) // set te game world's rooms
+            from startedTimer in StartRemoveWorldTimer(_removeWallTimer)
+            select Nothing;
 
         /// <summary>
         /// Unload the game world, and save it
@@ -141,12 +116,12 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
             // Hook up the Player events to the external world ie game UI
-            Level.Player.OnStateChanged += OnPlayerOnOnStateChanged; // want to know when the player's state changes
-            Level.Player.OnDirectionChanged += OnPlayerOnOnDirectionChanged; // want to know when the player's direction changes
-            Level.Player.OnCollisionDirectionChanged += OnPlayerOnOnCollisionDirectionChanged; // want to know when player collides
-            Level.Player.OnGameObjectComponentChanged += OnPlayerOnOnGameObjectComponentChanged; // want to know when the player's components change
+            Level.Player.OnStateChanged += PlayerOnOnStateChanged; // want to know when the player's state changes
+            Level.Player.OnDirectionChanged += PlayerOnOnDirectionChanged; // want to know when the player's direction changes
+            Level.Player.OnCollisionDirectionChanged += PlayerOnOnCollisionDirectionChanged; // want to know when player collides
+            Level.Player.OnGameObjectComponentChanged += PlayerOnOnGameObjectComponentChanged; // want to know when the player's components change
             Level.Player.OnCollision += PlayerOnOnCollision;
-            Level.Player.OnPlayerSpotted += OnPlayerOnOnPlayerSpotted;
+            Level.Player.OnPlayerSpotted += PlayerOnOnPlayerSpotted;
 
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
@@ -164,11 +139,11 @@ namespace MazerPlatformer
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
 
-            Either<IFailure, Unit> OnPlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => OnPlayerStateChanged?.Invoke(state));
-            Either<IFailure, Unit> OnPlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> OnPlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> OnPlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
-            Either<IFailure, Unit> OnPlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
+            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => OnPlayerStateChanged?.Invoke(state));
+            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
+            Either<IFailure, Unit> PlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
         });
 
         /// <summary>
@@ -182,11 +157,10 @@ namespace MazerPlatformer
             return from player in thePlayer.ToEither(NotFound.Create("Player not found"))
                 from gameObject in otherGameObject.ToEither(NotFound.Create("Other not found"))
                 from isNpc in Must(gameObject, () => gameObject.Type == GameObjectType.Npc, "Must be NPC")
-                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType)
-                                                .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType).ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
                 from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
                 from collisionResult in ActOnTypeCollision(npcType, player, gameObject)
-                select collisionResult;
+                    select collisionResult;
 
             Either<IFailure, Unit> ActOnTypeCollision(Npc.NpcTypes type, GameObject player, GameObject otherObject)
             {
@@ -212,27 +186,23 @@ namespace MazerPlatformer
                 {
                     _level.PlayLoseSound();
                     _playerDied = true;
-                    OnPlayerDied?.Invoke(player.Components);
+                    OnPlayerDied?.Invoke();
                 });
             }
 
             Either<IFailure, int> DetermineNewLevelPoints(GameObject player, GameObject gameObject)
-                => from pickupPointsComponent in gameObject.FindComponentByType(Component.ComponentType.Points)
-                                                 .ToEither(NotFound.Create("Could not find hit-point component"))
-                   from myPointsComponent in player.FindComponentByType(Component.ComponentType.Points)
-                                             .ToEither(NotFound.Create("Could not find hit-point component"))
-                   let myPoints = (int)myPointsComponent.Value
-                   let pickupPoints = (int)pickupPointsComponent.Value
-                   select myPoints + pickupPoints;
+                => from pickupPointsComponent in gameObject.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
+                   from myPointsComponent in player.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
+                   from myPoints in TryCastToT<int>(myPointsComponent.Value)
+                   from pickupPoints in Statics.TryCastToT<int>(pickupPointsComponent.Value)
+                    select myPoints + pickupPoints;
 
             Either<IFailure, int> DetermineNewHealth(GameObject gameObject1, GameObject otherObject2)
-                => from hitPointsComponent in otherObject2.FindComponentByType(Component.ComponentType.HitPoints)
-                                              .ToEither(NotFound.Create("Could not find hit-point component"))
-                   from healthComponent in gameObject1.FindComponentByType(Component.ComponentType.Health)
-                                              .ToEither(NotFound.Create("Could not find health component"))
-                   let myHealth = (int)healthComponent.Value
-                   let hitPoints = (int)hitPointsComponent.Value
-                   select myHealth - hitPoints;
+                => from hitPointsComponent in otherObject2.FindComponentByType(Component.ComponentType.HitPoints).ToEither(NotFound.Create("Could not find hit-point component"))
+                   from healthComponent in gameObject1.FindComponentByType(Component.ComponentType.Health).ToEither(NotFound.Create("Could not find health component"))
+                   from myHealth in TryCastToT<int>(healthComponent.Value)
+                   from hitPoints in  TryCastToT<int>(hitPointsComponent.Value)
+                    select myHealth - hitPoints;
         }
 
 
@@ -265,7 +235,7 @@ namespace MazerPlatformer
             var inactiveIds = _gameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
-                RemoveFromGameObjects(id);
+                RemoveGameObject(id);
 
             var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
@@ -308,44 +278,15 @@ namespace MazerPlatformer
                 ? Nothing 
                 : _level.PlaySong();
 
-        private Either<IFailure, Unit> AddToGameObjects(string id, GameObject gameObject) => Ensure(()=>
-        {
-            _gameObjects.Add(id, gameObject);
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _gameObjects.Count());
-        });
-
-        private Either<IFailure, Unit> RemoveFromGameObjects(string id)
-            => //setup pipeline to model declarative style
+        private Either<IFailure, Unit> RemoveGameObject(string id)
+        =>
             from gameObject in GetGameObject(_gameObjects, id)
             from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, _gameObjects, OnGameObjectAddedOrRemoved)
-            from removePickup in RemovePickup(gameObject, _level)
-            from deactivateObjects in DeactivateObjects(gameObject,_gameObjects, id)
-            from clearLevel in ClearLevel(OnLevelCleared,_level)
+            from removePickup in RemoveIfLevelPickup(gameObject, _level)
+            from clearLevel in NotifyIfLevelCleared(OnLevelCleared,_level)
+            from deactivateObjects in DeactivateGameObject(gameObject,_gameObjects, id)
                 select Nothing; // All pipelines return something
 
-        private Either<IFailure, Unit> RemoveFromGameObjectsOriginal(string id) => Ensure(() =>
-        {
-            var gameObject = _gameObjects[id];
-
-            if (gameObject == null)
-                return;
-
-            // We want subscribers to inspect the object before we dispose of it below
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: true, runningTotalCount: _gameObjects.Count());
-
-            // Remove number of known pickups...this is an indicator of level clearance
-            if (gameObject.IsNpcType(Npc.NpcTypes.Pickup))
-                _level.NumPickups--;
-
-            gameObject.Active = false;
-
-            _gameObjects.Remove(id);
-            gameObject.Dispose();
-
-            if (_level.NumPickups == 0)
-                OnLevelCleared?.Invoke(_level);
-
-        });
 
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
@@ -383,7 +324,7 @@ namespace MazerPlatformer
             else
             {
                 // object has no room - must have wondered off the screen - remove it
-                RemoveFromGameObjects(gameObject.Id);
+                RemoveGameObject(gameObject.Id);
             }
 
             // local functions
