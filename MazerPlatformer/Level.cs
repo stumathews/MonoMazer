@@ -93,7 +93,7 @@ namespace MazerPlatformer
         private List<Room> _rooms = new List<Room>();
 
         public Option<Room> GetRoom(int index) 
-            => index >= 0 && index <= (Cols * Rows)
+            => index >= 0 && index <= ((Cols * Rows)-1)
                 ? _rooms[index] 
                 : Option<Room>.None;
 
