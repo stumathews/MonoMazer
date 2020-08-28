@@ -82,5 +82,41 @@ namespace MazerPlatformer
             if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToEitherFailure<Unit>();
             return Nothing;
         }
+
+        [PureFunction]
+        public static (int greater, int smaller) SortBySize(int number1, int number2)
+        {
+            int smallerCol;
+            int greaterCol;
+            if (number1 > number2)
+            {
+                greaterCol = number1;
+                smallerCol = number2;
+                return (greaterCol, smallerCol);
+            }
+
+            smallerCol = number1;
+            greaterCol = number2;
+            return (greaterCol, smallerCol);
+        }
+
+        public static Option<(int greater, int smaller)> GetMaxMinRange(Option<int> number1, Option<int> number2) 
+            => from oc1 in number1 
+                from oc2 in number2
+                select SortBySize(oc1, oc2);
+
+        /// <summary>
+        /// What to do specifically when a room registers a collision
+        /// </summary>
+        /// <param name="room"></param>
+        /// <param name="otherObject"></param>
+        /// <param name="side"></param>
+        /// <param name="sideCharacteristics"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(() =>
+        {
+            if (otherObject.Type == GameObject.GameObjectType.Player)
+                room.RemoveSide(side);
+        });
     }
 }
