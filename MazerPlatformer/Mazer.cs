@@ -210,7 +210,7 @@ namespace MazerPlatformer
                 commands.AddKeyUpCommand(Keys.Z, (time) => Ensure(MediaPlayer.Resume).ThrowIfFailed());
                 commands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel).ThrowIfFailed()); // Cheat: complete current level!
                 commands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel).ThrowIfFailed());
-                commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased(time).ThrowIfFailed());
+                commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased().ThrowIfFailed());
                 return commands;
             });
 
@@ -384,21 +384,17 @@ namespace MazerPlatformer
         /// <param name="isFreshStart"></param>
         /// <param name="overridePlayerHealth">player health from previous level, overrides any within level file</param>
         /// <param name="overridePlayerScore">player score from previous level, overrides any within level file</param>
-        private Either<IFailure, Unit> StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-        {
-            _playerDied = false;
-
-            return
-                from gameWorld in _gameWorld
-                from unload in gameWorld.UnloadContent()
-                from load in gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore)
-                from init in gameWorld.Initialize() // We need to reinitialize things once we've reload content
-                from start in StartOrContinueLevel(isFreshStart)
-                select Nothing;
-        }
+        private Either<IFailure, Unit> StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
+            from setPlayerNotDead in (Either<IFailure, bool>)( _playerDied = false)
+            from gameWorld in _gameWorld
+            from unload in gameWorld.UnloadContent()
+            from load in gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore)
+            from init in gameWorld.Initialize() // We need to reinitialize things once we've reload content
+            from start in StartOrContinueLevel(isFreshStart)
+            select Nothing;
 
         private Either<IFailure, Unit> PlayMenuMusic() => Ensure(()
-            =>MediaPlayer.Play(_menuMusic));
+            => MediaPlayer.Play(_menuMusic));
 
         // This allows the playing state to indirectly move the player in the game world 
         internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) =>
@@ -419,36 +415,27 @@ namespace MazerPlatformer
             select Nothing;
 
         // Hide the menu and ask the game world to start or continue
-        internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart)
-        {
-            _currentGameState = GameStates.Playing;
-
-            return from hide in HideMenu()
-                from gameWorld in _gameWorld
-                from startOrResumeLevelMusic in gameWorld.StartOrResumeLevelMusic()
-                from reset in ResetPlayerStatistics(isFreshStart)
+        internal Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart) =>
+            from currentGameState in (Either<IFailure, GameStates>)(   _currentGameState = GameStates.Playing)
+            from hide in HideMenu()
+            from gameWorld in _gameWorld
+            from startOrResumeLevelMusic in gameWorld.StartOrResumeLevelMusic()
+            from reset in ResetPlayerStatistics(isFreshStart)
             select Nothing;
-        }
 
-        private Either<IFailure, Unit> ResetPlayerStatistics(bool isFreshStart) =>
-            !isFreshStart
+        private Either<IFailure, Unit> ResetPlayerStatistics(bool isFreshStart)
+            => !isFreshStart
                 ? ShortCircuitFailure.Create("Not Fresh Start").ToEitherFailure<Unit>().IgnoreFailure()
                 : ResetPlayerStatistics();
         
-        private Either<IFailure, Unit> ResetPlayerStatistics()
-        {
-            _playerHealth = 100;
-            _playerPoints = 0;
-            _playerPickups = 0;
-
-            // Inform the game world that we're intending to reset the players state(vitals) 
-            return SetPlayerStatistics(_gameWorld);
-        }
-
-        private Either<IFailure, Unit> SetPlayerStatistics(Either<IFailure, GameWorld> gameWorld) =>
-            from world in gameWorld
-            from result in world.SetPlayerStatistics(_playerHealth, _playerPoints)
-            select Nothing;
+        // Inform the game world that we're intending to reset the players state(vitals) 
+        private Either<IFailure, Unit> ResetPlayerStatistics() =>
+            from playerHealth in (Either<IFailure, int>) (_playerHealth = 100)
+            from playerPoints in (Either<IFailure, int>) (_playerPoints = 0)
+            from playerPickups in (Either<IFailure, int>) (_playerPickups = 0)
+            from gameWorld in _gameWorld
+            from setResult in gameWorld.SetPlayerStatistics(playerHealth, playerPoints)
+            select setResult;
 
         private Either<IFailure, Unit> ShowGameOverScreen() =>
             from setup in SetupGameOverMenu()
@@ -467,12 +454,11 @@ namespace MazerPlatformer
             UserInterface.Active.AddEntity(_gameOverPanel);
         });
 
-        private Either<IFailure, Unit> CreatePanels() => Ensure(() =>
-        {
-            _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-            _gameOverPanel = new Panel();
-            _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-        });
+        private Either<IFailure, Unit> CreatePanels() => EnsureWithReturn(() =>
+            from mainMenuPanel in (Either<IFailure, Panel>) (_mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
+            from gameOverPanel in (Either<IFailure, Panel>) (_gameOverPanel = new Panel())
+            from controlsPanel in (Either<IFailure, Panel>) (_controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
+            select Nothing).UnWrap();
 
         private Either<IFailure, Unit> SetupMainMenuPanel() => Ensure(() =>
         {
@@ -523,7 +509,7 @@ namespace MazerPlatformer
             _controlsPanel.AddChild(new Header("Mazer's Controls"));
             _controlsPanel.AddChild(new RichParagraph(
                 "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
-                "A level is cleared when all the baloons are collected.\n\n" +
+                "A level is cleared when all the ballons are collected.\n\n" +
                 "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
                 "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
                 "{{BOLD}}Good Luck!"));
@@ -625,7 +611,7 @@ namespace MazerPlatformer
             return Nothing;
         }
 
-        private Either<IFailure, Unit> OnEscapeKeyReleased(GameTime time) =>
+        private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame() 
                 ? PauseGame() 
                 : ResumeGame();
@@ -635,22 +621,20 @@ namespace MazerPlatformer
                 from startOrContinueLevelResult in StartOrContinueLevel(isFreshStart: false)
                 select startOrContinueLevelResult;
 
-        private Either<IFailure, Unit> PauseGame()
-        {
-            _currentGameState = GameStates.Paused;
-            return ShowMenu();
-        }
+        private Either<IFailure, Unit> PauseGame() =>
+            from currentGameState in (Either<IFailure, GameStates>) (_currentGameState = GameStates.Paused)
+            from result in ShowMenu()
+            select result;
 
         private bool IsPlayingGame() 
             => _currentGameState == GameStates.Playing;
 
-        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied(List<Component> components) => Ensure(() =>
-        {
-            // We don't have a game over state, as we use the pause state and then show a game over screen
-            _playerDied = true;
-            ShowGameOverScreen().ThrowIfFailed();
-            _currentGameState = GameStates.Paused;
-        });
+        // We don't have a game over state, as we use the pause state and then show a game over screen
+        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() => EnsureWithReturn(() =>
+            from playerDied in (Either<IFailure, bool>) (_playerDied = true)
+            from result in ShowGameOverScreen()
+            from currentGameState in (Either<IFailure, GameStates>) (_currentGameState = GameStates.Paused)
+            select Nothing).UnWrap();
 
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) 
             => IsStateEntered(reason)
@@ -707,7 +691,8 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> IncrementCollisionStats(GameObject gameObject) => Ensure(() =>
         {
-            if (gameObject.Type == GameObject.GameObjectType.Npc) _numCollisionsWithPlayerAndNpCs++;
+            if (gameObject.Type == GameObject.GameObjectType.Npc) 
+                _numCollisionsWithPlayerAndNpCs++;
 
             _numGameCollisionsEvents++;
         });
