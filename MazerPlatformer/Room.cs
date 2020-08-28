@@ -97,7 +97,7 @@ namespace MazerPlatformer
             from rightDraw in DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatch, HasSides)
             from bottomDraw in DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatch, HasSides)
             from leftDraw in DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatch, HasSides)
-            select Nothing;
+                select Nothing;
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
         public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
@@ -148,7 +148,7 @@ namespace MazerPlatformer
         protected bool Equals(Room other)
         {
             return 
-                   Enumerable.SequenceEqual(HasSides, other.HasSides) && 
+                   HasSides.SequenceEqual(other.HasSides) && 
                    Equals(RectangleDetail, other.RectangleDetail) &&
                    Equals(RoomAbove, other.RoomAbove) && 
                    Equals(RoomBelow, other.RoomBelow) && 
