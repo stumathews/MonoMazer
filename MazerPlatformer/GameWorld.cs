@@ -98,9 +98,10 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> UnloadContent() => Ensure(() =>
         {
             _unloading = true;
-            _gameObjects.Clear();
+            GameObjects.Clear();
             _level.Unload(); // TODO: I/O
             _unloading = false;
+            _rooms.Clear();
             _removeWallTimer.Stop();
         });
 

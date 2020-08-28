@@ -287,7 +287,7 @@ namespace MazerPlatformer
             var characters = new List<Npc>();
 
             // Load NPC details from file
-            if (Npcs != null && Npcs.Count > 0)
+            if (Npcs != null && levelFile.Npcs.Count > 0)
             {
                 foreach (var levelNpc in levelFile.Npcs)
                 {
@@ -453,6 +453,9 @@ namespace MazerPlatformer
             
             foreach (var npc in Npcs) npc.Dispose();
             foreach (var room in _rooms) room.Dispose();
+
+            Npcs.Clear();
+            _rooms.Clear();
         });
 
         // Save the level information including NPcs and Player info
