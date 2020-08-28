@@ -341,7 +341,7 @@ namespace MazerPlatformer
                 from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, ContentManager)
                 from setPLayer in SetPlayer(player)
                 from gameObjectsWithPlayer in AddToLevelGameObjects(Player.Id, player)
-                from npcs in MakeNpCs(_rooms, LevelFile, new CharacterBuilder(ContentManager, Rows, Cols), this)
+                from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(ContentManager, Rows, Cols), this)
                 from setNPCs in SetNPCs(npcs)
                 from gameObjectsWithNpcs in AddNpcsToGameObjects(npcs)
                 from setNumPickups in SetNumPickups(npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)))

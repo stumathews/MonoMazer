@@ -111,7 +111,9 @@ namespace MazerPlatformer
                 if (!otherObject.BoundingSphere.Intersects(thisWallProperty.Bounds.ToBoundingBox()) || !HasSide(side, HasSides)) 
                     continue;
 
-                Console.WriteLine($"{side} collided with object {otherObject.Id}");
+                if(Diagnostics.LogDiagnostics)
+                    Console.WriteLine($"{side} collided with object {otherObject.Id}");
+
                 thisWallProperty.Color = Color.White;
                 collision = true;
                 OnWallCollision?.Invoke(this, otherObject, side, thisWallProperty);

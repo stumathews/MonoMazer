@@ -26,7 +26,7 @@ namespace MazerPlatformer
         private int Rows { get; set; } // Rows Of rooms
         private int Cols { get; set; } // Columns of rooms
 
-        public readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+        public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
         private static readonly Random Random = new Random();
 
@@ -83,10 +83,10 @@ namespace MazerPlatformer
         /// Add player 
         /// </summary>
         internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
-            from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random, OnLoadLevel)
+            from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random, OnLevelLoad)
             from gameWorldLevel in (Either<IFailure, Level>)(_level = newLevel) //set the game world's level
             from levelObjects in gameWorldLevel.Load(overridePlayerHealth, overridePlayerScore)
-            from added in AddToGameWorld(levelObjects, _gameObjects, OnGameObjectAddedOrRemoved)
+            from added in AddToGameWorld(levelObjects, GameObjects, OnGameObjectAddedOrRemoved)
             from levelRooms in newLevel.GetRooms()
             from setGameWorldRooms in (Either<IFailure,List<Room>>)(_rooms = levelRooms) // set te game world's rooms
             from startedTimer in StartRemoveWorldTimer(_removeWallTimer)
@@ -127,7 +127,7 @@ namespace MazerPlatformer
             // Let us know when a room registers a collision
             _rooms.ForEach(r => r.OnWallCollision += OnRoomCollision);
 
-            foreach (var gameObject in _gameObjects)
+            foreach (var gameObject in GameObjects)
             {
                 gameObject.Value.Initialize();
                 gameObject.Value.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
@@ -214,7 +214,7 @@ namespace MazerPlatformer
         /// <param name="spriteBatch"></param>
         public Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
             => _unloading ? Nothing
-                          : _gameObjects.Values
+                          : GameObjects.Values
                               .Where(obj => obj.Active)
                               .Select(gameObject => gameObject.Draw(spriteBatch))
                               .AggregateUnitFailures();
@@ -233,12 +233,12 @@ namespace MazerPlatformer
 
             _removeWallTimer.Update(gameTime);
 
-            var inactiveIds = _gameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
+            var inactiveIds = GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
                 RemoveGameObject(id);
 
-            var activeGameObjects = _gameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
+            var activeGameObjects = GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
             {
                 gameObject.Update(gameTime);
@@ -252,13 +252,20 @@ namespace MazerPlatformer
             }
         });
 
-        // The game world wants to know about every component update/change that occurs in the world
+        /// <summary>
+        /// The game world wants to know about every component update/change that occurs in the world
+        /// See if we can hook this up to an event listener in the UI
+        /// A game object changed!
+        /// </summary>
+        /// <param name="thisObject"></param>
+        /// <param name="componentName"></param>
+        /// <param name="componentType"></param>
+        /// <param name="oldValue"></param>
+        /// <param name="newValue"></param>
+        /// <returns></returns>
         private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) => Ensure(() =>
         {
-            // See if we can hook this up to an event listener in the UI
-            // A game object changed!
-            Console.WriteLine(
-                $"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
+            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
         });
 
         /// <summary>
@@ -281,11 +288,11 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> RemoveGameObject(string id)
         =>
-            from gameObject in GetGameObject(_gameObjects, id)
-            from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, _gameObjects, OnGameObjectAddedOrRemoved)
+            from gameObject in GetGameObject(GameObjects, id)
+            from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, GameObjects, OnGameObjectAddedOrRemoved)
             from removePickup in RemoveIfLevelPickup(gameObject, _level)
             from clearLevel in NotifyIfLevelCleared(OnLevelCleared,_level)
-            from deactivateObjects in DeactivateGameObject(gameObject,_gameObjects, id)
+            from deactivateObjects in DeactivateGameObject(gameObject,GameObjects, id)
                 select Nothing; // All pipelines return something
 
 
@@ -381,16 +388,15 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> OnObjectCollision(Option<GameObject> obj1, Option<GameObject> obj2)
         {
             return
-                from o1 in obj1.ToEither(NotFound.Create("Game Object 1 not valid"))
-                from o2 in obj2.ToEither(NotFound.Create("Game Object 2 not valid"))
+                from gameObject1 in obj1.ToEither(NotFound.Create("Game Object 1 not valid"))
+                from gameObject2 in obj2.ToEither(NotFound.Create("Game Object 2 not valid"))
                 from unloadingFalse in _unloading.FailIfTrue(ShortCircuitFailure.Create("Already Unloading"))
                 from invokeResult in RaiseOnGameWorldCollisionEvent()
-                from setRoomToActiveResult in SetRoomToActive(o1, o2)
-                from soundPlayerCollisionResult in SoundPlayerCollision(o1, o2)
+                from setRoomToActiveResult in SetRoomToActive(gameObject1, gameObject2)
+                from soundPlayerCollisionResult in SoundPlayerCollision(gameObject1, gameObject2)
                 select Nothing;
 
-            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) =>
-            Ensure(() =>
+            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) => Ensure(() =>
             {
                 if (go1.Id == Level.Player.Id)
                     go2.Active = go2.Type == GameObjectType.Room;
@@ -410,13 +416,7 @@ namespace MazerPlatformer
             });
         }
 
-        // What to do specifically when a room registers a collision
-        private static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side,
-            SideCharacteristic sideCharacteristics) => Ensure(() =>
-        {
-            if (otherObject.Type == GameObjectType.Player)
-                room.RemoveSide(side);
-        });
+       
 
 
         // Inform the Game world that the up button was pressed, make the player idle
@@ -428,14 +428,10 @@ namespace MazerPlatformer
 
         public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsureWithReturn(() =>
         {
-            var obj1Row = ToRoomRow(obj1)
-                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
-            var obj1Col = ToRoomColumn(obj1)
-                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
-            var obj2Row = ToRoomRow(obj2)
-                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
-            var obj2Col = ToRoomColumn(obj2)
-                .ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
+            var obj1Row = ToRoomRow(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
+            var obj1Col = ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
+            var obj2Row = ToRoomRow(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
+            var obj2Col = ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
 
             var isSameRow = obj1Row == obj2Row;
             var isSameCol = obj1Col == obj2Col;
@@ -443,7 +439,6 @@ namespace MazerPlatformer
             {
                 var (greater, smaller) = GetMaxMinRange(obj2Col, obj1Col)
                     .ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
-                ;
 
                 var roomsInThisRow = _rooms.Where(o => o.Row + 1 == obj1Row);
                 var cropped = roomsInThisRow.Where(o =>
@@ -486,28 +481,6 @@ namespace MazerPlatformer
 
             return false;
         });
-
-        private static Option<(int greater, int smaller)> GetMaxMinRange(Option<int> number1, Option<int> number2) 
-            => from oc1 in number1
-            from oc2 in number2
-            select SortBySize(oc1, oc2);
-
-        [PureFunction]
-        private static (int greater, int smaller) SortBySize(int number1, int number2)
-        {
-            int smallerCol;
-            int greaterCol;
-            if (number1 > number2)
-            {
-                greaterCol = number1;
-                smallerCol = number2;
-                return (greaterCol, smallerCol);
-            }
-
-            smallerCol = number1;
-            greaterCol = number2;
-            return (greaterCol, smallerCol);
-        }
 
         public Either<IFailure, Unit> SetPlayerStatistics(int health = 100, int points = 0)
             => _level.ResetPlayer(health, points);
