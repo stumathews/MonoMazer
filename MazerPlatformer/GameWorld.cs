@@ -236,7 +236,7 @@ namespace MazerPlatformer
             var inactiveIds = GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
-                RemoveGameObject(id);
+                RemoveGameObject(id, _level);
 
             var activeGameObjects = GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
@@ -286,15 +286,15 @@ namespace MazerPlatformer
                 ? Nothing 
                 : _level.PlaySong();
 
-        private Either<IFailure, Unit> RemoveGameObject(string id)
+        private Either<IFailure, Unit> RemoveGameObject(string id, Level level)
         =>
             from gameObject in GetGameObject(GameObjects, id)
             from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, GameObjects, OnGameObjectAddedOrRemoved)
-            from removePickup in RemoveIfLevelPickup(gameObject, _level)
-            from clearLevel in NotifyIfLevelCleared(OnLevelCleared,_level)
+            from isLevelPickup in IsLevelPickup(gameObject, level).IfSome(unit => RemoveIfLevelPickup(gameObject, level)).ToEither()
+            from removePickup in RemoveIfLevelPickup(gameObject, level)
+            from isLevelCleared in IsLevelCleared(level).IfSome(unit => NotifyIfLevelCleared(OnLevelCleared, level)).ToEither()
             from deactivateObjects in DeactivateGameObject(gameObject,GameObjects, id)
-                select Nothing; // All pipelines return something
-
+                select Nothing;
 
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
@@ -332,7 +332,7 @@ namespace MazerPlatformer
             else
             {
                 // object has no room - must have wondered off the screen - remove it
-                RemoveGameObject(gameObject.Id);
+                RemoveGameObject(gameObject.Id, _level);
             }
 
             // local functions

@@ -17,6 +17,9 @@ namespace MazerPlatformer
                 levelClearedFunc?.Invoke(level);
         });
 
+        public static Option<Unit> IsLevelCleared(Level level)
+            => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
+
         public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, GameWorld.GameObjectAddedOrRemoved func) => Ensure(() =>
         {
             // We want subscribers to inspect the object before we dispose of it below
@@ -25,10 +28,12 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Level> RemoveIfLevelPickup(GameObject obj, Level level) => EnsureWithReturn(() =>
         {
-            if (obj.IsNpcType(Npc.NpcTypes.Pickup))
-                level.NumPickups--;
+            level.NumPickups--;
             return level;
         });
+
+        public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
+            obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
         public static Either<IFailure, GameObject> GetGameObject(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(() => gameObjects[id]);
 
