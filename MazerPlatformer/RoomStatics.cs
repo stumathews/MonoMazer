@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using C3.XNA;
-using GeonBit.UI.Entities;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -37,7 +37,7 @@ namespace MazerPlatformer
         /// <param name="room"></param>
         /// <returns></returns>
         [PureFunction]
-        public static Either<IFailure, Room> InitializeBounds(Room room) => Statics.EnsureWithReturn(() 
+        public static Either<IFailure, Room> InitializeBounds(Room room) => EnsureWithReturn(() 
             => from roomCopy in room.Copy()
                 from addedTop in AddWallCharacteristic(roomCopy, Room.Side.Top, new SideCharacteristic(Color.Black, TopBounds(room)))
                 from addedRight in AddWallCharacteristic(addedTop, Room.Side.Right, new SideCharacteristic(Color.Black, RightBounds(room)))
@@ -59,9 +59,9 @@ namespace MazerPlatformer
             => new Rectangle(x: room.RectangleDetail.GetAx(), y: room.RectangleDetail.GetAy(), height: room.RectangleDetail.GetAD(), width: 1);
 
         [PureFunction]
-        public static Either<IFailure, Unit> IsValid(int x, int y, int width, int height, int roomNumber, int row, int col) => Statics.EnsureWithReturn(() 
+        public static Either<IFailure, Unit> IsValid(int x, int y, int width, int height, int roomNumber, int row, int col) => EnsureWithReturn(() 
             => !AnyNegative(x, y, width, height) && col >= 0 && row >= 0
-            ? Statics.Nothing
+            ? Nothing
             : InvalidDataFailure.Create($"Invalid constructor arguments given to Room.{nameof(IsValid)}").ToEitherFailure<Unit>()).UnWrap();
 
         [PureFunction]
@@ -114,7 +114,7 @@ namespace MazerPlatformer
                 select result;
 
             // use copy and modify it and return copy to caller
-            Either<IFailure, Room> AddSideCharacteristic(Room theRoom, Room.Side theside, SideCharacteristic sideCharacteristic) => Statics.EnsureWithReturn(() =>
+            Either<IFailure, Room> AddSideCharacteristic(Room theRoom, Room.Side theside, SideCharacteristic sideCharacteristic) => EnsureWithReturn(() =>
             {
                 theRoom.WallProperties.Add(theside, sideCharacteristic);
                 return theRoom;
@@ -134,7 +134,7 @@ namespace MazerPlatformer
                 CD = Bottom
                 AD = Left  
         */
-        public static Either<IFailure, Unit> DrawSide(Room.Side side, Dictionary<Room.Side, SideCharacteristic> sideProperties, RectDetails rectangle, SpriteBatch spriteBatch, bool[] hasSides) => Statics.Ensure(() =>
+        public static Either<IFailure, Unit> DrawSide(Room.Side side, Dictionary<Room.Side, SideCharacteristic> sideProperties, RectDetails rectangle, SpriteBatch spriteBatch, bool[] hasSides) => Ensure(() =>
         {
             /* Draws each side as a separate Line*/
             switch (side)
@@ -143,13 +143,11 @@ namespace MazerPlatformer
                     if (Diagnostics.DrawTop)
                     {
                         if (Diagnostics.DrawLines && HasSide(side, hasSides))
-                            spriteBatch.DrawLine(rectangle.GetAx(), rectangle.GetAy(), rectangle.GetBx(),
-                                rectangle.GetBy(), sideProperties[side].Color, Room.WallThickness);
+                            spriteBatch.DrawLine(rectangle.GetAx(), rectangle.GetAy(), rectangle.GetBx(), rectangle.GetBy(), sideProperties[side].Color, Room.WallThickness);
 
                         if (Diagnostics.DrawSquareSideBounds)
                             spriteBatch.DrawRectangle(sideProperties[side].Bounds, Color.White, 2.5f);
                     }
-
                     break;
                 case Room.Side.Right:
                     if (Diagnostics.DrawRight)
@@ -220,9 +218,7 @@ namespace MazerPlatformer
             return room.ToEither();
         });
 
-        public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows)
-        {
-            return roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);
-        }
+        public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows) 
+            => roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);
     }
 }

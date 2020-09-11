@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Text;
-using GameLib.EventDriven;
+﻿using GameLib.EventDriven;
 using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
@@ -13,7 +7,6 @@ using Microsoft.Xna.Framework.Input;
 using GeonBit.UI;
 using GeonBit.UI.Entities;
 using LanguageExt;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
 using static MazerPlatformer.Statics;
@@ -94,7 +87,7 @@ namespace MazerPlatformer
                              from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, spriteBatch)
                                 select createdWorld;
 
-                _pauseState = new PauseState(this); 
+                _pauseState = new PauseState(); 
                 _playingState = new PlayingGameState(this);
 
                 Content.RootDirectory = "Content";

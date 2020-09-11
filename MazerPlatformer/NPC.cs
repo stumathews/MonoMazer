@@ -1,12 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Channels;
-using System.Text;
-using System.Threading.Tasks;
-using GameLibFramework.Animation;
+﻿using GameLibFramework.Animation;
 using LanguageExt;
 using static MazerPlatformer.Statics;
 

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ImmutableTests
+﻿namespace ImmutableTests
 {
     public interface IBuilder<T>
     {

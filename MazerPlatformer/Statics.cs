@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {
@@ -220,6 +215,11 @@ namespace MazerPlatformer
         public static Option<bool> ToOption(this bool thing)
         {
             return thing ? Option<bool>.Some(true) : Option<bool>.None;
+        }
+
+        public static Option<T> ToOption<T>(this T thing)
+        {
+            return thing != null ? Option<T>.Some(default(T)) : Option<T>.None;
         }
 
         public static Either<L, bool> FailIfTrue<L>(this bool theBool, L theFailure) 
@@ -459,6 +459,11 @@ namespace MazerPlatformer
 
         public static Either<IFailure, T> MustNotBe<T>(T arg, Func<bool> func, IFailure customFailure = null)
             => func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
+
+        public static Option<Unit> Must(Func<bool> func)
+            => !func()
+                ? Option<Unit>.None
+                : Nothing;
 
         /// <summary>
         /// Fali if the condition is not met

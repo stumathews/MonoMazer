@@ -1,9 +1,5 @@
-﻿using System;
-using GameLib.EventDriven;
-using GameLibFramework.Animation;
-using GameLibFramework.FSM;
+﻿using GameLibFramework.Animation;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.Statics;

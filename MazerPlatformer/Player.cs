@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using C3.XNA;
-using GameLib.EventDriven;
+﻿using C3.XNA;
 using GameLibFramework.Animation;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using static MazerPlatformer.Component;
 using static MazerPlatformer.Statics;
 
 

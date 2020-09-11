@@ -2,22 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Policy;
-using System.Xml;
 using GameLibFramework.Animation;
-using GameLibFramework.FSM;
 using LanguageExt;
-using LanguageExt.SomeHelp;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Component;
-using static MazerPlatformer.GameObject;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
