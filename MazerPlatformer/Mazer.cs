@@ -36,9 +36,9 @@ namespace MazerPlatformer
         private const int DefaultNumRows = 10;
 
         private int _currentLevel = 1;    // Initial level is 1
-        private int _playerPoints = 0; 
-        private int _playerHealth = 0; 
+        private int _playerHealth = 100; 
         private int _playerPickups = 0;
+        private int _playerPoints = 0; 
 
         private int _numGameCollisionsEvents;
         private int _numCollisionsWithPlayerAndNpCs;
@@ -56,50 +56,12 @@ namespace MazerPlatformer
         
         public Mazer()
         {
-            // Setup Hardware initialization pipeline 
             var initializationPipeline = 
-                from graphics in SetupGraphicsDevice()
+                from graphics in InitializeGraphicsDevice()
                 from software in CreateInfrastructure()
                 select Nothing;
 
-            // Pipeline needs to have no errors
-            initializationPipeline.ThrowIfFailed();
-
-            Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
-            {
-                _gameCommands = new CommandManager();
-                _gameStateMachine = new FSM(this);
-                _spriteBatch = new SpriteBatch(GraphicsDevice);
-                _gameWorld = from spriteBatch in _spriteBatch
-                             from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, DefaultNumRows, DefaultNumCols, spriteBatch)
-                             select createdWorld;
-
-                _playingState = new PlayingGameState(this);
-                _pauseState = new PauseState(); 
-                _pauseState.OnStateChanged += (state, reason) => OnPauseStateChanged(state, reason);
-
-                Content.RootDirectory = "Content";
-                IsFixedTimeStep = false;
-            }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
-
-            Either<IFailure, GraphicsDevice> SetupGraphicsDevice() => EnsureWithReturn(() =>
-            {
-                var graphicsDeviceManager = new GraphicsDeviceManager(this)
-                {
-                    GraphicsProfile = GraphicsProfile.Reach,
-                    HardwareModeSwitch = false,
-                    IsFullScreen = false,
-                    PreferMultiSampling = false,
-                    PreferredBackBufferFormat = SurfaceFormat.Color,
-                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
-                    PreferredDepthStencilFormat = DepthFormat.None,
-                    SupportedOrientations = DisplayOrientation.Default,
-                    SynchronizeWithVerticalRetrace = false,
-                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
-                };
-                graphicsDeviceManager.ApplyChanges();
-                return GraphicsDevice;
-            }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
+            initializationPipeline.ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception from the get-go
         }
 
         /// <summary>
@@ -113,7 +75,7 @@ namespace MazerPlatformer
                 from loadedMusic in Content.TryLoad<Song>("Music/bgm_menu")
                 from setFontResult in SetGameFont(() => _font = loadedFont)
                 from setMusicResult in SetMenuMusic(()=> _menuMusic = loadedMusic)
-                from loadedGameWorld in LoadGameWorldContent(_gameWorld, _currentLevel)
+                from loadedGameWorld in LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints) 
                 select loadedGameWorld;
 
             loadContentPipeline.ThrowIfFailed();
@@ -129,7 +91,7 @@ namespace MazerPlatformer
         {
             var initializePipeline =
                 from init in Ensure(() => base.Initialize())
-                from initializeUi in InitializeUi() // the from variable can silently name the anonymous function!
+                from initializeUi in InitializeUi()
                 from gameStateMachine in _gameStateMachine
                 from stateMachine in InitializeGameStateMachine(gameStateMachine)
                 from initGameWorld in InitializeGameWorld(_gameWorld, _gameCommands)
@@ -137,57 +99,6 @@ namespace MazerPlatformer
 
             initializePipeline.ThrowIfFailed();
 
-            // local functions:
-
-            Either<IFailure, Unit> InitializeUi() =>
-                from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
-                from setupMenuUi in 
-                    from panels in CreatePanels()
-                    from setup in SetupMainMenuPanel()
-                    from instructions in SetupInstructionsPanel()
-                    from gameOver in SetupGameOverMenu(_gameOverPanel)
-                    from addResult in AddPanelsToUi()
-                    select Nothing
-                select setupMenuUi;
-            
-             Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
-                 from world in gameWorld
-                 from commands in gameCommands
-                 from init in world.Initialize()
-                 from setup in SetupGameCommands(commands)
-                 from connectedGameWorld in ConnectToGameWorld(world)
-                 select connectedGameWorld;
-
-            Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
-            {
-                // Diagnostic keyboard shortcuts
-                commands.AddKeyUpCommand(Keys.T, time => ToggleSetting(ref Diagnostics.DrawTop));
-                commands.AddKeyUpCommand(Keys.B, time => ToggleSetting(ref Diagnostics.DrawBottom));
-                commands.AddKeyUpCommand(Keys.R, time => ToggleSetting(ref Diagnostics.DrawRight));
-                commands.AddKeyUpCommand(Keys.L, time => ToggleSetting(ref Diagnostics.DrawLeft));
-                commands.AddKeyUpCommand(Keys.D1, time => ToggleSetting(ref Diagnostics.DrawGameObjectBounds));
-                commands.AddKeyUpCommand(Keys.D2, time => ToggleSetting(ref Diagnostics.DrawSquareSideBounds));
-                commands.AddKeyUpCommand(Keys.D3, time => ToggleSetting(ref Diagnostics.DrawLines));
-                commands.AddKeyUpCommand(Keys.D4, time => ToggleSetting(ref Diagnostics.DrawCentrePoint));
-                commands.AddKeyUpCommand(Keys.D5, time => ToggleSetting(ref Diagnostics.DrawMaxPoint));
-                commands.AddKeyUpCommand(Keys.D6, time => ToggleSetting(ref Diagnostics.DrawObjectInfoText));
-                commands.AddKeyUpCommand(Keys.D0, time => EnableAllDiagnostics());
-
-                // Basic game commands
-                commands.AddKeyUpCommand(Keys.S, time => StartLevel(_currentLevel,   _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
-                commands.AddKeyUpCommand(Keys.N, time => StartLevel(++_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed()); // Cheat: complete current level!
-                commands.AddKeyUpCommand(Keys.P, time => StartLevel(--_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
-                commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased().ThrowIfFailed());
-                
-                // Music controls
-                commands.AddKeyUpCommand(Keys.X, time => Ensure(MediaPlayer.Pause).ThrowIfFailed());
-                commands.AddKeyUpCommand(Keys.Z, time => Ensure(MediaPlayer.Resume).ThrowIfFailed());
-                return commands;
-            });
-
-            Either<IFailure, GameWorld> ConnectToGameWorld(GameWorld gameWorld) 
-                => from connectedGameWorld in EnsureWithReturn(gameWorld, SubscribeToGameWorldEvents)
-                select connectedGameWorld;
         }
 
         /// <summary>
@@ -248,48 +159,124 @@ namespace MazerPlatformer
             drawPipeline.ThrowIfFailed();
         }
 
-        private GameWorld SubscribeToGameWorldEvents(GameWorld theWorld)
+        // Initialization functions
+
+        private Either<IFailure, Unit> InitializeGameStateMachine(FSM gameStateMachine) => Ensure(() =>
         {
-            theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
-            theWorld.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
-            theWorld.OnPlayerDirectionChanged += direction => Ensure(() => _characterDirection = direction);
-            theWorld.OnPlayerCollisionDirectionChanged += direction => Ensure(() => _characterCollisionDirection = direction);
-            theWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-            theWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            theWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-            theWorld.OnLevelCleared += level => ProgressToLevel(++_currentLevel, _playerHealth, _playerPoints).ThrowIfFailed();
-            theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
-            return theWorld;
-        }
+            var transitions = new[] 
+            {
+                new Transition(_pauseState, () => _currentGameState == GameStates.Paused),
+                new Transition(_playingState, () => _currentGameState == GameStates.Playing)
+            };
 
-        private Either<IFailure, int> ReadPlayerHealth(Component healthComponent) 
-            => from value in TryCastToT<int>(healthComponent.Value)
-                from set in (Either<IFailure, int>) SetPlayerHealthScalar(value)
-                select set;
+            gameStateMachine.AddState(_pauseState);
+            gameStateMachine.AddState(_playingState);
 
-        private Either<IFailure, int> ReadPlayerPoints(Component pointsComponent) 
-            => from value in TryCastToT<int>(pointsComponent.Value)
-                from set in (Either<IFailure, int>) SetPlayerPointsScalar(value) 
-                select set;
+            // Allow each state to go into any other state, except itself. (Paused -> playing and Playing -> Paused)
+            foreach (var state in new State[] {_pauseState, _playingState})
+            {
+                state.Initialize();
+                foreach (var transition in transitions)
+                {
+                    if (state.Name != transition.NextState.Name) // except itself
+                        state.AddTransition(transition);
+                }
+            }
 
-        private Either<IFailure, Unit> ProgressToLevel(int level, int playerHealth, int playerPoints) => StartLevel(level, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false, playerHealth, playerPoints);
+            
 
-        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) =>
-            from gameWorld in _gameWorld
-            from move in gameWorld.MovePlayer(dir, dt)
-            select Nothing;
+            // Ready the state machine and put it into the default state of 'pause' state            
+            gameStateMachine.Initialise(_pauseState.Name);
+        });
 
-        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) => // Hides GameWorld from PlayingState
-            from gameWorld in _gameWorld
-            from update in gameWorld.Update(dt)
-            select Nothing;
+        private Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
+        {
+            _gameCommands = new CommandManager();
+            _gameStateMachine = new FSM(this);
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _gameWorld = from spriteBatch in _spriteBatch
+                         from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, DefaultNumRows, DefaultNumCols, spriteBatch)
+                         select createdWorld;
 
-        private int ResetPlayerPickups() => _playerPickups = 0;
-        private int ResetPlayerPoints() => _playerPoints = 0;
-        private int ResetPlayerHealth() => _playerHealth = 100;
-        private bool SetPlayerDied(bool trueOrFalse) => _playerDied = trueOrFalse;
-        private int SetPlayerHealthScalar(int v) => _playerHealth = v;
-        private int SetPlayerPointsScalar(int v) => _playerPoints = v;
+            _playingState = new PlayingGameState(this);
+            _pauseState = new PauseState(); 
+            _pauseState.OnStateChanged += (state, reason) => OnPauseStateChanged(state, reason).ThrowIfFailed();
+
+            Content.RootDirectory = "Content";
+            IsFixedTimeStep = false;
+        }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
+
+        private Either<IFailure, GraphicsDevice> InitializeGraphicsDevice() => EnsureWithReturn(() =>
+            {
+                var graphicsDeviceManager = new GraphicsDeviceManager(this)
+                {
+                    GraphicsProfile = GraphicsProfile.Reach,
+                    HardwareModeSwitch = false,
+                    IsFullScreen = false,
+                    PreferMultiSampling = false,
+                    PreferredBackBufferFormat = SurfaceFormat.Color,
+                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                    PreferredDepthStencilFormat = DepthFormat.None,
+                    SupportedOrientations = DisplayOrientation.Default,
+                    SynchronizeWithVerticalRetrace = false,
+                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+                };
+                graphicsDeviceManager.ApplyChanges();
+
+                return GraphicsDevice;
+        }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
+
+        private Either<IFailure, Unit> InitializeUi() =>
+            from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
+            from setupMenuUi in 
+                from panels in CreatePanels()
+                from setup in SetupMainMenuPanel()
+                from instructions in SetupInstructionsPanel()
+                from gameOver in SetupGameOverMenu(_gameOverPanel)
+                from addResult in AddPanelsToUi()
+                select Nothing
+            select setupMenuUi;
+
+        private Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
+             from world in gameWorld
+             from commands in gameCommands
+             from init in world.Initialize()
+             from setup in SetupGameCommands(commands)
+             from connectedGameWorld in ConnectToGameWorld(world)
+             select connectedGameWorld;
+
+        private Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
+        {
+            // Diagnostic keyboard shortcuts
+            commands.AddKeyUpCommand(Keys.T, time => ToggleSetting(ref Diagnostics.DrawTop));
+            commands.AddKeyUpCommand(Keys.B, time => ToggleSetting(ref Diagnostics.DrawBottom));
+            commands.AddKeyUpCommand(Keys.R, time => ToggleSetting(ref Diagnostics.DrawRight));
+            commands.AddKeyUpCommand(Keys.L, time => ToggleSetting(ref Diagnostics.DrawLeft));
+            commands.AddKeyUpCommand(Keys.D1, time => ToggleSetting(ref Diagnostics.DrawGameObjectBounds));
+            commands.AddKeyUpCommand(Keys.D2, time => ToggleSetting(ref Diagnostics.DrawSquareSideBounds));
+            commands.AddKeyUpCommand(Keys.D3, time => ToggleSetting(ref Diagnostics.DrawLines));
+            commands.AddKeyUpCommand(Keys.D4, time => ToggleSetting(ref Diagnostics.DrawCentrePoint));
+            commands.AddKeyUpCommand(Keys.D5, time => ToggleSetting(ref Diagnostics.DrawMaxPoint));
+            commands.AddKeyUpCommand(Keys.D6, time => ToggleSetting(ref Diagnostics.DrawObjectInfoText));
+            commands.AddKeyUpCommand(Keys.D0, time => EnableAllDiagnostics());
+
+            // Basic game commands
+            commands.AddKeyUpCommand(Keys.S, time => StartLevel(_currentLevel,   _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.N, time => StartLevel(++_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed()); // Cheat: complete current level!
+            commands.AddKeyUpCommand(Keys.P, time => StartLevel(--_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased().ThrowIfFailed());
+            
+            // Music controls
+            commands.AddKeyUpCommand(Keys.X, time => Ensure(MediaPlayer.Pause).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.Z, time => Ensure(MediaPlayer.Resume).ThrowIfFailed());
+            return commands;
+        });
+
+        private Either<IFailure, GameWorld> ConnectToGameWorld(GameWorld gameWorld) 
+            => from connectedGameWorld in EnsureWithReturn(gameWorld, SubscribeToGameWorldEvents)
+            select connectedGameWorld;
+        
+        // UI functions
 
         private Either<IFailure, Unit> ShowGameOverScreen() =>
             from setup in SetupGameOverMenu(_gameOverPanel)
@@ -353,8 +340,6 @@ namespace MazerPlatformer
 
         private void SetMenuPanelNotVisibleFn() => _mainMenuPanel.Visible = false;
 
-        private GameStates SetGameToPlayingState() => (_currentGameState = GameStates.Playing);
-
         private Either<IFailure, Unit> SetupInstructionsPanel() => Ensure(() =>
         {
             var closeControlsPanelButton = new Button("Back");
@@ -371,9 +356,6 @@ namespace MazerPlatformer
             _controlsPanel.AddChild(closeControlsPanelButton);
             closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
         }, ExternalLibraryFailure.Create("Failed to setup instructions panel"));
-
-        private Either<IFailure, Unit> QuitGame()
-            => Ensure(Exit);
 
         private Either<IFailure, Unit> SetupGameOverMenu(Panel gameOverPanel) => Ensure(() =>
         {
@@ -409,41 +391,58 @@ namespace MazerPlatformer
             quit.OnClick += (b) => QuitGame().ThrowIfFailed();
         });
         
-        private Either<IFailure, Unit> InitializeGameStateMachine(FSM gameStateMachine) => Ensure(() =>
-        {
-            var transitions = new[] 
-            {
-                new Transition(_pauseState, () => _currentGameState == GameStates.Paused),
-                new Transition(_playingState, () => _currentGameState == GameStates.Playing)
-            };
+        // Utility functions
 
-            gameStateMachine.AddState(_pauseState);
-            gameStateMachine.AddState(_playingState);
+        private Either<IFailure, int> ReadPlayerHealth(Component healthComponent) 
+            => from value in TryCastToT<int>(healthComponent.Value)
+                from set in (Either<IFailure, int>) SetPlayerHealthScalar(value)
+                select set;
 
-            // Allow each state to go into any other state, except itself. (Paused -> playing and Playing -> Paused)
-            foreach (var state in new State[] {_pauseState, _playingState})
-            {
-                state.Initialize();
-                foreach (var transition in transitions)
-                {
-                    if (state.Name != transition.NextState.Name) // except itself
-                        state.AddTransition(transition);
-                }
-            }
+        private Either<IFailure, int> ReadPlayerPoints(Component pointsComponent) 
+            => from value in TryCastToT<int>(pointsComponent.Value)
+                from set in (Either<IFailure, int>) SetPlayerPointsScalar(value) 
+                select set;
 
-            
+        private Either<IFailure, Unit> ProgressToLevel(int level, int playerHealth, int playerPoints) => StartLevel(level, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false, playerHealth, playerPoints);
 
-            // Ready the state machine and put it into the default state of 'pause' state            
-            gameStateMachine.Initialise(_pauseState.Name);
-        });
-        
+        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) =>
+            from gameWorld in _gameWorld
+            from move in gameWorld.MovePlayer(dir, dt)
+            select Nothing;
+
+        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) => // Hides GameWorld from PlayingState
+            from gameWorld in _gameWorld
+            from update in gameWorld.Update(dt)
+            select Nothing;
+
+        private int ResetPlayerPickups() => _playerPickups = 0;
+        private int ResetPlayerPoints() => _playerPoints = 0;
+        private int ResetPlayerHealth() => _playerHealth = 100;
+        private bool SetPlayerDied(bool trueOrFalse) => _playerDied = trueOrFalse;
+        private int SetPlayerHealthScalar(int v) => _playerHealth = v;
+        private int SetPlayerPointsScalar(int v) => _playerPoints = v;
+        private Either<IFailure, Unit> QuitGame() => Ensure(Exit);
         private Either<IFailure, Unit> ResumeGame(Either<IFailure, GameWorld> theGameWorld)
             => from hideMenuResult in HideMenu(SetMenuPanelNotVisibleFn)
                 from startOrContinueLevelResult in StartOrContinueLevel(isFreshStart: false, theGameWorld: theGameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups)
                 select startOrContinueLevelResult;
+        private GameStates SetGameToPlayingState() => (_currentGameState = GameStates.Playing);
+        
+        // Subscription functions
 
-        // Subscriptions to other interfaces used by Mazer
-
+        private GameWorld SubscribeToGameWorldEvents(GameWorld theWorld)
+        {
+            theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
+            theWorld.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
+            theWorld.OnPlayerDirectionChanged += direction => Ensure(() => _characterDirection = direction);
+            theWorld.OnPlayerCollisionDirectionChanged += direction => Ensure(() => _characterCollisionDirection = direction);
+            theWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+            theWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+            theWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+            theWorld.OnLevelCleared += level => ProgressToLevel(++_currentLevel, _playerHealth, _playerPoints).ThrowIfFailed();
+            theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            return theWorld;
+        }
         internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) =>
             from world in _gameWorld
             from result in world.OnKeyUp(sender, keyboardEventArgs)

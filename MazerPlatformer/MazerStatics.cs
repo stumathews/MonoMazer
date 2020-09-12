@@ -165,9 +165,9 @@ namespace MazerPlatformer
             from start in StartOrContinueLevel(isFreshStart, theGameWorld, setMenuPanelNotVisibleFunction, setGameToPlayingState,  setPlayerHealth, setPlayerPoints, setPLayerPickups)
             select Statics.Nothing;
 
-        public static Either<IFailure, GameWorld> LoadGameWorldContent(Either<IFailure, GameWorld> theGameWworld, int currentLevel) =>
+        public static Either<IFailure, GameWorld> LoadGameWorldContent(Either<IFailure, GameWorld> theGameWworld, int currentLevel, int playerHealth = 100, int playerPoints = 0) =>
         from world in theGameWworld
-        from load in world.LoadContent(levelNumber: currentLevel, 100, 0)
+        from load in world.LoadContent(levelNumber: currentLevel, playerHealth, playerPoints)
             select world;
 
         public static Either<IFailure, Unit> SetGameFont(Action setGameFont) => Statics.Ensure(setGameFont);
