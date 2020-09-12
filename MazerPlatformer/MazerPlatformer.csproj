@@ -62,6 +62,7 @@
     <Compile Include="GameWorldStatics.cs" />
     <Compile Include="IFailure.cs" />
     <Compile Include="Failures\InvalidCastFailure.cs" />
+    <Compile Include="MazerStatics.cs" />
     <Compile Include="MovingState.cs" />
     <Compile Include="NotFound.cs" />
     <Compile Include="Failures\NotTypeExceptionFailure.cs" />
