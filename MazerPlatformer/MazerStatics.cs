@@ -111,7 +111,7 @@ namespace MazerPlatformer
             incrementGameCollisionEvents();
         });
 
-        public static Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value, Action<int> setPlayerHealth, Action<int> setPlayerPoints)
+        public static Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value, Func<int, int> setPlayerHealth, Func<int, int> setPlayerPoints)
         {
             switch (type)
             {
@@ -143,5 +143,34 @@ namespace MazerPlatformer
                 setPlayerPoints, 
                 setPLayerPickups, theGameWorld)
             select Statics.Nothing;
+
+        // Not pure - depends on static state and changes it
+        public static Unit EnableAllDiagnostics()
+        {
+            Diagnostics.DrawMaxPoint = !Diagnostics.DrawMaxPoint;
+            Diagnostics.DrawSquareSideBounds = !Diagnostics.DrawSquareSideBounds;
+            Diagnostics.DrawSquareBounds = !Diagnostics.DrawSquareBounds;
+            Diagnostics.DrawGameObjectBounds = !Diagnostics.DrawGameObjectBounds;
+            Diagnostics.DrawObjectInfoText = !Diagnostics.DrawObjectInfoText;
+            Diagnostics.ShowPlayerStats = !Diagnostics.ShowPlayerStats;
+            return Statics.Nothing;
+        }
+
+        public static Either<IFailure, Unit> StartLevel(int level, Either<IFailure, GameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups, Func<bool, bool> setPlayerDied, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
+            from setPlayerNotDead in (Either<IFailure, bool>)( setPlayerDied(false))
+            from gameWorld in theGameWorld
+            from unload in gameWorld.UnloadContent()
+            from load in gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore)
+            from init in gameWorld.Initialize() // We need to reinitialize things once we've reload content
+            from start in StartOrContinueLevel(isFreshStart, theGameWorld, setMenuPanelNotVisibleFunction, setGameToPlayingState,  setPlayerHealth, setPlayerPoints, setPLayerPickups)
+            select Statics.Nothing;
+
+        public static Either<IFailure, GameWorld> LoadGameWorldContent(Either<IFailure, GameWorld> theGameWworld, int currentLevel) =>
+        from world in theGameWworld
+        from load in world.LoadContent(levelNumber: currentLevel, 100, 0)
+            select world;
+
+        public static Either<IFailure, Unit> SetGameFont(Action setGameFont) => Statics.Ensure(setGameFont);
+        public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic) => Statics.Ensure(setMenuMusic);
     }
 }
