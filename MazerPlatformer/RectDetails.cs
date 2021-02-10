@@ -1,13 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
-using Newtonsoft.Json;
+
 
 namespace MazerPlatformer
 {
     public class RectDetails
     {
         public Rectangle Rectangle { get; }
-        
-        [JsonConstructor]
+
         public RectDetails(Rectangle rectangle) 
             => Rectangle = rectangle;
 

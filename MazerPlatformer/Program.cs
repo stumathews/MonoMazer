@@ -2,7 +2,7 @@
 
 namespace MazerPlatformer
 {
-#if WINDOWS || LINUX
+
     /// <summary>
     /// The main class.
     /// </summary>
@@ -18,5 +18,5 @@ namespace MazerPlatformer
                 game.Run();
         }
     }
-#endif
+
 }

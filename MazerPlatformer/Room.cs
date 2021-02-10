@@ -5,7 +5,6 @@ using GameLibFramework.FSM;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Newtonsoft.Json;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 
@@ -72,7 +71,6 @@ namespace MazerPlatformer
             RectangleDetail = new RectDetails(x, y, width, height);
         }
 
-        [JsonConstructor]
         private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, int roomAbove, int roomBelow, int roomRight, int roomLeft, int roomNumber, int col, int row)
             : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
         {

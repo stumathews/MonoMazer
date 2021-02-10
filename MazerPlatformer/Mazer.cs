@@ -5,8 +5,6 @@ using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using GeonBit.UI;
-using GeonBit.UI.Entities;
 using LanguageExt;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
@@ -43,9 +41,6 @@ namespace MazerPlatformer
         private int _numGameCollisionsEvents;
         private int _numCollisionsWithPlayerAndNpCs;
 
-        private Panel _mainMenuPanel;
-        private Panel _gameOverPanel;
-        private Panel _controlsPanel;
 
         private CharacterStates _characterState;
         private CharacterDirection _characterDirection;
@@ -153,7 +148,6 @@ namespace MazerPlatformer
                                                                 _numCollisionsWithPlayerAndNpCs, _characterState, _characterDirection,
                                                                 _characterCollisionDirection, _currentGameState).IgnoreFailure()
                 from spriteBatchAfterEnd in EndSpriteBatch(spriteBatch)
-                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatchAfterEnd))
                 select Nothing;
 
             drawPipeline.ThrowIfFailed();
@@ -227,12 +221,11 @@ namespace MazerPlatformer
         }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
 
         private Either<IFailure, Unit> InitializeUi() =>
-            from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
             from setupMenuUi in 
                 from panels in CreatePanels()
                 from setup in SetupMainMenuPanel()
                 from instructions in SetupInstructionsPanel()
-                from gameOver in SetupGameOverMenu(_gameOverPanel)
+                from gameOver in SetupGameOverMenu()
                 from addResult in AddPanelsToUi()
                 select Nothing
             select setupMenuUi;
@@ -279,116 +272,64 @@ namespace MazerPlatformer
         // UI functions
 
         private Either<IFailure, Unit> ShowGameOverScreen() =>
-            from setup in SetupGameOverMenu(_gameOverPanel)
-            from visible in MakeGameOverPanelVisible(()=>_gameOverPanel.Visible = true)
+            from setup in SetupGameOverMenu()
+            from visible in MakeGameOverPanelVisible(()=>{ })
             select Nothing;
 
         private Either<IFailure, Unit> MakeGameOverPanelVisible(Action setVisible) => Ensure(setVisible);
 
         private Either<IFailure, Unit> AddPanelsToUi() => Ensure(() =>
         {
-            UserInterface.Active.AddEntity(_mainMenuPanel);
-            UserInterface.Active.AddEntity(_controlsPanel);
-            UserInterface.Active.AddEntity(_gameOverPanel);
         });
 
-        private Either<IFailure, Unit> CreatePanels() => EnsureWithReturn(() =>
-            from mainMenuPanel in (Either<IFailure, Panel>) (_mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
-            from gameOverPanel in (Either<IFailure, Panel>) (_gameOverPanel = new Panel())
-            from controlsPanel in (Either<IFailure, Panel>) (_controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
-            select Nothing).UnWrap();
+        private Either<IFailure, Unit> CreatePanels() => EnsureWithReturn(() => Nothing);
+
+        private void startGame()
+        {
+             _currentLevel = 1;
+                StartLevel(_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied);
+            
+        }
+
+        private void saveGame(){ 
+              _gameWorld.Bind(world => world.SaveLevel());
+                StartOrContinueLevel(isFreshStart: false, theGameWorld: _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState, ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups);
+           }
 
         private Either<IFailure, Unit> SetupMainMenuPanel() => Ensure(() =>
         {
-            var diagnostics = new Button("Diagnostics On/Off");
-            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
-            var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-            var startGameButton = new Button("New");
-            var saveGameButton = new Button("Save");
-            var loadGameButton = new Button("Load");
+           
 
             HideMenu(SetMenuPanelNotVisibleFn);
 
-            _mainMenuPanel.AdjustHeightAutomatically = true;
-            _mainMenuPanel.AddChild(new Header("Main Menu"));
-            _mainMenuPanel.AddChild(new HorizontalLine());
-            _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
-            _mainMenuPanel.AddChild(startGameButton);
-            _mainMenuPanel.AddChild(saveGameButton);
-            _mainMenuPanel.AddChild(loadGameButton);
-            _mainMenuPanel.AddChild(controlsButton);
-            _mainMenuPanel.AddChild(diagnostics);
-            _mainMenuPanel.AddChild(quitButton);
 
-            startGameButton.OnClick += (Entity entity) =>
-            {
-                _currentLevel = 1;
-                StartLevel(_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied);
-            };
-
-            saveGameButton.OnClick += (e) =>
-            {
-                _gameWorld.Bind(world => world.SaveLevel());
-                StartOrContinueLevel(isFreshStart: false, theGameWorld: _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState, ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups);
-            };
-
-            loadGameButton.OnClick += (e) => StartLevel(_currentLevel, _gameWorld,SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false);
-            diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
-            quitButton.OnClick += (Entity entity) => QuitGame().ThrowIfFailed();
-            controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
         }, ExternalLibraryFailure.Create("Unable to setup main menu panel"));
 
-        private void SetMenuPanelNotVisibleFn() => _mainMenuPanel.Visible = false;
+        private void loadgame()
+        {
+             StartLevel(_currentLevel, _gameWorld,SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false);
+        }
+
+        private void toggleDiags()
+        {
+            EnableAllDiagnostics();
+        }
+
+        private void quit()
+        {
+            QuitGame().ThrowIfFailed();
+        }
+
+        private void SetMenuPanelNotVisibleFn() {}
 
         private Either<IFailure, Unit> SetupInstructionsPanel() => Ensure(() =>
         {
-            var closeControlsPanelButton = new Button("Back");
-
-            _controlsPanel.Visible = false;
-            _controlsPanel.AdjustHeightAutomatically = true;
-            _controlsPanel.AddChild(new Header("Mazer's Controls"));
-            _controlsPanel.AddChild(new RichParagraph(
-                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
-                "A level is cleared when all the ballons are collected.\n\n" +
-                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
-                "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
-                "{{BOLD}}Good Luck!"));
-            _controlsPanel.AddChild(closeControlsPanelButton);
-            closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
+          
         }, ExternalLibraryFailure.Create("Failed to setup instructions panel"));
 
-        private Either<IFailure, Unit> SetupGameOverMenu(Panel gameOverPanel) => Ensure(() =>
+        private Either<IFailure, Unit> SetupGameOverMenu() => Ensure(() =>
         {
-            var closeButton = new Button("Return to main menu");
-            var restartLevel = new Button("Try again");
-            var quit = new Button("Quit game");
-
-            gameOverPanel.ClearChildren();
-            gameOverPanel.AddChild(new Header("You died!"));
-            gameOverPanel.AddChild(new RichParagraph("You had {{YELLOW}}" + _playerPoints + "{{DEFAULT}} points.{{DEFAULT}}"));
-            gameOverPanel.AddChild(new RichParagraph("You picked up {{YELLOW}}" + _playerPickups +
-                                                      "{{DEFAULT}} pick-ups.{{DEFAULT}}"));
-            gameOverPanel.AddChild(new RichParagraph("You reach level {{YELLOW}}" + _currentLevel + "{{DEFAULT}}.{{DEFAULT}}\n"));
-            gameOverPanel.AddChild(new RichParagraph("Try again to {{BOLD}}improve!\n"));
-            gameOverPanel.AddChild(restartLevel);
-            gameOverPanel.AddChild(closeButton);
-            gameOverPanel.Visible = false;
-
-            closeButton.OnClick += (button) =>
-            {
-                SetPlayerDied(false);
-                gameOverPanel.Visible = false;
-                _currentGameState = GameStates.Paused;
-            };
-
-            restartLevel.OnClick += (button) =>
-            {
-                _playerDied = false;
-                gameOverPanel.Visible = false;
-                StartLevel(_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied);
-            };
-
-            quit.OnClick += (b) => QuitGame().ThrowIfFailed();
+         
         });
         
         // Utility functions
@@ -449,7 +390,7 @@ namespace MazerPlatformer
             select Nothing;
         private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame(_currentGameState) 
-                ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>_mainMenuPanel.Visible = true) 
+                ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>{ }) 
                 : ResumeGame(_gameWorld);
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() => EnsureWithReturn(() =>
             from playerDied in (Either<IFailure, bool>) (_playerDied = true)
@@ -459,7 +400,7 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) 
             => IsStateEntered(reason)
                 ? from playResult in PlayMenuMusic(_menuMusic)
-                  from showResult in ShowMenu(()=>_mainMenuPanel.Visible = true)
+                  from showResult in ShowMenu(()=>{})
                     select showResult
                 : Nothing;
         private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount)

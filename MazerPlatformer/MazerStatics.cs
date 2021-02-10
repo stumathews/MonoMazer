@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
-using GeonBit.UI;
+
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -15,7 +15,7 @@ namespace MazerPlatformer
 {
     public static class MazerStatics
     {
-        public static Either<IFailure, Unit> UpdateUi(GameTime gameTime) => Statics.Ensure(() => UserInterface.Active.Update(gameTime));
+        public static Either<IFailure, Unit> UpdateUi(GameTime gameTime) => Statics.Ensure(() => { });
 
         public static Either<IFailure, CommandManager> UpdateCommands(Either<IFailure, CommandManager> gameCommands, GameTime time)
         {

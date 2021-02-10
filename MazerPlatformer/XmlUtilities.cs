@@ -4,8 +4,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
 using LanguageExt;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+
 
 namespace MazerPlatformer
 {
@@ -28,17 +27,7 @@ namespace MazerPlatformer
             }
         });
 
-        public static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
-        {
-            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-            TraceWriter = new MemoryTraceWriter(),
-            Error = delegate (object sender, Newtonsoft.Json.Serialization.ErrorEventArgs args)
-            {
-                Console.WriteLine(SerializerSettings.TraceWriter);
-                //args.ErrorContext.Handled = true;
-            },
-
-        };
+        
 
         private static Dictionary<int, object> CopyCache = new Dictionary<int, object>();
 
@@ -65,10 +54,11 @@ namespace MazerPlatformer
                 return InvalidCastFailure.Create("Cannot copy null").ToEitherFailure<T>();
             }
 
-            var serialized = JsonConvert.SerializeObject(source, SerializerSettings);
-            var deserialized = JsonConvert.DeserializeObject<T>(serialized).ToEither();
-            var areEqual = deserialized.Match(Left: failure => false, Right: arg => arg.Equals(source));
-            return deserialized;
+            //var serialized = JsonConvert.SerializeObject(source, SerializerSettings);
+            //var deserialized = JsonConvert.DeserializeObject<T>(serialized).ToEither();
+            //var areEqual = deserialized.Match(Left: failure => false, Right: arg => arg.Equals(source));
+            //return deserialized;
+            return source;
         }).UnWrap();
     }
 

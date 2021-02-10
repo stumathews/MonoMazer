@@ -1,8 +1,8 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:bin
-/intermediateDir:obj
+/outputDir:bin/$(Platform)
+/intermediateDir:obj/$(Platform)
 /platform:Windows
 /config:
 /profile:Reach
@@ -16,7 +16,7 @@
 #begin Gems/crystal-qubodup-ccby3-32-green.png
 /importer:TextureImporter
 /processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyColor=0,0,0,255
 /processorParam:ColorKeyEnabled=True
 /processorParam:GenerateMipmaps=False
 /processorParam:PremultiplyAlpha=True
@@ -84,18 +84,6 @@
 /processor:SongProcessor
 /processorParam:Quality=Best
 /build:Music/bgm_menu.mp3
-
-#begin Music/positive 1.mp3
-/importer:Mp3Importer
-/processor:SongProcessor
-/processorParam:Quality=Best
-/build:Music/positive 1.mp3
-
-#begin Music/positive 2.mp3
-/importer:Mp3Importer
-/processor:SongProcessor
-/processorParam:Quality=Best
-/build:Music/positive 2.mp3
 
 #begin Sprites/balloon-blue.png
 /importer:TextureImporter
@@ -191,7 +179,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/crystal-qubodup-ccby3-32-orange.png
+/build:Sprites/crystal-qubodup-ccby3-32-orange.png;Sprites/crystal.png
 
 #begin Sprites/dark_soldier.png
 /importer:TextureImporter
@@ -313,48 +301,12 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/dodo.png
 
-#begin Sprites/foodies_sheet_borderless.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/foodies_sheet_borderless.png
-
 #begin Sprites/gameFont.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
 /build:Sprites/gameFont.spritefont
-
-#begin Sprites/Healthpack.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Healthpack.png
-
-#begin Sprites/hero_a.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/hero_a.png
 
 #begin Sprites/pirate-f-001-light.png
 /importer:TextureImporter
@@ -366,7 +318,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-f-001-light.png
+/build:Sprites/pirate-f-001-light.png;Sprites/pirate1
 
 #begin Sprites/pirate-m-001-light.png
 /importer:TextureImporter
@@ -378,7 +330,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-001-light.png
+/build:Sprites/pirate-m-001-light.png;Sprites/pirate2
 
 #begin Sprites/pirate-m-003-light.png
 /importer:TextureImporter
@@ -390,7 +342,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-003-light.png
+/build:Sprites/pirate-m-003-light.png;Sprites/pirate3
 
 #begin Sprites/pirate-m-003-light-alt.png
 /importer:TextureImporter
@@ -402,7 +354,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-003-light-alt.png
+/build:Sprites/pirate-m-003-light-alt.png;Sprites/pirate4
 
 #begin Sprites/pirate-m-004-light.png
 /importer:TextureImporter
@@ -414,7 +366,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-004-light.png
+/build:Sprites/pirate-m-004-light.png;Sprites/pirate5
 
 #begin Sprites/werewolf-NESW.png
 /importer:TextureImporter

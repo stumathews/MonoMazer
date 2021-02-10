@@ -6,7 +6,6 @@ using GameLibFramework.FSM;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Newtonsoft.Json;
 using static System.String;
 using static MazerPlatformer.Statics;
 
@@ -73,7 +72,6 @@ namespace MazerPlatformer
 
 
         // Used only for JSON copying
-        [JsonConstructor]
         protected GameObject(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components)
         {
             IsColliding = isColliding;
