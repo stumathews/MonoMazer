@@ -323,7 +323,7 @@ namespace MazerPlatformer
         {
             var loadPipeline =
                 from levelFile in GetLevelFile(playerHealth, playerScore)
-                from setLevelFile in SetLevelFile(LevelFile)
+                from setLevelFile in SetLevelFile(levelFile)
                 from levelMusic in LoadLevelMusic()
                 from soundEffectsLoaded in LoadSoundEffects()
                 from rooms in MakeLevelRooms().ToEither()

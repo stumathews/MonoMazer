@@ -366,7 +366,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-f-001-light.png
+/build:Sprites/pirate-f-001-light.png;Sprites/pirate1.png
 
 #begin Sprites/pirate-m-001-light.png
 /importer:TextureImporter
@@ -378,7 +378,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-001-light.png
+/build:Sprites/pirate-m-001-light.png;Sprites/pirate2.png
 
 #begin Sprites/pirate-m-003-light.png
 /importer:TextureImporter
@@ -390,7 +390,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-003-light.png
+/build:Sprites/pirate-m-003-light.png;Sprites/pirate3.png
 
 #begin Sprites/pirate-m-003-light-alt.png
 /importer:TextureImporter
@@ -402,7 +402,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-003-light-alt.png
+/build:Sprites/pirate-m-003-light-alt.png;Sprites/pirate4.png
 
 #begin Sprites/pirate-m-004-light.png
 /importer:TextureImporter
@@ -414,7 +414,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/pirate-m-004-light.png
+/build:Sprites/pirate-m-004-light.png;Sprites/pirate5.png
 
 #begin Sprites/werewolf-NESW.png
 /importer:TextureImporter
