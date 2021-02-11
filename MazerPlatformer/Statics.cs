@@ -439,6 +439,11 @@ namespace MazerPlatformer
                         Left:failure => failure.ToEitherFailure<Unit>(),
                         Right: unit1 => unit1));
 
+        public static Either<IFailure, Unit> Nothingness(Action action)
+        {
+            action();
+            return Nothing;
+        }
         public static Either<IFailure, R> EnsuringBind<R>(Func<Either<IFailure, R>> action) =>
             action.TryThis()
                 .Match(
