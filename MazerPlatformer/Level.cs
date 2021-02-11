@@ -323,7 +323,7 @@ namespace MazerPlatformer
         {
             var loadPipeline =
                 from levelFile in GetLevelFile(playerHealth, playerScore)
-                from setLevelFile in SetLevelFile(LevelFile)
+                from setLevelFile in SetLevelFile(levelFile)
                 from levelMusic in LoadLevelMusic()
                 from soundEffectsLoaded in LoadSoundEffects()
                 from rooms in MakeLevelRooms().ToEither()
@@ -506,29 +506,14 @@ namespace MazerPlatformer
                 return details;
             });
 
-            Either<IFailure, Unit> CopyOrUpdateComponents(Character @from, LevelCharacterDetails to) => Ensure(() =>
-            {
-                if (to.Components == null)
-                    to.Components = new List<Component>();
-
-                foreach (var component in @from.Components)
-                {
-                    // We dont want to serialize any GameWorld References or Player references that a NPC might have
-                    if (component.Type == ComponentType.GameWorld || component.Type == ComponentType.Player)
-                        continue;
-
-                    var found = to.Components.SingleOrFailure(x => x.Type == component.Type).ThrowIfFailed();
-                    if (found == null)
-                    {
-                        to.Components.Add(component);
-                    }
-                    else
-                    {
-                        //update
-                        found.Value = component.Value;
-                    }
-                }
-            });
+            Either<IFailure, Unit> CopyOrUpdateComponents(Character @from, LevelCharacterDetails to) => EnsuringBind(() 
+                => @from.Components.Map(fromComponent => fromComponent.Type == ComponentType.GameWorld || fromComponent.Type == ComponentType.Player 
+                ? ShortCircuitFailure.Create("Not needed").ToEitherFailure<Unit>() 
+                : to.Components.SingleOrFailure(x => x.Type == fromComponent.Type)
+                               .BiBind(found => Nothingness(() => fromComponent.Value = found),
+                                    notFound => Nothingness(()=> to.Components.Add(fromComponent))))
+                .AggregateUnitFailures()
+                .IgnoreFailure());
 
             Either<IFailure, Unit> CopyAnimationInfo(Character @from, LevelCharacterDetails to) => EnsuringBind(() =>
             {
@@ -538,6 +523,7 @@ namespace MazerPlatformer
                 to.SpriteFrameCount = @from.AnimationInfo.FrameCount;
                 to.SpriteFrameTime = @from.AnimationInfo.FrameTime;
                 to.MoveStep = 3;
+                to.Components = to.Components ?? new List<Component>();
                 return CopyOrUpdateComponents(@from, to);
             });
 
