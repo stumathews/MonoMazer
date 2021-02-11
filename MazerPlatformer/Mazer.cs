@@ -206,7 +206,7 @@ namespace MazerPlatformer
                 {
                     GraphicsProfile = GraphicsProfile.Reach,
                     HardwareModeSwitch = false,
-                    IsFullScreen = false,
+                    IsFullScreen = true,
                     PreferMultiSampling = false,
                     PreferredBackBufferFormat = SurfaceFormat.Color,
                     PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
@@ -390,7 +390,7 @@ namespace MazerPlatformer
             select Nothing;
         private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame(_currentGameState) 
-                ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>{ }) 
+                ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>{ quit(); }) 
                 : ResumeGame(_gameWorld);
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() => EnsureWithReturn(() =>
             from playerDied in (Either<IFailure, bool>) (_playerDied = true)
