@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
@@ -22,7 +22,7 @@
     <MonoGameContentReference Include="Content\Content.mgcb" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\GameLib2\GameLib2\GameLib2.csproj" />
+    <ProjectReference Include="..\..\GameLib\GameLib.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Level1.xml">

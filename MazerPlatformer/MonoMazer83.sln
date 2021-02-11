@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMazer83", "MonoMazer83.csproj", "{A7E07859-B24D-4F9E-8EB4-B83EBE13F3D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLib2", "..\..\GameLib2\GameLib2\GameLib2.csproj", "{F5AC4E0C-0D99-4092-A5EA-9775FEDA96EB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLib", "..\..\GameLib\GameLib.csproj", "{CC7341CD-8F31-48F9-BF82-A5046EA464C0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{A7E07859-B24D-4F9E-8EB4-B83EBE13F3D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7E07859-B24D-4F9E-8EB4-B83EBE13F3D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7E07859-B24D-4F9E-8EB4-B83EBE13F3D8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F5AC4E0C-0D99-4092-A5EA-9775FEDA96EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F5AC4E0C-0D99-4092-A5EA-9775FEDA96EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F5AC4E0C-0D99-4092-A5EA-9775FEDA96EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F5AC4E0C-0D99-4092-A5EA-9775FEDA96EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC7341CD-8F31-48F9-BF82-A5046EA464C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC7341CD-8F31-48F9-BF82-A5046EA464C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC7341CD-8F31-48F9-BF82-A5046EA464C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC7341CD-8F31-48F9-BF82-A5046EA464C0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
