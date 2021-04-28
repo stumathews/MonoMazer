@@ -6,7 +6,7 @@ using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
-    public abstract class Character : GameObject
+    public abstract record Character : GameObject
     {
         // All characters move 3 Pixels at a time
         private readonly int _moveStep;
@@ -99,18 +99,16 @@ namespace MazerPlatformer
             switch (direction)
             {
                 case CharacterDirection.Up:
-                    Y -= MoveByStep();
+                    if(Y > MoveByStep())
+                        Y -= MoveByStep();
                     break;
-                case CharacterDirection.Down:
-
+                case CharacterDirection.Down:                    
                     Y += MoveByStep();
                     break;
                 case CharacterDirection.Left:
-
                     X -= MoveByStep();
                     break;
                 case CharacterDirection.Right:
-
                     X += MoveByStep();
                     break;
                 default:
@@ -185,17 +183,19 @@ namespace MazerPlatformer
             // Artificially nudge the player out of the collision
             switch (LastCollisionDirection)
             {
-                case CharacterDirection.Up:
+                case CharacterDirection.Up:                   
                     Y += 1;
                     break;
                 case CharacterDirection.Down:
-                    Y -= 1;
+                    if( Y > 0)
+                        Y -= 1;
                     break;
                 case CharacterDirection.Left:
                     X += 1;
                     break;
                 case CharacterDirection.Right:
-                    X -= 1;
+                    if(X > 0)
+                        X -= 1;
                     break;
                 default:
                     return new InvalidDirectionFailure(LastCollisionDirection);

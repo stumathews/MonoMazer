@@ -11,7 +11,7 @@ namespace MazerPlatformer
     /// <summary>
     /// Main playing character
     /// </summary>
-    public class Player : Character
+    public record Player : Character
     {
         public const string PlayerId = "Player";
 

@@ -536,5 +536,8 @@ namespace MazerPlatformer
         {
             return dic1.Count == dic2.Count && !dic1.Except(dic2).Any();
         }
+
+        public static Either<IFailure, SideCharacteristic> Immutable(this SideCharacteristic me) => (me with { }).ToEither();
+        public static Either<IFailure, Room> Immutable(this Room me) => (me with { }).ToEither();
     }
 }

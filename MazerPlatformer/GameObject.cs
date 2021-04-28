@@ -12,7 +12,7 @@ using static MazerPlatformer.Statics;
 namespace MazerPlatformer
 {
     // A fundamental Game Object
-    public abstract class GameObject : IDisposable, PerFrame
+    public abstract record GameObject : IDisposable, PerFrame
     {
         // Types of game object
         public enum GameObjectType { Room, Player, Npc }
@@ -32,7 +32,7 @@ namespace MazerPlatformer
         // Location and dimension of the game object
         public int X { get; protected set; }
         public int Y { get; protected set; }
-        public string Id { get; set; }
+        public string Id { get; init; }
         public int Width { get; }
         public int Height { get; }
 

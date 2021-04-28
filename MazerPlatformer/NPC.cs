@@ -4,7 +4,7 @@ using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
-    public class Npc : Character
+    public record Npc : Character
     {
         public enum NpcTypes
         {

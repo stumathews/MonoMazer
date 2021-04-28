@@ -38,7 +38,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         [PureFunction]
         public static Either<IFailure, Room> InitializeBounds(Room room) => EnsureWithReturn(() 
-            => from roomCopy in room.Copy()
+            => from roomCopy in room.Immutable()
                 from addedTop in AddWallCharacteristic(roomCopy, Room.Side.Top, new SideCharacteristic(Color.Black, TopBounds(room)))
                 from addedRight in AddWallCharacteristic(addedTop, Room.Side.Right, new SideCharacteristic(Color.Black, RightBounds(room)))
                 from addedBottom in AddWallCharacteristic(addedRight, Room.Side.Bottom, new SideCharacteristic(Color.Black, BottomBounds(room)))
@@ -108,8 +108,8 @@ namespace MazerPlatformer
         {
             // copy characteristic, change it and then return the copy
             return
-                from sideCharacteristic in characteristic.Copy()
-                from roomCopy in room.Copy()
+                from sideCharacteristic in characteristic.Immutable()
+                from roomCopy in room.Immutable()
                 from result in AddSideCharacteristic(roomCopy, side, sideCharacteristic)
                 select result;
 
@@ -195,7 +195,7 @@ namespace MazerPlatformer
         });
 
         [PureFunction]
-        public static Either<IFailure, Room> RemoveSide(Room theRoom, Room.Side side) => theRoom.Copy().EnsuringBind(room =>
+        public static Either<IFailure, Room> RemoveSide(Room theRoom, Room.Side side) => theRoom.Immutable().EnsuringBind(room =>
         {
             switch (side)
             {
@@ -218,7 +218,14 @@ namespace MazerPlatformer
             return room.ToEither();
         });
 
-        public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows) 
-            => roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);
+        public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows)
+        {
+            var result = roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);
+            if(result == false)
+            {
+                int i = 0;
+            }
+            return result;
+        }
     }
 }
