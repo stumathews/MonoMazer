@@ -156,6 +156,14 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
 
+        /// <summary>
+        /// Same as Ensure()
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> Unsafe(Action action)
+            => action.TryThis();
+
         public static Either<IFailure, T> Ensure<T>(T arg, Action<T> action)
             => action.TryThis<T>(arg);
 
@@ -217,9 +225,23 @@ namespace MazerPlatformer
             return thing ? Option<bool>.Some(true) : Option<bool>.None;
         }
 
+        [PureFunction]
+        public static Option<Unit> TrueToUnit(this bool thing)
+        {
+            return thing ? Option<Unit>.Some(Unit.Default) : Option<Unit>.None;
+        }
+
+        [PureFunction]
+        public static Option<Unit> MaybeTrue( Func<bool> predicate)
+        {
+            return predicate() ? Option<Unit>.Some(Unit.Default) : Option<Unit>.None;
+        }
+
+        public static Option<T> ToSome<T>(this T t) => Prelude.Some<T>(t);
+
         public static Option<T> ToOption<T>(this T thing)
         {
-            return thing != null ? Option<T>.Some(default(T)) : Option<T>.None;
+            return thing != null ? Option<T>.Some(thing) : Option<T>.None;
         }
 
         public static Either<L, bool> FailIfTrue<L>(this bool theBool, L theFailure) 
