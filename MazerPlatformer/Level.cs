@@ -137,6 +137,14 @@ namespace MazerPlatformer
         public Either<IFailure, List<Room>> MakeRooms(bool removeRandomSides = false)
         {
             var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight);
+            
+
+            return mazeGrid.Map( (idx, room) => (GetNextIndex(idx) <= GetTotalRooms(mazeGrid)).ToOption()
+                                                .Map(unit => ChangeRoom(idx, room, mazeGrid)))
+            .ToEither()
+            .BindT(room => room)
+            .Map(inner => new List<Room>(inner));  
+            
             int GetTotalRooms(List<Room> allRooms) => allRooms.Count;
             int GetNextIndex(int index) => index + 1;
             int GetThisColumn(Room r) => r.Col;
@@ -145,17 +153,17 @@ namespace MazerPlatformer
             int GetRoomLeftIndex(int index) => index - 1;
             int GetRoomRightIndex(int index) => index + 1;
             Option<Unit> CanRemoveAbove(int index) => MaybeTrue(()=>GetRoomAboveIndex(index) > 0);                        
-            Option<Unit> CanRemoveBelow(int index) => MaybeTrue(()=>GetRoomBelowIndex(index) < GetTotalRooms(mazeGrid));
+            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => MaybeTrue(()=>GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
             Option<Unit> CanRemoveLeft(int index, Room room) => MaybeTrue(()=>GetThisColumn(room) - 1 >= 1);
             Option<Unit> CanRemoveRight(int index, Room room) =>MaybeTrue(()=>GetThisColumn(room) - 1 <= Cols);               
                 
-            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(mazeGrid)
+            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms)
                 ? rooms[index].ToOption()
                 : Prelude.None;
 
-            Option<Room.Side> SideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index) 
+            Option<Room.Side> SideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms) 
                             => from side in canRemove
-                                from room in GetRoom(index, mazeGrid)
+                                from room in GetRoom(index, allRooms)
                                 from hasSide1 in MaybeTrue(()=>HasSide(side1, room.HasSides))
                                 from hasSide2 in MaybeTrue(()=>HasSide(side2, room.HasSides))
                                 select side1; 
@@ -179,15 +187,14 @@ namespace MazerPlatformer
                 RemovedSide(idx, side, currentRoom, Room.Side.Bottom, (indx, r, s) => GetRoomBelow(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Top)));
                 RemovedSide(idx, side, currentRoom, Room.Side.Left, (indx, r, s) => GetRoomLeft(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Right)));
                 RemovedSide(idx, side, currentRoom, Room.Side.Right, (indx, r, s) => GetRoomRight(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Left)));
-
             }
 
-            List<Room.Side> GetRoomRemovableSides(int index, Room currentRoom, List<Room.Side> allRemovableSides)
+            List<Room.Side> GetRoomRemovableSides(int index, Room currentRoom, List<Room.Side> allRemovableSides, List<Room> allRooms)
             {
-                SideRemovable(CanRemoveAbove(index), Room.Side.Top, Room.Side.Bottom, GetRoomAboveIndex(index)).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveBelow(index), Room.Side.Bottom, Room.Side.Top, GetRoomBelowIndex(index)).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveLeft(index, currentRoom), Room.Side.Left, Room.Side.Right, GetRoomLeftIndex(index)).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveRight(index, currentRoom), Room.Side.Right, Room.Side.Left, GetRoomRightIndex(index)).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SideRemovable(CanRemoveAbove(index), Room.Side.Top, Room.Side.Bottom, GetRoomAboveIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SideRemovable(CanRemoveBelow(index, allRooms), Room.Side.Bottom, Room.Side.Top, GetRoomBelowIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SideRemovable(CanRemoveLeft(index, currentRoom), Room.Side.Left, Room.Side.Right, GetRoomLeftIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SideRemovable(CanRemoveRight(index, currentRoom), Room.Side.Right, Room.Side.Left, GetRoomRightIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
                 return allRemovableSides;
             }
 
@@ -198,7 +205,7 @@ namespace MazerPlatformer
                 UpdateRoomAdjacents(idx, currentRoom);
 
                 //if (!removeRandomSides) return false; // Return quick if you don't want to remove random sides
-                GetRandomSide(GetRoomRemovableSides(idx, currentRoom, new List<Room.Side>())).Iter( side => RemoveRandomSide(side, idx, currentRoom, allRooms));
+                GetRandomSide(GetRoomRemovableSides(idx, currentRoom, new List<Room.Side>(), allRooms)).Iter( side => RemoveRandomSide(side, idx, currentRoom, allRooms));
                 
                 return currentRoom;
                 
@@ -211,12 +218,6 @@ namespace MazerPlatformer
                 currentRoom.RoomLeft = GetRoomLeftIndex(idx);
                 currentRoom.RoomRight = GetRoomRightIndex(idx);
             }
-
-            return mazeGrid.Map( (idx, room) => (GetNextIndex(idx) <= GetTotalRooms(mazeGrid)).ToOption()
-                                                .Map(unit => ChangeRoom(idx, room, mazeGrid)))
-            .ToEither()
-            .BindT(room => room)
-            .Map(inner => new List<Room>(inner));               
         }
 
 
