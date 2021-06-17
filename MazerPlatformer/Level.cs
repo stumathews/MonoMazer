@@ -477,14 +477,19 @@ namespace MazerPlatformer
         // Save the level information including NPcs and Player info
         public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs)
         {
-            if (!shouldSave)
-                    return ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>();
 
-            // If we have no NPC info in our level file, save auto generated NPCs into save file (Allows us to modify it later too)
-            if (npcs.Count == 0)
-                AddCurrentNPCsToLevelFile(npcs).ThrowIfFailed();
-
-            return SaveLevelFile();
+            return MaybeTrue(()=>shouldSave).Match(
+                                                    Some: (unit)=>unit.ToEither(), 
+                                                    None: ()=> ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>()
+                                                    )
+                    .Bind((either) => MaybeTrue(()=>npcs.Count == 0).Match(
+                        Some: (unit)=>
+                        {
+                             AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed();
+                            return Nothing.ToEither();
+                        }, 
+                        None: ()=> Nothing.ToEither())
+                    .Bind((unit)=>SaveLevelFile()));
 
             Either<IFailure, Unit> SaveLevelFile()
             {
@@ -495,7 +500,7 @@ namespace MazerPlatformer
                     select Nothing;
             }
 
-            Either<IFailure, IEnumerable<Either<IFailure,LevelNpcDetails>>> AddCurrentNPCsToLevelFile(List<Npc> list)
+            Either<IFailure, IEnumerable<Either<IFailure,LevelNpcDetails>>> AddCurrentNPCsToLevelFile(List<Npc> list, LevelDetails file)
             {
                 return AddNpcsToLevelFile(list).AggregateFailures();
 
@@ -513,7 +518,7 @@ namespace MazerPlatformer
                                 from type in npc.GetNpcType().ToEither(NotFound.Create("Could not find Npc Type in NPC components"))
                                 from details in CreateLevelNpcDetails(type)
                                 from copy in CopyAnimationInfo(npc, details)
-                                from add in AddNpcDetailsToLevelFile(levelFile, details)
+                                from add in AddNpcDetailsToLevelFile(file, details)
                                 from added in AddToSeen(seenAssets, npcByAssetFile)
                                 select details;
                         }
