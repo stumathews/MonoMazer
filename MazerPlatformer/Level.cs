@@ -134,17 +134,16 @@ namespace MazerPlatformer
         }        
 
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
-        public Either<IFailure, List<Room>> MakeRooms(bool removeRandomSides = false)
+        public Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false)
         {
             var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight);
-            
 
-            return mazeGrid.Map( (idx, room) => (GetNextIndex(idx) <= GetTotalRooms(mazeGrid)).ToOption()
-                                                .Map(unit => ChangeRoom(idx, room, mazeGrid)))
-            .ToEither()
-            .BindT(room => room)
-            .Map(inner => new List<Room>(inner));  
-            
+            return mazeGrid
+                .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
+                .ToEither()
+                .BindT(room => room)
+                .Map(inner => new List<Room>(inner));
+
             int GetTotalRooms(List<Room> allRooms) => allRooms.Count;
             int GetNextIndex(int index) => index + 1;
             int GetThisColumn(Room r) => r.Col;
@@ -152,63 +151,62 @@ namespace MazerPlatformer
             int GetRoomBelowIndex(int index) => index + Cols;
             int GetRoomLeftIndex(int index) => index - 1;
             int GetRoomRightIndex(int index) => index + 1;
-            Option<Unit> CanRemoveAbove(int index) => MaybeTrue(()=>GetRoomAboveIndex(index) > 0);                        
-            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => MaybeTrue(()=>GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
-            Option<Unit> CanRemoveLeft(int index, Room room) => MaybeTrue(()=>GetThisColumn(room) - 1 >= 1);
-            Option<Unit> CanRemoveRight(int index, Room room) =>MaybeTrue(()=>GetThisColumn(room) - 1 <= Cols);               
-                
+            Option<Unit> CanRemoveAbove(int index) => MaybeTrue(() => GetRoomAboveIndex(index) > 0);
+            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => MaybeTrue(() => GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
+            Option<Unit> CanRemoveLeft(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 >= 1);
+            Option<Unit> CanRemoveRight(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 <= Cols);
+
             Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms)
                 ? rooms[index].ToOption()
                 : Prelude.None;
 
-            Option<Room.Side> SideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms) 
+            Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms)
                             => from side in canRemove
-                                from room in GetRoom(index, allRooms)
-                                from hasSide1 in MaybeTrue(()=>HasSide(side1, room.HasSides))
-                                from hasSide2 in MaybeTrue(()=>HasSide(side2, room.HasSides))
-                                select side1; 
+                               from room in GetRoom(index, allRooms)
+                               from hasSide1 in MaybeTrue(() => HasSide(side1, room.HasSides))
+                               from hasSide2 in MaybeTrue(() => HasSide(side2, room.HasSides))
+                               select side1;
 
             void RemoveRandomSide(Room.Side side, int idx, Room currentRoom, List<Room> allRooms)
-            { 
+            {
                 Option<Room> GetRoomBelow(int index, List<Room> rooms) => GetRoom(GetRoomBelowIndex(idx), allRooms);
                 Option<Room> GetRoomAbove(int index, List<Room> rooms) => GetRoom(GetRoomAboveIndex(idx), allRooms);
                 Option<Room> GetRoomLeft(int index, List<Room> rooms) => GetRoom(GetRoomLeftIndex(idx), allRooms);
                 Option<Room> GetRoomRight(int index, List<Room> rooms) => GetRoom(GetRoomRightIndex(idx), allRooms);
-                    
-                Option<Room.Side> RemovedSide(int index, Room.Side sideToRemove, Room room, Room.Side whenSide, Action<int, Room, Room.Side> then) 
-                => MaybeTrue(()=>sideToRemove == whenSide)
-                    .Map((unit)=> {
-                            room.RemoveSide(sideToRemove);
-                            then(index, room, whenSide);
-                            return sideToRemove;
+
+                Option<Room.Side> RemovedSide(int index, Room.Side sideToRemove, Room room, Room.Side whenSide, Action<int, Room, Room.Side> then)
+                => MaybeTrue(() => sideToRemove == whenSide)
+                    .Map((unit) =>
+                    {
+                        room.RemoveSide(sideToRemove);
+                        then(index, room, whenSide);
+                        return sideToRemove;
                     });
 
-                RemovedSide(idx, side, currentRoom, Room.Side.Top, (indx, r, s) => GetRoomAbove(idx, allRooms).Iter((room)=>room.RemoveSide(Room.Side.Bottom)));
-                RemovedSide(idx, side, currentRoom, Room.Side.Bottom, (indx, r, s) => GetRoomBelow(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Top)));
-                RemovedSide(idx, side, currentRoom, Room.Side.Left, (indx, r, s) => GetRoomLeft(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Right)));
-                RemovedSide(idx, side, currentRoom, Room.Side.Right, (indx, r, s) => GetRoomRight(idx, allRooms).Iter(room=>room.RemoveSide(Room.Side.Left)));
+                RemovedSide(idx, side, currentRoom, Room.Side.Top, (indx, r, s) => GetRoomAbove(idx, allRooms).Iter((room) => room.RemoveSide(Room.Side.Bottom)));
+                RemovedSide(idx, side, currentRoom, Room.Side.Bottom, (indx, r, s) => GetRoomBelow(idx, allRooms).Iter(room => room.RemoveSide(Room.Side.Top)));
+                RemovedSide(idx, side, currentRoom, Room.Side.Left, (indx, r, s) => GetRoomLeft(idx, allRooms).Iter(room => room.RemoveSide(Room.Side.Right)));
+                RemovedSide(idx, side, currentRoom, Room.Side.Right, (indx, r, s) => GetRoomRight(idx, allRooms).Iter(room => room.RemoveSide(Room.Side.Left)));
             }
 
             List<Room.Side> GetRoomRemovableSides(int index, Room currentRoom, List<Room.Side> allRemovableSides, List<Room> allRooms)
             {
-                SideRemovable(CanRemoveAbove(index), Room.Side.Top, Room.Side.Bottom, GetRoomAboveIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveBelow(index, allRooms), Room.Side.Bottom, Room.Side.Top, GetRoomBelowIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveLeft(index, currentRoom), Room.Side.Left, Room.Side.Right, GetRoomLeftIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
-                SideRemovable(CanRemoveRight(index, currentRoom), Room.Side.Right, Room.Side.Left, GetRoomRightIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SetSideRemovable(CanRemoveAbove(index), Room.Side.Top, Room.Side.Bottom, GetRoomAboveIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SetSideRemovable(CanRemoveBelow(index, allRooms), Room.Side.Bottom, Room.Side.Top, GetRoomBelowIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SetSideRemovable(CanRemoveLeft(index, currentRoom), Room.Side.Left, Room.Side.Right, GetRoomLeftIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
+                SetSideRemovable(CanRemoveRight(index, currentRoom), Room.Side.Right, Room.Side.Left, GetRoomRightIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
                 return allRemovableSides;
             }
 
-            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0 ? sides[RandomGenerator.Next(0, sides.Count)].ToOption() : Prelude.None;
+            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0
+                ? sides[RandomGenerator.Next(0, sides.Count)].ToOption()
+                : Prelude.None;
 
-            Room ChangeRoom(int idx, Room currentRoom, List<Room> allRooms)
+            Room RemoveRndSide(int idx, Room currentRoom, List<Room> allRooms)
             {
                 UpdateRoomAdjacents(idx, currentRoom);
-
-                //if (!removeRandomSides) return false; // Return quick if you don't want to remove random sides
-                GetRandomSide(GetRoomRemovableSides(idx, currentRoom, new List<Room.Side>(), allRooms)).Iter( side => RemoveRandomSide(side, idx, currentRoom, allRooms));
-                
+                GetRandomSide(GetRoomRemovableSides(idx, currentRoom, new List<Room.Side>(), allRooms)).Iter(side => RemoveRandomSide(side, idx, currentRoom, allRooms));
                 return currentRoom;
-                
             }
 
             void UpdateRoomAdjacents(int idx, Room currentRoom)
@@ -217,6 +215,16 @@ namespace MazerPlatformer
                 currentRoom.RoomBelow = GetRoomBelowIndex(idx);
                 currentRoom.RoomLeft = GetRoomLeftIndex(idx);
                 currentRoom.RoomRight = GetRoomRightIndex(idx);
+            }
+
+            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides)
+            {
+                return GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
+            }
+
+            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms)
+            {
+                return MaybeTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
             }
         }
 
@@ -229,40 +237,60 @@ namespace MazerPlatformer
         /// <param name="playerRoom"></param>
         /// <returns></returns>
         public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager) => EnsureWithReturn(() =>
-        {
-            var assetFile = string.IsNullOrEmpty(levelFile?.Player?.SpriteFile)
+        {            
+
+            return (from assetFile in CreateAssetFile(levelFile)
+                    from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
+                    from playerAnimation in CreatePlayerAnimation(assetFile, texture)
+                    from player in CreatePlayer(playerRoom, playerAnimation, levelFile)
+                    from InitializedPlayer in InitializePlayer(levelFile, player)
+                    from playerHealth in GetPlayerHealth(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
+                    from playerPoints in GetPlayerPoints(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
+                    select player).ThrowIfNone();
+
+            Option<string> CreateAssetFile(LevelDetails level) => string.IsNullOrEmpty(levelFile?.Player?.SpriteFile)
                 ? @"Sprites\dark_soldier-sword"
                 : levelFile.Player.SpriteFile;
 
-            var playerAnimation = new AnimationInfo(
-                texture: contentManager.Load<Texture2D>(assetFile), assetFile,
+            Option<AnimationInfo> CreatePlayerAnimation(string assetFile, Texture2D texture) => new AnimationInfo(
+                texture: texture, assetFile,
                 frameWidth: levelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
                 frameHeight: levelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
                 frameCount: levelFile?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
 
-            var player = new Player(x: (int) playerRoom.GetCentre().X,
-                y: (int) playerRoom.GetCentre().Y,
-                width: levelFile.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                height: levelFile.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                animationInfo: playerAnimation);
+            Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level) => new Player(x: (int)player_room.GetCentre().X,
+                y: (int)player_room.GetCentre().Y,
+                width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                animationInfo: animation);
+            
+            Option<Component> AddPlayerPointsComponent(Player p) 
+            {
+                p.Components.Add(new Component(ComponentType.Health, 100));
+                return GetPlayerHealth(p);
+            }
 
-            if (levelFile.Player.Components == null)
-                levelFile.Player.Components = new List<Component>();
-            // Load any additional components from the level file
-            foreach (var component in levelFile.Player.Components)
-                player.AddComponent(component.Type, component.Value);
+            Option<Component> AddPlayerHealthComponent(Player p) 
+            {
+                 p.Components.Add(new Component(ComponentType.Health, 100));
+                return GetPlayerHealth(p);
+            }
 
             // Make sure we actually have health or points for the player
-            var playerHealth = player.FindComponentByType(ComponentType.Health);
-            var playerPoints = player.FindComponentByType(ComponentType.Points);
+            Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
+            Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
 
-            if (playerHealth == null)
-                player.Components.Add(new Component(ComponentType.Health, 100));
-            if (playerPoints == null)
-                player.Components.Add(new Component(ComponentType.Points, 0));
-
-            return player;
+            Option<Player> InitializePlayer(LevelDetails level, Player p)
+            {
+                level.Player.Components = level.Player.Components ?? new List<Component>();
+                
+                // Load any additional components from the level file
+                level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
+                return p;
+            }
         });
+
+        
 
         /// <summary>
         /// loading the definition of the enemies into a file.
@@ -272,45 +300,42 @@ namespace MazerPlatformer
         /// <param name="npcBuilder"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsureWithReturn(() =>
+        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
         {
-            // build up a list of characters (aka npcs)
-            var characters = new List<Npc>();
+           return MaybeTrue(()=>Npcs != null && levelFile.Npcs.Count > 0).Match(
+                Some: (unit) => GenerateFromFile(new List<Npc>(), levelFile), 
+                None: ()=> npcBuilder.GenerateDefaultNpcSet(rooms, new List<Npc>(), level));
+                        
 
-            // Load NPC details from file
-            if (Npcs != null && levelFile.Npcs.Count > 0)
+            Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
             {
-                foreach (var levelNpc in levelFile.Npcs)
+                levelNpc.Components.Iter((comp) =>
                 {
-                    for (var i = 0; i < levelNpc.Count; i++)
-                    {
-                        npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
-                                            levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                                            levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                                            levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                                            levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
-                            .Bind(AttachComponents)
-                            .Bind(AddNpc);
-
-                        Either<IFailure, Npc> AttachComponents(Npc npc1)
-                        {
-                            // Attach components onto the NPC
-                            foreach (var component in levelNpc.Components) 
-                                npc1.AddComponent(component.Type, component.Value);
-                            return npc1;
-                        }
-
-                        Either<IFailure, Unit> AddNpc(Npc npc) => Ensure(action: () => { characters.Add(npc); });
-                    }
-                }
+                    npc1.AddComponent(comp.Type, comp.Value);
+                });
+                            
+                return npc1;
             }
-            else
+
+            Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () => { characters.Add(npc); });
+
+            Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file)
             {
-                // Make default set of NPCs if we don't have a level definition file
-                npcBuilder.GenerateDefaultNpcSet(rooms, characters, level).ThrowIfFailed();
+                file.Npcs.Iter((levelNpc)=>
+                    {
+                        Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
+                        { 
+                            npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
+                                                levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                                                levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                                                levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
+                                                levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
+                                .Bind((npc) => AttachComponents(levelNpc, npc))
+                                .Bind((npc) => AddNpc(npc, chars));
+                            });
+                    });
+                return chars;
             }
-
-            return characters;
         });
 
         private static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
@@ -348,7 +373,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetNumPickups(int numPickups) => Ensure(() => { NumPickups = numPickups; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
             Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
-            List<Room> MakeLevelRooms() => MakeRooms(removeRandomSides: Diagnostics.RandomSides).ThrowIfFailed();
+            List<Room> MakeLevelRooms() => MakeRooms(removeRandSides: Diagnostics.RandomSides).ThrowIfFailed();
 
             Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>
             {

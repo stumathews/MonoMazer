@@ -66,7 +66,7 @@ namespace MazerPlatformer
 
         
 
-        public Either<IFailure, Unit> GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => EnsuringBind(() =>
+        public Either<IFailure, List<Npc>> GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => EnsuringBind(() =>
         {
             return
                 from pirates in CreateWith(DefaultNumPirates, () => Create($@"Sprites\pirate{_random.Next(1, 4)}", 40, Npc.NpcTypes.Enemy, level, rooms))
@@ -81,7 +81,7 @@ namespace MazerPlatformer
                     .BindT(AddToNpcList).AggregateFailures()
                 from pink in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-pink", 40, Npc.NpcTypes.Pickup, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
-                select Nothing;
+                select npcs;
 
             IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator)
             {
