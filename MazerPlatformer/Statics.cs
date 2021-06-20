@@ -136,6 +136,9 @@ namespace MazerPlatformer
         public static Either<L, T> ToEither<L, T>(this T value)
             => Prelude.Right<L, T>(value);
 
+        public static Either<IFailure, T> ToEither<T>(this Option<T> value)
+            => value.Match(Some: (t)=>Prelude.Right(t), None: ()=>ShortCircuitFailure.Create("None").ToEitherFailure<T>());
+
         /// <summary>
         /// Make an IAmFailure to a Either&lt;IAmFailure, T&gt; ie convert a failure to a either that represents that failure ie an either in the left state
         /// </summary>
@@ -417,6 +420,10 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<L, Unit> IgnoreFailure<L>(this Either<L, Unit> either)
             => either.IfLeft(Nothing);
+
+        //public static Either<L, R> IgnoreFailure<L, R>(this Either<L, R> either) =>
+        //    either.Match(Left: (left) => Prelude.Left<L, R>(left),
+        //                 Right: (right) => Prelude.Right<L, R>(right));
 
         /// <summary>
         /// Ensuring map will return either a transformation failure or the result of the transformation
