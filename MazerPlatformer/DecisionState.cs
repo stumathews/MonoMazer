@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -20,17 +21,9 @@ namespace MazerPlatformer
         {
             base.Update(owner, gameTime);
 
-            // skip doing anything for a few secs
-            if (IsWithin(100, gameTime).ThrowIfFailed())
-                return;
-
-           
-            Npc.SwapDirection();
-            
-
-            // then move
-            if (!Npc.IsColliding)
-                Npc.NpcState = Npc.NpcStates.Moving;
+           IsWithin(100, gameTime).ShortCirtcutOnTrue()
+                        .Bind((boolean) => Npc.SwapDirection())
+                        .IfRight((u) => Npc.NpcState = Npc.NpcStates.Moving);
         }
     }
 }
