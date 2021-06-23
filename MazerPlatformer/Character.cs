@@ -175,16 +175,16 @@ namespace MazerPlatformer
         {
             CanMove = false;
 
-            Either<IFailure, bool> MoveInDirection(CharacterDirection target, CharacterDirection src, System.Action how)
+            Unit ModifyAxis(System.Action how)
             {
-                Unit ModifyAxis(Unit b)
-                {
-                    how();
-                    return Nothing;
-                }
-
-                return MaybeTrue(() => src == target).ToEither().Map(ModifyAxis).Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+                how();
+                return Nothing;
             }
+
+            Either<IFailure, bool> MoveInDirection(CharacterDirection target, CharacterDirection src, System.Action how) => MaybeTrue(() => src == target).ToEither()
+                    .Map((b) => ModifyAxis(how))
+                    .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+
             // Artificially nudge the player out of the collision
             return from maybeUp in MoveInDirection(CharacterDirection.Up, LastCollisionDirection, ()=> Y += 1)
                     from maybeDown in MoveInDirection(CharacterDirection.Down, LastCollisionDirection, ()=> Y-= 1)
