@@ -15,5 +15,6 @@ namespace MazerPlatformer
             Reason = $"Invalid Direction {direction}";
         }
         public string Reason { get; set; }
+        public static IFailure Create(Character.CharacterDirection direction) => new InvalidDirectionFailure(direction);
     }
 }
