@@ -197,25 +197,18 @@ namespace MazerPlatformer
         // impure
         public Either<IFailure, Unit> SwapDirection()
         {
-            switch (CurrentDirection)
-            {
-                case CharacterDirection.Up:
-                    SetCharacterDirection(CharacterDirection.Down);
-                    break;
-                case CharacterDirection.Down:
-                    SetCharacterDirection(CharacterDirection.Up);
-                    break;
-                case CharacterDirection.Left:
-                    SetCharacterDirection(CharacterDirection.Right);
-                    break;
-                case CharacterDirection.Right:
-                    SetCharacterDirection(CharacterDirection.Left);
-                    break;
-                default:
-                    return new InvalidDirectionFailure(CurrentDirection);
-            }
 
-            return Nothing;
+            Either<IFailure, bool> SetDirection(CharacterDirection src, CharacterDirection target, CharacterDirection to)
+                => MaybeTrue(() => src == target).ToEither()
+                    .Bind((unit) => SetCharacterDirection(to))
+                    .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+
+            return from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
+                   from maybeDown in SetDirection(CurrentDirection, CharacterDirection.Down, to: CharacterDirection.Up).ShortCirtcutOnTrue()
+                   from maybeLeft in SetDirection(CurrentDirection, CharacterDirection.Left, to: CharacterDirection.Right).ShortCirtcutOnTrue()
+                   from maybeRight in SetDirection(CurrentDirection, CharacterDirection.Right, to: CharacterDirection.Left).ShortCirtcutOnTrue()
+                   from handled in Maybe(() => maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(InvalidDirectionFailure.Create(CurrentDirection))
+                   select Nothing;
         }
 
         //impure

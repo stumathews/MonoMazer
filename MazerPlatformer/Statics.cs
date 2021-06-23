@@ -148,6 +148,13 @@ namespace MazerPlatformer
         public static Either<L, R> ToEitherFailure<L, R>(this L left)
             => Prelude.Left<L, R>(left);
 
+        public static Either<IFailure, bool> ShortCirtcutOnTrue(this Either<IFailure, bool> either) 
+            => from boolean in either
+               from isTrue in MaybeTrue(() => boolean == true).ToEither()
+                            .Match(Left: (failure) => boolean.ToEither(),
+                            Right: (unit) => ShortCircuitFailure.Create("Intentional Short circuit").ToEitherFailure<bool>())
+                select isTrue;
+
         /// <summary>
         /// Runs code that is contains external dependencies and 
         /// </summary>
