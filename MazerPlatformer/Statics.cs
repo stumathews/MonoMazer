@@ -29,34 +29,31 @@ namespace MazerPlatformer
         //TODO: Ensure that GameObjects is not NULL - use Option<T>
         public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
 
+        public static bool IsNpc(GameObject obj) => obj.Type == GameObject.GameObjectType.Npc;
+
         //TODO: Ensure that GameObjects is not NULL - use Option<T>
         public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
         {
-            if (gameObject.Type != GameObject.GameObjectType.Npc) return false;
-            return gameObject.FindComponentByType(Component.ComponentType.NpcType)
-                .Match(
-                    Some: component => (Npc.NpcTypes)component.Value == type,
-                    None: () => false);
+            
+            bool IsComponentFound() => gameObject.FindComponentByType(Component.ComponentType.NpcType)
+                    .Map(found=>(Npc.NpcTypes)found.Value == type)                            
+                    .Match(Some: (o)=>true, None:()=>false);
 
+            return MaybeTrue(()=>!IsNpc(gameObject))
+                    .Match(Some: (unit)=> false, None: ()=> IsComponentFound());
         }
 
         public static Either<IFailure, T> GetRandomEnumValue<T>() => EnsureWithReturn(() =>
         {
-            var values = Enum.GetValues(typeof(T));
-            return (T) values.GetValue(Level.RandomGenerator.Next(values.Length));
+            Array GetValues() => Enum.GetValues(typeof(T));
+            return (T) GetValues().GetValue(Level.RandomGenerator.Next(GetValues().Length));
         });
 
-        public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc)
-        {
-            if (npc.Type != GameObject.GameObjectType.Npc)
-                return Option<Npc.NpcTypes>.None;
-
-            return npc.FindComponentByType(Component.ComponentType.NpcType)
-                .Bind(component => String.IsNullOrEmpty(component.Value.ToString())
-                    ? Option<string>.None
-                    : component.Value.ToString())
-                .Bind(str => ParseEnum<Npc.NpcTypes>(str).ToOption());
-        }
+        public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc) =>
+                 Maybe(() => !IsNpc(npc))
+                .Bind((b) => npc.FindComponentByType(Component.ComponentType.NpcType)
+                .Bind(component => string.IsNullOrEmpty(component.Value.ToString()) ? Option<string>.None : component.Value.ToString())
+                .Bind(str => ParseEnum<Npc.NpcTypes>(str).ToOption()));
 
         /// <summary>
         /// Reduces multiple failures into one failure ie aggregates it
@@ -65,9 +62,9 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, T> AggregateFailures<T>(this IEnumerable<Either<IFailure, T>> eithers, T left)
         {
-            var failed = eithers.Lefts().ToList();
-            return failed.Any() 
-                ? new AggregatePipelineFailure(failed).ToEitherFailure<T>() 
+            List<IFailure> GetFailed() => eithers.Lefts().ToList();
+            return GetFailed().Any() 
+                ? new AggregatePipelineFailure(GetFailed()).ToEitherFailure<T>() 
                 : left.ToEither();
         }
 
@@ -238,6 +235,12 @@ namespace MazerPlatformer
         public static Option<Unit> MaybeTrue( Func<bool> predicate)
         {
             return predicate() ? Option<Unit>.Some(Unit.Default) : Option<Unit>.None;
+        }
+
+        [PureFunction]
+        public static Option<bool> Maybe(Func<bool> predicate)
+        {
+            return predicate() ? Option<bool>.Some(true) : Option<bool>.Some(false);
         }
 
         public static Option<T> ToSome<T>(this T t) => Prelude.Some<T>(t);
@@ -420,6 +423,9 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<L, Unit> IgnoreFailure<L>(this Either<L, Unit> either)
             => either.IfLeft(Nothing);
+
+        public static Option<Unit> IgnoreNone<T>(this Option<T> option)
+            => option.Match(Some: (some)=> Prelude.Some(some), None: ()=>Prelude.Some(Nothing));
 
         //public static Either<L, R> IgnoreFailure<L, R>(this Either<L, R> either) =>
         //    either.Match(Left: (left) => Prelude.Left<L, R>(left),
