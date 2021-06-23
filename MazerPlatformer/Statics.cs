@@ -431,6 +431,12 @@ namespace MazerPlatformer
         public static Either<L, Unit> IgnoreFailure<L>(this Either<L, Unit> either)
             => either.IfLeft(Nothing);
 
+        public static Either<IFailure, Unit> IgnoreFailureOf<IFailure, R>(this Either<IFailure, R> either, Type failureType)
+        {
+            return either.Match(Right: (r) => r.ToEither(),
+                                       Left: (l) => MaybeTrue(() => l.GetType() == failureType));
+        }
+
         public static Option<Unit> IgnoreNone<T>(this Option<T> option)
             => option.Match(Some: (some)=> Prelude.Some(some), None: ()=>Prelude.Some(Nothing));
 
