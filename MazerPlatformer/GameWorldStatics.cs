@@ -35,7 +35,7 @@ namespace MazerPlatformer
         public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
-        public static Either<IFailure, GameObject> GetGameObject(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(() => gameObjects[id]);
+        public static Either<IFailure, GameObject> GetGameObject(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(() => gameObjects[id]).ThrowIfFailed();
 
         public static  Either<IFailure, Unit> DeactivateGameObject(GameObject obj, Dictionary<string, GameObject> gameObjects, string id) => Ensure(() =>
         {

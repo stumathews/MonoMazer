@@ -236,7 +236,7 @@ namespace MazerPlatformer
             var inactiveIds = GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
             foreach (var id in inactiveIds)
-                RemoveGameObject(id, _level).ThrowIfFailed();
+                RemoveGameObject(id, _level);
 
             var activeGameObjects = GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
             foreach (var gameObject in activeGameObjects)
