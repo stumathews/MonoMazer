@@ -25,9 +25,9 @@ namespace MazerPlatformer
             _spottedPlayerTimeout.Update(gameTime);
 
             var updatePipeline =
-                from playerComponent in Npc.FindComponentByType(Component.ComponentType.Player).ToEither(NotFound.Create("not found"))
+                from playerComponent in Npc.FindComponentByType(Component.ComponentType.Player).ToEither(NotFound.Create("player component not found"))
                 from player in TryCastToT<Player>(playerComponent.Value)
-                from component in Npc.FindComponentByType(Component.ComponentType.GameWorld).ToEither(NotFound.Create("not found"))
+                from component in Npc.FindComponentByType(Component.ComponentType.GameWorld).ToEither(NotFound.Create("gameworld compoennt not found"))
                 from gameWorld in TryCastToT<GameWorld>(component.Value)
                 let npcRoom = gameWorld.GetRoomIn(Npc).ThrowIfNone(NotFound.Create("Room unexpectedly not found"))
                 let myRow = gameWorld.ToRoomRow(Npc).ThrowIfNone(NotFound.Create("Could not find room row for NPC"))
