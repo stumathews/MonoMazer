@@ -9,8 +9,10 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Component;
+using static MazerPlatformer.Level;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
+using static MazerPlatformer.LevelStatics;
 
 namespace MazerPlatformer
 {
@@ -231,59 +233,21 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager) => EnsureWithReturn(() =>
-        {            
-
-            return (from assetFile in CreateAssetFile(levelFile)
+        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager) => EnsureWithReturn(()
+            =>     (from assetFile in CreateAssetFile(levelFile)
                     from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
-                    from playerAnimation in CreatePlayerAnimation(assetFile, texture)
+                    from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
                     from player in CreatePlayer(playerRoom, playerAnimation, levelFile)
                     from InitializedPlayer in InitializePlayer(levelFile, player)
                     from playerHealth in GetPlayerHealth(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
                     from playerPoints in GetPlayerPoints(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
-                    select player).ThrowIfNone();
+                    select player).ThrowIfNone());
 
-            Option<string> CreateAssetFile(LevelDetails level) => string.IsNullOrEmpty(levelFile?.Player?.SpriteFile)
-                ? @"Sprites\dark_soldier-sword"
-                : levelFile.Player.SpriteFile;
-
-            Option<AnimationInfo> CreatePlayerAnimation(string assetFile, Texture2D texture) => new AnimationInfo(
-                texture: texture, assetFile,
-                frameWidth: levelFile?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                frameHeight: levelFile?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                frameCount: levelFile?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
-
-            Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level) => new Player(x: (int)player_room.GetCentre().X,
-                y: (int)player_room.GetCentre().Y,
-                width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                animationInfo: animation);
             
-            Option<Component> AddPlayerPointsComponent(Player p) 
-            {
-                p.Components.Add(new Component(ComponentType.Health, 100));
-                return GetPlayerHealth(p);
-            }
+            
+            
 
-            Option<Component> AddPlayerHealthComponent(Player p) 
-            {
-                 p.Components.Add(new Component(ComponentType.Health, 100));
-                return GetPlayerHealth(p);
-            }
-
-            // Make sure we actually have health or points for the player
-            Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
-            Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
-
-            Option<Player> InitializePlayer(LevelDetails level, Player p)
-            {
-                level.Player.Components = level.Player.Components ?? new List<Component>();
-                
-                // Load any additional components from the level file
-                level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
-                return p;
-            }
-        });
+        
 
         
 
@@ -565,5 +529,51 @@ namespace MazerPlatformer
 
         public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
             => Player.SetPlayerVitals(health, points);
+    }
+
+    public static class LevelStatics
+    {
+        public static Option<string> CreateAssetFile(LevelDetails l) => string.IsNullOrEmpty(l?.Player?.SpriteFile)
+                ? @"Sprites\dark_soldier-sword"
+                : l.Player.SpriteFile;
+
+        public static Option<AnimationInfo> CreatePlayerAnimation(string assetFile, Texture2D texture, LevelDetails l) => new AnimationInfo(
+            texture: texture, assetFile,
+            frameWidth: l?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+            frameHeight: l?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+            frameCount: l?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
+
+        public static Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level) => new Player(x: (int)player_room.GetCentre().X,
+            y: (int)player_room.GetCentre().Y,
+            width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+            height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+            animationInfo: animation);
+
+        public static Option<Component> AddPlayerPointsComponent(Player p) 
+        {
+            p.Components.Add(new Component(ComponentType.Health, 100));
+            return GetPlayerHealth(p);
+        }
+
+        public static Option<Component> AddPlayerHealthComponent(Player p) 
+        {
+                p.Components.Add(new Component(ComponentType.Health, 100));
+            return GetPlayerHealth(p);
+        }
+
+        
+            // Make sure we actually have health or points for the player
+            public static Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
+            public static Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
+
+            public static Option<Player> InitializePlayer(LevelDetails level, Player p)
+            {
+                level.Player.Components = level.Player.Components ?? new List<Component>();
+                
+                // Load any additional components from the level file
+                level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
+                return p;
+            }
+
     }
 }
