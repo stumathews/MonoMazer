@@ -118,10 +118,8 @@ namespace MazerPlatformer
         /// <param name="side"></param>
         /// <param name="sideCharacteristics"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(() =>
-        {
-            if (otherObject.Type == GameObject.GameObjectType.Player)
-                room.RemoveSide(side);
-        });
+        public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(() 
+            => MaybeTrue(() => otherObject.Type == GameObject.GameObjectType.Player)
+                .Iter((success) => room.RemoveSide(side)));
     }
 }

@@ -19,9 +19,8 @@ namespace MazerPlatformer
 
         public static Either<IFailure, CommandManager> UpdateCommands(Either<IFailure, CommandManager> gameCommands, GameTime time)
         {
-            return 
-                from manager in gameCommands
-                select UpdateCommandManager(manager, time);
+            return from manager in gameCommands
+                    select UpdateCommandManager(manager, time);
 
             CommandManager UpdateCommandManager(CommandManager manager, GameTime theTime)
             {
@@ -30,11 +29,9 @@ namespace MazerPlatformer
             }
         }
 
-        public static Either<IFailure, SpriteBatch> BeginSpriteBatch(SpriteBatch spriteBatch)
-        {
-            return from result in Statics.Ensure(() => spriteBatch.Begin())
-                select spriteBatch;
-        }
+        public static Either<IFailure, SpriteBatch> BeginSpriteBatch(SpriteBatch spriteBatch) 
+            => from result in Statics.Ensure(() => spriteBatch.Begin())
+               select spriteBatch;
 
         public static Either<IFailure, Unit> PlayMenuMusic(Song song) => Statics.Ensure(()
             => MediaPlayer.Play(song));
@@ -105,8 +102,8 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> IncrementCollisionStats(GameObject gameObject, Action increamentNumCollisionsWithPlayer, Action incrementGameCollisionEvents) => Statics.Ensure(() =>
         {
-            if (gameObject.Type == GameObject.GameObjectType.Npc) 
-                increamentNumCollisionsWithPlayer();
+            Statics.Maybe(()=>gameObject.Type == GameObject.GameObjectType.Npc)
+            .Iter((success)=>increamentNumCollisionsWithPlayer());
 
             incrementGameCollisionEvents();
         });

@@ -97,33 +97,29 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> SetPlayerVitalComponents(List<Component> components, int health, int points)
         {
-            var healthComponent = components.SingleOrNone(o => o.Type == Component.ComponentType.Health)
+            Option<object> GetHealthComponent() => components.SingleOrNone(o => o.Type == Component.ComponentType.Health)
                 .Map(component => component.Value = health);
 
-            var pointsComponent = components.SingleOrNone(o => o.Type == Component.ComponentType.Points)
+            Option<object> GetPointsComponent() => components.SingleOrNone(o => o.Type == Component.ComponentType.Points)
                 .Map(component => component.Value = points);
 
             return
-                (from h in healthComponent.ToEither<IFailure>(new NotFound("health component not found"))
-                 from p in pointsComponent.ToEither<IFailure>(new NotFound("health component not found"))
+                (from h in GetHealthComponent().ToEither<IFailure>(new NotFound("health component not found"))
+                 from p in GetPointsComponent().ToEither<IFailure>(new NotFound("health component not found"))
                  select Nothing);
         }
 
-        public static Option<T> SingleOrNone<T>(this List<T> list, Func<T, bool> predicate)
-        {
-            return EnsureWithReturn(() => list.SingleOrDefault(predicate))
+        public static Option<T> SingleOrNone<T>(this List<T> list, Func<T, bool> predicate) => EnsureWithReturn(() 
+            => list.SingleOrDefault(predicate))
                 .EnsuringMap(item => item != null ? item : Option<T>.None)
                 .IfLeft(Option<T>.None);
-        }
 
-        public static Either<IFailure, T> SingleOrFailure<T>(this List<T> list, Func<T, bool> predicate, string name = "no name provided")
-        {
-            return EnsureWithReturn(() => list.SingleOrDefault(predicate))
+        public static Either<IFailure, T> SingleOrFailure<T>(this List<T> list, Func<T, bool> predicate, string name = "no name provided") => EnsureWithReturn(() 
+            => list.SingleOrDefault(predicate))
                 .EnsuringMap(item => item != null ? item : Option<T>.None)
                 .IfLeft(Option<T>.None)
                 .ToEither(NotFound.Create($"Could not find item: ${name}"));
-        }
-        
+
         /// <summary>
         /// Make Either<IFailure, T> in right state
         /// </summary>
@@ -217,45 +213,44 @@ namespace MazerPlatformer
         public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action)
             => either.IfLeft(action);
 
-        public static void IfFailedAnd<R>(this Either<IFailure, R> either, bool condition, Action<IFailure> action)
-        {
-            if (condition)
-                either.IfFailed(action);
-        }
+        public static void IfFailedAnd<R>(this Either<IFailure, R> either, bool condition, Action<IFailure> action) => 
+                MaybeTrue(() => condition)
+                .Iter((success) => either.IfFailed(action));
 
         public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn(()
             => (T)value, InvalidCastFailure.Default());
 
         [PureFunction]
-        public static Option<bool> ToOption(this bool thing)
-        {
-            return thing ? Option<bool>.Some(true) : Option<bool>.None;
-        }
+        public static Option<bool> ToOption(this bool thing) 
+            => thing 
+            ? Option<bool>.Some(true) 
+            : Option<bool>.None;
 
         [PureFunction]
-        public static Option<Unit> TrueToUnit(this bool thing)
-        {
-            return thing ? Option<Unit>.Some(Unit.Default) : Option<Unit>.None;
-        }
+        public static Option<Unit> TrueToUnit(this bool thing) 
+            => thing 
+            ? Option<Unit>.Some(Unit.Default) 
+            : Option<Unit>.None;
 
         [PureFunction]
-        public static Option<Unit> MaybeTrue( Func<bool> predicate)
-        {
-            return predicate() ? Option<Unit>.Some(Unit.Default) : Option<Unit>.None;
-        }
+        public static Option<Unit> MaybeTrue(Func<bool> predicate)
+            => predicate() 
+            ? Option<Unit>.Some(Unit.Default) 
+            : Option<Unit>.None;
 
         [PureFunction]
-        public static Option<bool> Maybe(Func<bool> predicate)
-        {
-            return predicate() ? Option<bool>.Some(true) : Option<bool>.Some(false);
-        }
+        public static Option<bool> Maybe(Func<bool> predicate) 
+            => predicate() 
+            ? Option<bool>.Some(true) 
+            : Option<bool>.Some(false);
 
-        public static Option<T> ToSome<T>(this T t) => Prelude.Some<T>(t);
+        public static Option<T> ToSome<T>(this T t) 
+            => Prelude.Some<T>(t);
 
-        public static Option<T> ToOption<T>(this T thing)
-        {
-            return thing != null ? Option<T>.Some(thing) : Option<T>.None;
-        }
+        public static Option<T> ToOption<T>(this T thing) 
+            => thing != null 
+            ? Option<T>.Some(thing) 
+            : Option<T>.None;
 
         public static Either<L, bool> FailIfTrue<L>(this bool theBool, L theFailure) 
             => theBool ? theFailure.ToEitherFailure<L, bool>() : theBool.ToEither<L, bool>();
@@ -268,7 +263,6 @@ namespace MazerPlatformer
 
         public static Either<L, bool> FailIfFalse<L>(this Either<L, bool> theBool, L theFailure)
             => theBool ? theBool.FailIfFalse(theFailure) : theFailure.ToEitherFailure<L, bool>();
-
 
         // contains I/O
         public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
@@ -370,11 +364,9 @@ namespace MazerPlatformer
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
 
         public static Either<IFailure, R> Call<R>(this Either<IFailure, R>? either)
-        {
-            return either == null
+            => either == null
                 ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
                 : either.Value;
-        }
 
         public static Either<IFailure, T> TryLoad<T>(this ContentManager content, string assetName) => EnsureWithReturn(()
             => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}"));
@@ -405,10 +397,10 @@ namespace MazerPlatformer
         /// <param name="condition"></param>
         /// <param name="then"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> EnsureIf(bool condition, Action then)
-        {
-            return condition ? Ensure(then).Bind(unit => Nothing.ToEither()) : new ConditionNotSatisfiedFailure();
-        }
+        public static Either<IFailure, Unit> EnsureIf(bool condition, Action then) 
+            => condition 
+            ? Ensure(then).Bind(unit => Nothing.ToEither()) 
+            : new ConditionNotSatisfiedFailure();
 
         /// <summary>
         /// Explicitly turns failures into Right values
@@ -431,25 +423,18 @@ namespace MazerPlatformer
         public static Either<L, Unit> IgnoreFailure<L>(this Either<L, Unit> either)
             => either.IfLeft(Nothing);
 
-        public static Either<IFailure, Unit> IgnoreFailureOf<IFailure, R>(this Either<IFailure, R> either, Type failureType)
-        {
-            return either.Match(Right: (r) => r.ToEither(),
-                                       Left: (l) => MaybeTrue(() => l.GetType() == failureType));
-        }
+        public static Either<IFailure, Unit> IgnoreFailureOf<IFailure, R>(this Either<IFailure, R> either, Type failureType) 
+            => either.Match(Right: (r) => r.ToEither(),
+                            Left: (l) => MaybeTrue(() => l.GetType() == failureType));
 
-         public static Either<IFailure, R> IgnoreFailureOfAs<IFailure, R>(this Either<IFailure, R> either, Type failureType, R OnFail)
-        {
-            return either.Match(Right: (r) => r,
-                                Left: (l) =>MaybeTrue(() => l.GetType() == failureType).Map((unit)=>OnFail).ToEither(l));
-        }
+        public static Either<IFailure, R> IgnoreFailureOfAs<IFailure, R>(this Either<IFailure, R> either, Type failureType, R OnFail) 
+            => either.Match(Right: (r) => r,
+                            Left: (l) => MaybeTrue(() => l.GetType() == failureType).Map((unit) => OnFail).ToEither(l));
 
         public static Option<Unit> IgnoreNone<T>(this Option<T> option)
             => option.Match(Some: (some)=> Prelude.Some(some), None: ()=>Prelude.Some(Nothing));
 
-        //public static Either<L, R> IgnoreFailure<L, R>(this Either<L, R> either) =>
-        //    either.Match(Left: (left) => Prelude.Left<L, R>(left),
-        //                 Right: (right) => Prelude.Right<L, R>(right));
-
+        
         /// <summary>
         /// Ensuring map will return either a transformation failure or the result of the transformation
         /// </summary>
@@ -591,9 +576,7 @@ namespace MazerPlatformer
         public static Vector2 GetCentre(this GameObject gameObject) 
             => GetCentreImpure(gameObject).ThrowIfFailed();
 
-        public static bool DictValueEquals<K,V>(IDictionary<K,V> dic1, IDictionary<K, V> dic2)
-        {
-            return dic1.Count == dic2.Count && !dic1.Except(dic2).Any();
-        }
+        public static bool DictValueEquals<K, V>(IDictionary<K, V> dic1, IDictionary<K, V> dic2) 
+            => dic1.Count == dic2.Count && !dic1.Except(dic2).Any();
     }
 }

@@ -21,10 +21,10 @@ namespace MazerPlatformer
 
         public bool[] HasSides { get; set; } = 
         {
-            /*Top*/ true,
-            /*Right*/ true,
-            /*Bottom*/ true,
-            /*Left*/ true
+            true, // Top
+            true, // Right
+            true, // Bottom
+            true // Left
         };
 
         public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
@@ -143,20 +143,17 @@ namespace MazerPlatformer
             return Nothing.ToEither();
         }
 
-        protected bool Equals(Room other)
-        {
-            return 
-                   HasSides.SequenceEqual(other.HasSides) && 
+        protected bool Equals(Room other) 
+                => HasSides.SequenceEqual(other.HasSides) &&
                    Equals(RectangleDetail, other.RectangleDetail) &&
-                   Equals(RoomAbove, other.RoomAbove) && 
-                   Equals(RoomBelow, other.RoomBelow) && 
-                   Equals(RoomRight, other.RoomRight) && 
-                   Equals(RoomLeft, other.RoomLeft) && 
-                   RoomNumber == other.RoomNumber && 
-                   Col == other.Col 
+                   Equals(RoomAbove, other.RoomAbove) &&
+                   Equals(RoomBelow, other.RoomBelow) &&
+                   Equals(RoomRight, other.RoomRight) &&
+                   Equals(RoomLeft, other.RoomLeft) &&
+                   RoomNumber == other.RoomNumber &&
+                   Col == other.Col
                    && Row == other.Row &&
                    DictValueEquals(WallProperties, other.WallProperties);
-        }
 
         public override bool Equals(object obj)
         {

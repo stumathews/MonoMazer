@@ -18,10 +18,8 @@ namespace MazerPlatformer
             Color = color;
         }
 
-        protected bool Equals(SideCharacteristic other)
-        {
-            return Color.Equals(other.Color) && Bounds.Equals(other.Bounds);
-        }
+        protected bool Equals(SideCharacteristic other) 
+            => Color.Equals(other.Color) && Bounds.Equals(other.Bounds);
 
         public override bool Equals(object obj)
         {

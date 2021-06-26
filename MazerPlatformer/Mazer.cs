@@ -183,8 +183,6 @@ namespace MazerPlatformer
                 }
             }
 
-            
-
             // Ready the state machine and put it into the default state of 'pause' state            
             gameStateMachine.Initialise(_pauseState.Name);
         });
@@ -207,23 +205,23 @@ namespace MazerPlatformer
         }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
 
         private Either<IFailure, GraphicsDevice> InitializeGraphicsDevice() => EnsureWithReturn(() =>
+        {
+            var graphicsDeviceManager = new GraphicsDeviceManager(this)
             {
-                var graphicsDeviceManager = new GraphicsDeviceManager(this)
-                {
-                    GraphicsProfile = GraphicsProfile.Reach,
-                    HardwareModeSwitch = false,
-                    IsFullScreen = false,
-                    PreferMultiSampling = false,
-                    PreferredBackBufferFormat = SurfaceFormat.Color,
-                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
-                    PreferredDepthStencilFormat = DepthFormat.None,
-                    SupportedOrientations = DisplayOrientation.Default,
-                    SynchronizeWithVerticalRetrace = false,
-                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
-                };
-                graphicsDeviceManager.ApplyChanges();
+                GraphicsProfile = GraphicsProfile.Reach,
+                HardwareModeSwitch = false,
+                IsFullScreen = false,
+                PreferMultiSampling = false,
+                PreferredBackBufferFormat = SurfaceFormat.Color,
+                PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                PreferredDepthStencilFormat = DepthFormat.None,
+                SupportedOrientations = DisplayOrientation.Default,
+                SynchronizeWithVerticalRetrace = false,
+                PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+            };
+            graphicsDeviceManager.ApplyChanges();
 
-                return GraphicsDevice;
+            return GraphicsDevice;
         }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
 
         private Either<IFailure, Unit> InitializeUi() =>
@@ -443,25 +441,30 @@ namespace MazerPlatformer
             theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
             return theWorld;
         }
+
         internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) =>
             from world in _gameWorld
             from result in world.OnKeyUp(sender, keyboardEventArgs)
             select Nothing;
+
         private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame(_currentGameState) 
                 ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>_mainMenuPanel.Visible = true) 
                 : ResumeGame(_gameWorld);
+
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() => EnsureWithReturn(() =>
             from playerDied in (Either<IFailure, bool>) (_playerDied = true)
             from result in ShowGameOverScreen() // We don't have a game over state, as we use the pause state and then show a game over screen
             from currentGameState in (Either<IFailure, GameStates>) (_currentGameState = GameStates.Paused)
             select Nothing).UnWrap();
+
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) 
             => IsStateEntered(reason)
                 ? from playResult in PlayMenuMusic(_menuMusic)
                   from showResult in ShowMenu(()=>_mainMenuPanel.Visible = true)
                     select showResult
                 : Nothing;
+
         private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount)
         {
             _numGameObjects = runningTotalCount; // We'll keep track of how many pickups the player picks up over time
@@ -482,6 +485,7 @@ namespace MazerPlatformer
                 SetPlayerHealthScalar,
                 SetPlayerPointsScalar)
             select Nothing;
+
         private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
             from points in levelDetails.Player.Components
                 .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
@@ -490,6 +494,7 @@ namespace MazerPlatformer
                 .SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
                 .Map(ReadPlayerHealth)
             select Nothing;
+
         private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/) =>
             from gameObject1 in object1.ToEither(NotFound.Create("Game Object was invalid or not found"))
             from result in IncrementCollisionStats(gameObject1, 

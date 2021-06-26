@@ -11,8 +11,8 @@ namespace MazerPlatformer
         public RectDetails(Rectangle rectangle) 
             => Rectangle = rectangle;
 
-        public RectDetails(int x, int y, int w, int h) => 
-            Rectangle = new Rectangle(x, y, w, h) {X = x, Y = y, Width = w, Height = h};
+        public RectDetails(int x, int y, int w, int h) 
+            => Rectangle = new Rectangle(x, y, w, h) {X = x, Y = y, Width = w, Height = h};
 
         public int GetAx() => Statics.EnsureWithReturn(() => Rectangle.X).ThrowIfFailed();
         public int GetAy() => Statics.EnsureWithReturn(() =>Rectangle.Y).ThrowIfFailed();

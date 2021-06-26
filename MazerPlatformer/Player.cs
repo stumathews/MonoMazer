@@ -38,13 +38,14 @@ namespace MazerPlatformer
             base.Draw(spriteBatch);
 
             return MaybeTrue(()=>Diagnostics.DrawPlayerRectangle)
-                .Iter((success)=> spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray));
+                    .Iter((success)=> spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray));
         }
 
         // I can handle my own collisions
         public Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 
             => NudgeOutOfCollision();
 
-        public Either<IFailure, Unit> Seen() => Ensure(()=> OnPlayerSpotted?.Invoke(this));
+        public Either<IFailure, Unit> Seen() => Ensure(()
+            => OnPlayerSpotted?.Invoke(this));
     }
 }

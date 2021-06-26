@@ -220,9 +220,7 @@ namespace MazerPlatformer
                 .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
                 .ToEither()
                 .BindT(room => room)
-                .Map(inner => new List<Room>(inner));
-
-            
+                .Map(inner => new List<Room>(inner));            
         }
 
 
@@ -306,31 +304,29 @@ namespace MazerPlatformer
 
             Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
             {
-                levelNpc.Components.Iter((comp) =>
-                {
-                    npc1.AddComponent(comp.Type, comp.Value);
-                });
+                levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
                             
                 return npc1;
             }
 
-            Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () => { characters.Add(npc); });
+            Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () 
+                => characters.Add(npc));
 
             Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file)
             {
                 file.Npcs.Iter((levelNpc)=>
-                    {
-                        Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
-                        { 
-                            npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
-                                                levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                                                levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                                                levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                                                levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
-                                .Bind((npc) => AttachComponents(levelNpc, npc))
-                                .Bind((npc) => AddNpc(npc, chars));
-                            });
-                    });
+                {
+                    Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
+                    { 
+                        npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
+                                            levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                                            levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                                            levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
+                                            levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
+                            .Bind((npc) => AttachComponents(levelNpc, npc))
+                            .Bind((npc) => AddNpc(npc, chars));
+                        });
+                });
                 return chars;
             }
         });
@@ -410,25 +406,27 @@ namespace MazerPlatformer
 
         private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
         {
-            return MaybeTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind<LevelDetails>(Right: (unit)=>
-            {
-                LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
+            return MaybeTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind(
+                Right: (unit)=>
+                {
+                    LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
 
-                // override the default col x row size if we've got it in the load file
-                Rows = LevelFile.Rows ?? Rows;
-                Cols = LevelFile.Cols ?? Cols;
-                RoomWidth = ViewPortWidth / Cols;
-                RoomHeight = ViewPortHeight / Rows;
+                    // override the default col x row size if we've got it in the load file
+                    Rows = LevelFile.Rows ?? Rows;
+                    Cols = LevelFile.Cols ?? Cols;
+                    RoomWidth = ViewPortWidth / Cols;
+                    RoomHeight = ViewPortHeight / Rows;
 
-                Maybe(()=> i.HasValue && playerScore.HasValue)
-                    .Bind((success)=>
-                    {
-                        // If we're continuing on, then dont load the players vitals from file - use provided:
-                        return SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
-                    });
+                    Maybe(()=> i.HasValue && playerScore.HasValue)
+                        .Bind((success)=>
+                        {
+                            // If we're continuing on, then dont load the players vitals from file - use provided:
+                            return SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
+                        });
 
-                return LevelFile;
-            }, Left:(failure)=>MakeNewLevelDetails());
+                    return LevelFile;
+                }, 
+                Left:(failure)=>MakeNewLevelDetails());
         });
 
         private Either<IFailure, LevelDetails> MakeNewLevelDetails()
@@ -479,14 +477,13 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs)
         {
 
-            return MaybeTrue(()=>shouldSave).Match(
-                                                    Some: (unit)=>unit.ToEither(), 
-                                                    None: ()=> ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>()
-                                                    )
+            return MaybeTrue(()=>shouldSave)
+                    .Match(Some: (unit)=>unit.ToEither(), 
+                           None: ()=> ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
                     .Bind((either) => MaybeTrue(()=>npcs.Count == 0).Match(
                         Some: (unit)=>
                         {
-                             AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed();
+                            AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed();
                             return Nothing.ToEither();
                         }, 
                         None: ()=> Nothing.ToEither())
@@ -561,8 +558,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> AddNpcDetailsToLevelFile(LevelDetails levelDetails, LevelNpcDetails details) =>
                 Ensure(() => { levelDetails.Npcs.Add(details); });
 
-            Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets,
-                IGrouping<string, Npc> npcByAssetFile)
+            Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets, IGrouping<string, Npc> npcByAssetFile)
                 => EnsuringBind<bool>(() => seenAssets.Add(npcByAssetFile.Key)
                     .FailIfTrue(InvalidDataFailure.Create("Could not added")));
         }
