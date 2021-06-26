@@ -9,7 +9,6 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Component;
-using static MazerPlatformer.Level;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.LevelStatics;
@@ -401,172 +400,16 @@ namespace MazerPlatformer
         });
 
         // Save the level information including NPcs and Player info
-        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs)
-        {
-
-            return MaybeTrue(()=>shouldSave)
-                    .Match(Some: (unit)=>unit.ToEither(), 
-                           None: ()=> ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
-                    .Bind((either) => MaybeTrue(()=>npcs.Count == 0).Match(
-                        Some: (unit)=>
-                        {
-                            AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed();
-                            return Nothing.ToEither();
-                        }, 
-                        None: ()=> Nothing.ToEither())
-                    .Bind((unit)=>SaveLevelFile()));
-
-            Either<IFailure, Unit> SaveLevelFile()
-            {
-                // Save Player info into level file
-                return 
-                    from copy in CopyAnimationInfo(player, levelFile?.Player ?? new LevelPlayerDetails())
-                    from saved in Ensure(() => GameLib.Files.Xml.SerializeObject(levelFileName, levelFile))
-                    select Nothing;
-            }
-
-            Either<IFailure, IEnumerable<Either<IFailure,LevelNpcDetails>>> AddCurrentNPCsToLevelFile(List<Npc> list, LevelDetails file)
-            {
-                return AddNpcsToLevelFile(list).AggregateFailures();
-
-                IEnumerable<Either<IFailure, LevelNpcDetails>> AddNpcsToLevelFile(IEnumerable<Npc> characters)
-                {
-                    var seenAssets = new System.Collections.Generic.HashSet<string>();
-
-                    foreach (var npcByAssetFile in characters.GroupBy(o => o.AnimationInfo.AssetFile))
-                    {
-                        foreach (var npc in npcByAssetFile)
-                        {
-                            if (seenAssets.Contains(npcByAssetFile.Key)) break;
-
-                            yield return
-                                from type in npc.GetNpcType().ToEither(NotFound.Create("Could not find Npc Type in NPC components"))
-                                from details in CreateLevelNpcDetails(type)
-                                from copy in CopyAnimationInfo(npc, details)
-                                from add in AddNpcDetailsToLevelFile(file, details)
-                                from added in AddToSeen(seenAssets, npcByAssetFile)
-                                select details;
-                        }
-                    }
-                }
-            };
-
-            Either<IFailure, LevelNpcDetails> CreateLevelNpcDetails(Npc.NpcTypes type) => EnsureWithReturn(() =>
-            {
-                var details = new LevelNpcDetails
-                {
-                    NpcType = type,
-                    Count = CharacterBuilder.DefaultNumPirates // template level file saves 5 of each type of npc
-                };
-                return details;
-            });
-
-            Either<IFailure, Unit> CopyOrUpdateComponents(Character @from, LevelCharacterDetails to) => EnsuringBind(() 
-                => @from.Components.Map(fromComponent => fromComponent.Type == ComponentType.GameWorld || fromComponent.Type == ComponentType.Player 
-                ? ShortCircuitFailure.Create("Not needed").ToEitherFailure<Unit>() 
-                : to.Components.SingleOrFailure(x => x.Type == fromComponent.Type)
-                               .BiBind(found => Nothingness(() => fromComponent.Value = found),
-                                    notFound => Nothingness(()=> to.Components.Add(fromComponent))))
-                .AggregateUnitFailures()
-                .IgnoreFailure());
-
-            Either<IFailure, Unit> CopyAnimationInfo(Character @from, LevelCharacterDetails to) => EnsuringBind(() =>
-            {
-                to.SpriteHeight = @from.AnimationInfo.FrameHeight;
-                to.SpriteWidth = @from.AnimationInfo.FrameWidth;
-                to.SpriteFile = @from.AnimationInfo.AssetFile;
-                to.SpriteFrameCount = @from.AnimationInfo.FrameCount;
-                to.SpriteFrameTime = @from.AnimationInfo.FrameTime;
-                to.MoveStep = 3;
-                to.Components = to.Components ?? new List<Component>();
-                return CopyOrUpdateComponents(@from, to);
-            });
-
-            Either<IFailure, Unit> AddNpcDetailsToLevelFile(LevelDetails levelDetails, LevelNpcDetails details) =>
-                Ensure(() => { levelDetails.Npcs.Add(details); });
-
-            Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets, IGrouping<string, Npc> npcByAssetFile)
-                => EnsuringBind<bool>(() => seenAssets.Add(npcByAssetFile.Key)
-                    .FailIfTrue(InvalidDataFailure.Create("Could not added")));
-        }
+        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs) 
+            => MaybeTrue(() => shouldSave)
+                    .Match(Some: (unit) => unit.ToEither(),
+                           None: () => ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
+                    .Bind((either) => MaybeTrue(() => npcs.Count == 0).Match(
+                        Some: (unit) => Ensure(() => AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed()),
+                        None: () => Nothing.ToEither())
+                    .Bind((unit) => SaveLevelFile(player, levelFile, levelFileName)));
 
         public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
             => Player.SetPlayerVitals(health, points);
-    }
-
-    public static class LevelStatics
-    {
-        public static Option<string> CreateAssetFile(LevelDetails l) => string.IsNullOrEmpty(l?.Player?.SpriteFile)
-                ? @"Sprites\dark_soldier-sword"
-                : l.Player.SpriteFile;
-
-        public static Option<AnimationInfo> CreatePlayerAnimation(string assetFile, Texture2D texture, LevelDetails l) => new AnimationInfo(
-            texture: texture, assetFile,
-            frameWidth: l?.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-            frameHeight: l?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-            frameCount: l?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
-
-        public static Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level) => new Player(x: (int)player_room.GetCentre().X,
-            y: (int)player_room.GetCentre().Y,
-            width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-            height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-            animationInfo: animation);
-
-        public static Option<Component> AddPlayerPointsComponent(Player p) 
-        {
-            p.Components.Add(new Component(ComponentType.Health, 100));
-            return GetPlayerHealth(p);
-        }
-
-        public static Option<Component> AddPlayerHealthComponent(Player p) 
-        {
-                p.Components.Add(new Component(ComponentType.Health, 100));
-            return GetPlayerHealth(p);
-        }
-
-        
-        // Make sure we actually have health or points for the player
-        public static Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
-        public static Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
-
-        public static Option<Player> InitializePlayer(LevelDetails level, Player p)
-        {
-            level.Player.Components = level.Player.Components ?? new List<Component>();
-                
-            // Load any additional components from the level file
-            level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
-            return p;
-        }
-
-        public static Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
-            {
-                levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
-                            
-                return npc1;
-            }
-
-        public static Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () 
-            => characters.Add(npc));
-
-        public static Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
-        {
-            file.Npcs.Iter((levelNpc)=>
-            {
-                Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
-                { 
-                    npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
-                                        levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                                        levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                                        levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                                        levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
-                        .Bind((npc) => AttachComponents(levelNpc, npc))
-                        .Bind((npc) => AddNpc(npc, chars));
-                    });
-            });
-            return chars;
-        }
-
-        public static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
-
     }
 }
