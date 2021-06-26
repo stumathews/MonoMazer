@@ -328,29 +328,12 @@ namespace MazerPlatformer
                 // Wait!, while we're in this room, are there any other objects in here that we might collide with? (Player, Pickups etc)
                 foreach (var other in activeGameObjects.Where(go => ToRoomColumnFast(go) == GetCol(gameObject) && ToRoomRowFast(go) == GetRow(gameObject)))
                     NotifyIfColliding(gameObject, other);
-            }, None: ()=>
+            }, 
+            None: ()=>
             {
                 // object has no room - must have wondered off the screen - remove it
                 RemoveGameObject(gameObject.Id, _level);
             });
-                      
-
-            // local functions
-
-            void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
-            {
-                // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
-                MaybeTrue(()=>gameObject.Type != gameObject2.Type)
-                .Bind<Unit>((success)=> MaybeTrue(()=> gameObject2.IsCollidingWith(gameObject1).ThrowIfFailed())
-                .BiIter(Some: (yes) => SetCollisionsOccuredEvents(gameObject1, gameObject2),
-                        None: () => gameObject2.IsColliding = gameObject1.IsColliding = false));
-
-                void SetCollisionsOccuredEvents(GameObject go1, GameObject go2)
-                {
-                    gameObject2.CollisionOccuredWith(go1);
-                    gameObject1.CollisionOccuredWith(go2);
-                }
-            }
         });
 
         public Option<Room> GetRoomIn(GameObject gameObject) =>
@@ -394,10 +377,7 @@ namespace MazerPlatformer
                 from soundPlayerCollisionResult in SoundPlayerCollision(gameObject1, gameObject2)
                 select Nothing;
 
-            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) => 
-                MaybeTrue(()=> go1.Id == Level.Player.Id)
-                .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
-                .ToEither();
+            
             
 
             Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() => OnGameWorldCollision?.Invoke(obj1, obj2));
