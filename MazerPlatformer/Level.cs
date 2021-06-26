@@ -453,8 +453,6 @@ namespace MazerPlatformer
         }
 
 
-
-
         /// <summary>
         /// Get the room objects in the level
         /// </summary>
@@ -463,8 +461,10 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> Unload() => Ensure(() =>
         {
-            if (!File.Exists(LevelFileName))
-                Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs).ThrowIfFailed();
+            Maybe(()=>!File.Exists(LevelFileName))
+            .Bind((success)=> Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs))
+            .ToEither()
+            .ThrowIfFailed();
 
             Player.Dispose();
             
