@@ -137,13 +137,6 @@ namespace MazerPlatformer
         public Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false)
         {
             var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight);
-
-            return mazeGrid
-                .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
-                .ToEither()
-                .BindT(room => room)
-                .Map(inner => new List<Room>(inner));
-
             int GetTotalRooms(List<Room> allRooms) => allRooms.Count;
             int GetNextIndex(int index) => index + 1;
             int GetThisColumn(Room r) => r.Col;
@@ -156,8 +149,8 @@ namespace MazerPlatformer
             Option<Unit> CanRemoveLeft(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 >= 1);
             Option<Unit> CanRemoveRight(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 <= Cols);
 
-            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms)
-                ? rooms[index].ToOption()
+            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms) 
+                ? rooms[index].ToOption() 
                 : Prelude.None;
 
             Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms)
@@ -198,7 +191,7 @@ namespace MazerPlatformer
                 return allRemovableSides;
             }
 
-            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0
+            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0 
                 ? sides[RandomGenerator.Next(0, sides.Count)].ToOption()
                 : Prelude.None;
 
@@ -217,15 +210,19 @@ namespace MazerPlatformer
                 currentRoom.RoomRight = GetRoomRightIndex(idx);
             }
 
-            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides)
-            {
-                return GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
-            }
+            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides) 
+                => GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
 
-            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms)
-            {
-                return MaybeTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
-            }
+            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms) 
+                => MaybeTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
+
+            return mazeGrid
+                .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
+                .ToEither()
+                .BindT(room => room)
+                .Map(inner => new List<Room>(inner));
+
+            
         }
 
 
@@ -382,12 +379,13 @@ namespace MazerPlatformer
                 _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
             });
 
-            Either<IFailure, Song> LoadLevelMusic() => EnsureWithReturn(() =>
-            {
-                if (!string.IsNullOrEmpty(LevelFile.Music))
-                    _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
-                return _levelMusic;
-            });
+            Either<IFailure, Song> LoadLevelMusic() => EnsuringBind(()
+                => MaybeTrue(()=>!string.IsNullOrEmpty(LevelFile.Music)).ToEither()
+                    .Bind<Song>((unit)=>
+                    {
+                        _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
+                        return _levelMusic;
+                    }));
 
             Either<IFailure, Dictionary<string, GameObject>> AddRoomsToGameObjects() => EnsureWithReturn(() =>
             {
@@ -410,9 +408,9 @@ namespace MazerPlatformer
             });
         }
 
-        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsureWithReturn(() =>
+        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
         {
-            if (File.Exists(LevelFileName))
+            return MaybeTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind<LevelDetails>(Right: (unit)=>
             {
                 LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
 
@@ -422,16 +420,19 @@ namespace MazerPlatformer
                 RoomWidth = ViewPortWidth / Cols;
                 RoomHeight = ViewPortHeight / Rows;
 
-                if (i.HasValue && playerScore.HasValue)
-                {
-                    // If we're continuing on, then dont load the players vitals from file - use provided:
-                    SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
-                }
+                Maybe(()=> i.HasValue && playerScore.HasValue)
+                    .Bind((success)=>
+                    {
+                        // If we're continuing on, then dont load the players vitals from file - use provided:
+                        return SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
+                    });
 
                 return LevelFile;
-            }
+            }, Left:(failure)=>MakeNewLevelDetails());
+        });
 
-            // Initialize a default level file if one did not exist. This represents an auto generated level
+        private Either<IFailure, LevelDetails> MakeNewLevelDetails()
+        {
             return new LevelDetails
             {
                 Player = new LevelPlayerDetails(),
@@ -449,10 +450,10 @@ namespace MazerPlatformer
                 Sound3 = @"Music\64_lose2", // Player died
                 SpriteFile = @"Sprites\dark_soldier-sword" // Default Sprite file for any character not found
             };
-        });
+        }
 
 
-        
+
 
         /// <summary>
         /// Get the room objects in the level
