@@ -139,29 +139,26 @@ namespace MazerPlatformer
                 return Nothing;
             });
 
-        // The arguments could still be null, and could throw exceptions, but otherwise only depends on its arguments
-        private Either<IFailure, Animation> SetAnimationDirection(CharacterDirection direction, Animation animation)
-        {
-            Unit SetAnimationDirectionFor(Animation anim, Animation.AnimationDirection dir) 
-            { 
-                anim.CurrentAnimationDirection = dir;
-                return Nothing; 
-            };
-
-            Either<IFailure, bool> SetDirection(CharacterDirection target, CharacterDirection src, Animation ani, Animation.AnimationDirection newDir) 
+       public static Either<IFailure, bool> SetDirection(CharacterDirection target, CharacterDirection src, Animation ani, Animation.AnimationDirection newDir) 
                 => MaybeTrue(() => src == target)
                 .ToEither()
                 .Map((b) => SetAnimationDirectionFor(ani, newDir))
                 .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
 
-           
-            return from maybeUp in SetDirection(direction, CharacterDirection.Up, animation, Animation.AnimationDirection.Up)
-                    from maybeDown in SetDirection(direction, CharacterDirection.Down, animation, Animation.AnimationDirection.Down)
-                    from maybeLeft in SetDirection(direction, CharacterDirection.Left, animation, Animation.AnimationDirection.Left)
-                    from maybeRight in SetDirection(direction, CharacterDirection.Right, animation, Animation.AnimationDirection.Right)
-                    from handled in MaybeTrue(()=> maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(ShortCircuitFailure.Create($"Unknown Direction {direction}"))
-                    select animation;
+        public static Unit SetAnimationDirectionFor(Animation anim, Animation.AnimationDirection dir) 
+        { 
+            anim.CurrentAnimationDirection = dir;
+            return Nothing; 
         }
+
+        // The arguments could still be null, and could throw exceptions, but otherwise only depends on its arguments
+        private Either<IFailure, Animation> SetAnimationDirection(CharacterDirection direction, Animation animation)
+            => from maybeUp in SetDirection(direction, CharacterDirection.Up, animation, Animation.AnimationDirection.Up)
+                from maybeDown in SetDirection(direction, CharacterDirection.Down, animation, Animation.AnimationDirection.Down)
+                from maybeLeft in SetDirection(direction, CharacterDirection.Left, animation, Animation.AnimationDirection.Left)
+                from maybeRight in SetDirection(direction, CharacterDirection.Right, animation, Animation.AnimationDirection.Right)
+                from handled in MaybeTrue(() => maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(ShortCircuitFailure.Create($"Unknown Direction {direction}"))
+                select animation;
 
         // I can do unique things when my state changes
         private Either<IFailure, Unit> OnMyStateChanged(CharacterStates state) => Ensure(() 
@@ -177,21 +174,14 @@ namespace MazerPlatformer
         [PureFunction]
         private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? _moveStep;
 
+        public static Either<IFailure, bool> MoveInDirection(CharacterDirection target, CharacterDirection src, System.Action how) => MaybeTrue(() => src == target).ToEither()
+                    .Map((b) => { how(); return Nothing; })
+                    .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+
         // impure as uses underlying class State
         protected Either<IFailure, Unit> NudgeOutOfCollision()
         {
             CanMove = false;
-
-            Unit ModifyAxis(System.Action how)
-            {
-                how();
-                return Nothing;
-            }
-
-            Either<IFailure, bool> MoveInDirection(CharacterDirection target, CharacterDirection src, System.Action how) => MaybeTrue(() => src == target).ToEither()
-                    .Map((b) => ModifyAxis(how))
-                    .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
-
             // Artificially nudge the player out of the collision
             return from maybeUp in MoveInDirection(CharacterDirection.Up, LastCollisionDirection, ()=> Y += 1)
                     from maybeDown in MoveInDirection(CharacterDirection.Down, LastCollisionDirection, ()=> Y-= 1)
@@ -201,24 +191,20 @@ namespace MazerPlatformer
                     select Nothing;
         }
 
-        // impure
-        public Either<IFailure, Unit> SwapDirection()
-        {
-
-            Either<IFailure, bool> SetDirection(CharacterDirection src, CharacterDirection target, CharacterDirection to)
+        Either<IFailure, bool> SetDirection(CharacterDirection src, CharacterDirection target, CharacterDirection to)
                 => MaybeTrue(() => src == target).ToEither()
                     .Bind((unit) => SetCharacterDirection(to))
                     .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
 
-            return (
+        // impure
+        public Either<IFailure, Unit> SwapDirection() => (
                    from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
                    from maybeDown in SetDirection(CurrentDirection, CharacterDirection.Down, to: CharacterDirection.Up).ShortCirtcutOnTrue()
                    from maybeLeft in SetDirection(CurrentDirection, CharacterDirection.Left, to: CharacterDirection.Right).ShortCirtcutOnTrue()
                    from maybeRight in SetDirection(CurrentDirection, CharacterDirection.Right, to: CharacterDirection.Left).ShortCirtcutOnTrue()
                    from handled in Maybe(() => maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(InvalidDirectionFailure.Create(CurrentDirection))
-                    select Nothing
+                   select Nothing
                    ).IgnoreFailureOf(typeof(ShortCircuitFailure));
-        }
 
         //impure
         public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir) 
