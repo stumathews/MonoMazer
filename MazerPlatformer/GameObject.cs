@@ -160,9 +160,9 @@ namespace MazerPlatformer
         // as its the game world is what checks for collisions
         public virtual Either<IFailure, Unit> CollisionOccuredWith(GameObject otherObject) => Ensure(() =>
         {
-            var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
+            CollisionArgs GetCollisionHandler() => OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
             IsColliding = true;
-            handler?.Invoke(this, otherObject);
+            GetCollisionHandler()?.Invoke(this, otherObject);
         });
 
         
