@@ -186,9 +186,9 @@ namespace MazerPlatformer
 
         public Either<IFailure, Component> AddComponent(Component.ComponentType type, object value, string id = null) => EnsureWithReturn(() =>
         {
-            var component = new Component(type, value, id);
-            Components.Add(component);
-            return component;
+            Component MakeComponent(Component.ComponentType t, object v, string ident ) => new Component(t, v, ident);
+            Components.Add(MakeComponent(type, value, id));
+            return Components.Last();
         });
 
         private Either<IFailure, object> UpdateComponent(object newValue, Component found)
@@ -253,31 +253,24 @@ namespace MazerPlatformer
         // Specific game objects need to initialize themselves
         public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
-            // We enter the default state whatever that is
-            foreach (var state in States)
-                StateMachine.AddState(state);
-
+            // We enter the default state whatever that is            
+            States.ForEach(state=> StateMachine.AddState(state));
             StateMachine.Initialise(States.Any()
                 ? States.FirstOrDefault(s => s.Name == "default")?.Name ?? States.First()?.Name
                 : null);
         });
 
-        
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposing) return;
-
-            Ensure(() => OnDisposing?.Invoke(this))
-                .EnsuringMap(unit =>
-                {
-                    // Cleanup objects we know we wont need or that other objects should not need.
-                    Components.Clear();
-                    States.Clear();
-                    StateTransitions.Clear();
-                    return Nothing;
-                }).ThrowIfFailed();
-        }
+        protected virtual void Dispose(bool disposing) => 
+            MaybeTrue(() => disposing).ToEither()
+            .Bind((unit) => Ensure(() => OnDisposing?.Invoke(this)))
+            .EnsuringMap(unit =>
+            {
+                // Cleanup objects we know we wont need or that other objects should not need.
+                Components.Clear();
+                States.Clear();
+                StateTransitions.Clear();
+                return Nothing;
+            }).ThrowIfFailed();
 
         public void Dispose()
         {
