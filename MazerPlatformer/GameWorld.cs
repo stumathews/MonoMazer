@@ -227,30 +227,30 @@ namespace MazerPlatformer
         /// Inform game object subscribers that they had a collision by raising event
         /// </summary>
         /// <param name="gameTime"></param>
-        public Either<IFailure, Unit> Update(GameTime gameTime) => Ensure(() =>
-        {
-            if (_unloading) return;
-
-            _removeWallTimer.Update(gameTime);
-
-            var inactiveIds = GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
-
-            foreach (var id in inactiveIds)
-                RemoveGameObject(id, _level);
-
-            var activeGameObjects = GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
-            foreach (var gameObject in activeGameObjects)
+        public Either<IFailure, Unit> Update(GameTime gameTime) => EnsuringBind(() 
+            => MaybeTrue(() => !_unloading)
+            .Iter((success) =>
             {
-                gameObject.Update(gameTime);
+                _removeWallTimer.Update(gameTime);
 
-                // Optimization: We wont be asking every room to check itself for collisions,
-                // we'll be asking each game object which room its in, and from that room we can find adjacent rooms and we'll check those
-                if (gameObject.Type == GameObjectType.Room)
-                    continue;
+                List<string> GetInactiveIds() => GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
 
-                CheckForObjectCollisions(gameObject, activeGameObjects, gameTime);
-            }
-        });
+                foreach (var id in GetInactiveIds())
+                    RemoveGameObject(id, _level);
+
+                List<GameObject> GetActiveGameObjects() => GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
+                foreach (var gameObject in GetActiveGameObjects())
+                {
+                    gameObject.Update(gameTime);
+
+                    // Optimization: We wont be asking every room to check itself for collisions,
+                    // we'll be asking each game object which room its in, and from that room we can find adjacent rooms and we'll check those
+                    if (gameObject.Type == GameObjectType.Room)
+                        continue;
+
+                    CheckForObjectCollisions(gameObject, GetActiveGameObjects(), gameTime);
+                }
+            }).ToEither());
 
         /// <summary>
         /// The game world wants to know about every component update/change that occurs in the world
@@ -263,10 +263,8 @@ namespace MazerPlatformer
         /// <param name="oldValue"></param>
         /// <param name="newValue"></param>
         /// <returns></returns>
-        private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) => Ensure(() =>
-        {
-            Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'");
-        });
+        private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) => Ensure(() 
+            => Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'"));
 
         /// <summary>
         /// Overwrite any defaults that are now in the level file

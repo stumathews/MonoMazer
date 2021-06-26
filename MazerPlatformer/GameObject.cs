@@ -142,8 +142,7 @@ namespace MazerPlatformer
         public virtual Either<IFailure, Unit> Update(GameTime gameTime) =>        
             MaybeTrue(()=>Active).ToEither()
             .Bind(unit=> CalculateBoundingBox(X, Y, Width, Height))
-            .Bind((unit)=> Ensure(()=>StateMachine.Update(gameTime)));
-        
+            .Bind((unit)=> Ensure(()=>StateMachine.Update(gameTime)));        
         
 
         // Every object can check if its colliding with another object's bounding box

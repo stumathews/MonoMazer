@@ -72,7 +72,8 @@ namespace MazerPlatformer
                 OnStateChanged += OnMyStateChanged;
             });
 
-            Either<IFailure, Unit> SetInitialDirection() => Ensure(() => {
+            Either<IFailure, Unit> SetInitialDirection() => Ensure(() => 
+            {
                 // We start of facing down
                 CurrentDirection = CharacterDirection.Down;
 
@@ -141,14 +142,20 @@ namespace MazerPlatformer
         // The arguments could still be null, and could throw exceptions, but otherwise only depends on its arguments
         private Either<IFailure, Animation> SetAnimationDirection(CharacterDirection direction, Animation animation)
         {
-            Unit SetAnimationDirectionFor(Animation anim, Animation.AnimationDirection dir) { anim.CurrentAnimationDirection = dir; return Nothing; };
-            Either<IFailure, bool> SetDirection(CharacterDirection target, CharacterDirection src, Animation ani, Animation.AnimationDirection newDir) 
-                => MaybeTrue(() => src == target).ToEither()
-                                           .Map((b) => SetAnimationDirectionFor(ani, newDir))
-                                           .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+            Unit SetAnimationDirectionFor(Animation anim, Animation.AnimationDirection dir) 
+            { 
+                anim.CurrentAnimationDirection = dir;
+                return Nothing; 
+            };
 
-            return
-                    from maybeUp in SetDirection(direction, CharacterDirection.Up, animation, Animation.AnimationDirection.Up)
+            Either<IFailure, bool> SetDirection(CharacterDirection target, CharacterDirection src, Animation ani, Animation.AnimationDirection newDir) 
+                => MaybeTrue(() => src == target)
+                .ToEither()
+                .Map((b) => SetAnimationDirectionFor(ani, newDir))
+                .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
+
+           
+            return from maybeUp in SetDirection(direction, CharacterDirection.Up, animation, Animation.AnimationDirection.Up)
                     from maybeDown in SetDirection(direction, CharacterDirection.Down, animation, Animation.AnimationDirection.Down)
                     from maybeLeft in SetDirection(direction, CharacterDirection.Left, animation, Animation.AnimationDirection.Left)
                     from maybeRight in SetDirection(direction, CharacterDirection.Right, animation, Animation.AnimationDirection.Right)
@@ -204,14 +211,13 @@ namespace MazerPlatformer
                     .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
 
             return (
-                from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
+                   from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
                    from maybeDown in SetDirection(CurrentDirection, CharacterDirection.Down, to: CharacterDirection.Up).ShortCirtcutOnTrue()
                    from maybeLeft in SetDirection(CurrentDirection, CharacterDirection.Left, to: CharacterDirection.Right).ShortCirtcutOnTrue()
                    from maybeRight in SetDirection(CurrentDirection, CharacterDirection.Right, to: CharacterDirection.Left).ShortCirtcutOnTrue()
                    from handled in Maybe(() => maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(InvalidDirectionFailure.Create(CurrentDirection))
-                   select Nothing
-                   )
-                   .IgnoreFailureOf(typeof(ShortCircuitFailure));
+                    select Nothing
+                   ).IgnoreFailureOf(typeof(ShortCircuitFailure));
         }
 
         //impure
