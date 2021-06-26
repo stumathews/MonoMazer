@@ -37,10 +37,8 @@ namespace MazerPlatformer
         {
             base.Draw(spriteBatch);
 
-            if (Diagnostics.DrawPlayerRectangle)
-                spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray);
-
-            return new Unit();
+            return MaybeTrue(()=>Diagnostics.DrawPlayerRectangle)
+                .Iter((success)=> spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray));
         }
 
         // I can handle my own collisions
