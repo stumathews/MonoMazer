@@ -297,58 +297,58 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {
             // Determine which room the game object is in
-            var col = ToRoomColumnFast(gameObject);
-            var row = ToRoomRowFast(gameObject);
-            var roomNumber = ((row - 1) * Cols) + col - 1;
+            int GetCol(GameObject go) => ToRoomColumnFast(go);
+            int GetRow(GameObject go) => ToRoomRowFast(go);
+            int GetRoomNumber(GameObject go) => ((GetRow(go) - 1) * Cols) + GetCol(go) - 1;
+            Room GetCurrentRoomIn(GameObject go) => GetRoom(GetRoomNumber(go)).ThrowIfNone(NotFound.Create($"Room not found at room number {GetRoomNumber(go)}"));
 
             // Only check for collisions with adjacent rooms or current room
-            if (DoesRoomNumberExist(roomNumber,Cols, Rows))
-            {
-                var roomIn = GetRoom(roomNumber).ThrowIfNone(NotFound.Create($"Room not found at room number {roomNumber}"));
-                var adjacentRooms = new List<Option<Room>> 
-                { 
-                    _level.GetRoom(roomIn.RoomAbove),
-                    _level.GetRoom(roomIn.RoomBelow),
-                    _level.GetRoom(roomIn.RoomLeft),
-                    _level.GetRoom(roomIn.RoomRight)
+            MaybeTrue(()=> DoesRoomNumberExist(GetRoomNumber(gameObject), Cols, Rows))
+            .BiIter(Some: (success)=>
+            { 
+                
+                var adjacentRooms = new List<Option<Room>>
+                {
+                    _level.GetRoom(GetCurrentRoomIn(gameObject).RoomAbove),
+                    _level.GetRoom(GetCurrentRoomIn(gameObject).RoomBelow),
+                    _level.GetRoom(GetCurrentRoomIn(gameObject).RoomLeft),
+                    _level.GetRoom(GetCurrentRoomIn(gameObject).RoomRight)
                 };
                 var collisionRooms = new List<Option<Room>>();
 
                 collisionRooms.AddRange(adjacentRooms);
-                collisionRooms.Add(roomIn);
+                collisionRooms.Add(GetCurrentRoomIn(gameObject));
 
-                if (roomIn.RoomNumber != roomNumber)
+                if (GetCurrentRoomIn(gameObject).RoomNumber != GetRoomNumber(gameObject))
                     throw new ArgumentException("We didn't get the room number we expected!");
 
                 // Check the rooms that this object is in and any adjacent rooms
                 collisionRooms.IterT(room => NotifyIfColliding(gameObject, room));
 
                 // Wait!, while we're in this room, are there any other objects in here that we might collide with? (Player, Pickups etc)
-                foreach (var other in activeGameObjects.Where(go => ToRoomColumnFast(go) == col && ToRoomRowFast(go) == row))
+                foreach (var other in activeGameObjects.Where(go => ToRoomColumnFast(go) == GetCol(gameObject) && ToRoomRowFast(go) == GetRow(gameObject)))
                     NotifyIfColliding(gameObject, other);
-            }
-            else
+            }, None: ()=>
             {
                 // object has no room - must have wondered off the screen - remove it
                 RemoveGameObject(gameObject.Id, _level);
-            }
+            });
+                      
 
             // local functions
 
             void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
             {
                 // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
-                if (gameObject.Type == gameObject2.Type)
-                    return;
+                MaybeTrue(()=>gameObject.Type != gameObject2.Type)
+                .Bind<Unit>((success)=> MaybeTrue(()=> gameObject2.IsCollidingWith(gameObject1).ThrowIfFailed())
+                .BiIter(Some: (yes) => SetCollisionsOccuredEvents(gameObject1, gameObject2),
+                        None: () => gameObject2.IsColliding = gameObject1.IsColliding = false));
 
-                if (gameObject2.IsCollidingWith(gameObject1).ThrowIfFailed())
+                void SetCollisionsOccuredEvents(GameObject go1, GameObject go2)
                 {
-                    gameObject2.CollisionOccuredWith(gameObject1);
-                    gameObject1.CollisionOccuredWith(gameObject2);
-                }
-                else
-                {
-                    gameObject2.IsColliding = gameObject1.IsColliding = false;
+                    gameObject2.CollisionOccuredWith(go1);
+                    gameObject1.CollisionOccuredWith(go2);
                 }
             }
         });
@@ -395,11 +395,8 @@ namespace MazerPlatformer
                 select Nothing;
 
             Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) => 
-                MaybeTrue(()=> (go1.Id == Level.Player.Id))
-                .Iter((unit)=>
-                {
-                    go2.Active = go2.Type == GameObjectType.Room; 
-                })
+                MaybeTrue(()=> go1.Id == Level.Player.Id)
+                .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
             
 
@@ -413,9 +410,6 @@ namespace MazerPlatformer
                         then: (pickup) => _level.PlaySound1()));
             });
         }
-
-       
-
 
         // Inform the Game world that the up button was pressed, make the player idle
         public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
