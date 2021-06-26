@@ -243,14 +243,6 @@ namespace MazerPlatformer
                     from playerPoints in GetPlayerPoints(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
                     select player).ThrowIfNone());
 
-            
-            
-            
-
-        
-
-        
-
         /// <summary>
         /// loading the definition of the enemies into a file.
         /// </summary>
@@ -262,40 +254,11 @@ namespace MazerPlatformer
         public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
         {
            return MaybeTrue(()=>Npcs != null && levelFile.Npcs.Count > 0).Match(
-                Some: (unit) => GenerateFromFile(new List<Npc>(), levelFile), 
-                None: ()=> npcBuilder.GenerateDefaultNpcSet(rooms, new List<Npc>(), level));
-                        
-
-            Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
-            {
-                levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
-                            
-                return npc1;
-            }
-
-            Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () 
-                => characters.Add(npc));
-
-            Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file)
-            {
-                file.Npcs.Iter((levelNpc)=>
-                {
-                    Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
-                    { 
-                        npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
-                                            levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
-                                            levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-                                            levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
-                                            levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
-                            .Bind((npc) => AttachComponents(levelNpc, npc))
-                            .Bind((npc) => AddNpc(npc, chars));
-                        });
-                });
-                return chars;
-            }
+                Some: (unit) => GenerateFromFile(new List<Npc>(), levelFile, npcBuilder, rooms, level), 
+                None: ()=> npcBuilder.GenerateDefaultNpcSet(rooms, new List<Npc>(), level));            
         });
 
-        private static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
+        
 
         /// <summary>
         /// Load the level
@@ -562,18 +525,48 @@ namespace MazerPlatformer
         }
 
         
-            // Make sure we actually have health or points for the player
-            public static Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
-            public static Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
+        // Make sure we actually have health or points for the player
+        public static Option<Component> GetPlayerHealth(Player p) => p.FindComponentByType(ComponentType.Health);
+        public static Option<Component> GetPlayerPoints(Player p) => p.FindComponentByType(ComponentType.Points);
 
-            public static Option<Player> InitializePlayer(LevelDetails level, Player p)
-            {
-                level.Player.Components = level.Player.Components ?? new List<Component>();
+        public static Option<Player> InitializePlayer(LevelDetails level, Player p)
+        {
+            level.Player.Components = level.Player.Components ?? new List<Component>();
                 
-                // Load any additional components from the level file
-                level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
-                return p;
+            // Load any additional components from the level file
+            level.Player.Components.Iter((comp) => p.AddComponent(comp.Type, comp.Value));
+            return p;
+        }
+
+        public static Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
+            {
+                levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
+                            
+                return npc1;
             }
+
+        public static Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () 
+            => characters.Add(npc));
+
+        public static Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
+        {
+            file.Npcs.Iter((levelNpc)=>
+            {
+                Enumerable.Range(0, levelNpc.Count.Value).Iter((i)=> 
+                { 
+                    npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
+                                        levelNpc.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
+                                        levelNpc.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
+                                        levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
+                                        levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
+                        .Bind((npc) => AttachComponents(levelNpc, npc))
+                        .Bind((npc) => AddNpc(npc, chars));
+                    });
+            });
+            return chars;
+        }
+
+        public static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
 
     }
 }
