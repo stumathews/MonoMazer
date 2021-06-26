@@ -147,14 +147,14 @@ namespace MazerPlatformer
         
 
         // Every object can check if its colliding with another object's bounding box
-        public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
-        {
-            if (otherObject == null || otherObject.Id == Id) return false;
-            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
-            otherObject.IsColliding = IsColliding;
-
-            return IsColliding;
-        });
+        public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsuringBind(() 
+            => MaybeTrue(() => otherObject == null || otherObject.Id == Id).ToEither()
+                .BiBind<bool>(Right: (unit) => false, Left: (ifailure) =>
+                  {
+                      IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
+                      otherObject.IsColliding = IsColliding;
+                      return IsColliding;
+                  }));
 
         // Not sure this is a good as it could be because the Game world is what calls this 
         // as its the game world is what checks for collisions
