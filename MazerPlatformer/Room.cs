@@ -19,10 +19,10 @@ namespace MazerPlatformer
         public enum Side { Bottom, Right, Top, Left }
         public const float WallThickness = 3.0f;
 
-        public bool[] HasSides { get; set; } = {
+        public bool[] HasSides { get; set; } = 
+        {
             /*Top*/ true,
-            /*Right*/
-                      true,
+            /*Right*/ true,
             /*Bottom*/ true,
             /*Left*/ true
         };
@@ -140,7 +140,7 @@ namespace MazerPlatformer
                     return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Unit>();
             }
 
-            return Nothing.ToEither<Unit>();
+            return Nothing.ToEither();
         }
 
         protected bool Equals(Room other)

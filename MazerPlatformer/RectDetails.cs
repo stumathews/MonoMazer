@@ -36,8 +36,10 @@ namespace MazerPlatformer
 
         
         protected bool Equals(RectDetails other) 
-            => Rectangle.X == other.Rectangle.X && Rectangle.Y == other.Rectangle.Y &&
-               Rectangle.Width == other.Rectangle.Width && Rectangle.Height == other.Rectangle.Height;
+            => Rectangle.X == other.Rectangle.X && 
+               Rectangle.Y == other.Rectangle.Y &&
+               Rectangle.Width == other.Rectangle.Width && 
+               Rectangle.Height == other.Rectangle.Height;
 
         public override bool Equals(object obj)
         {
