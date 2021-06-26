@@ -426,60 +426,63 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
             => Level.Player.MoveInDirection(direction, dt);
 
-        public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsureWithReturn(() =>
+        public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsuringBind(() =>
         {
-            var obj1Row = ToRoomRow(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
-            var obj1Col = ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
-            var obj2Row = ToRoomRow(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
-            var obj2Col = ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
+            int GetObj1Row() => ToRoomRow(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
+            int GetObj1Col() => ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
+            int GetObj2Row() => ToRoomRow(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
+            int GetObj2Col() => ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
+            bool IsSameRow() => GetObj1Row() == GetObj2Row();
+            bool IsSameCol() => GetObj1Col() == GetObj2Col();
 
-            var isSameRow = obj1Row == obj2Row;
-            var isSameCol = obj1Col == obj2Col;
-            if (isSameRow)
+            IEnumerable<Room> GetRoomsInThisRow(List<Room> rooms) => rooms.Where(room => room.Row + 1 == GetObj1Row());
+            List<Room> GetRooomsBetween(List<Room> rooms, int max, int min) => GetRoomsInThisRow(rooms).Where(room => room.Col >= min - 1 && room.Col <= max - 1).OrderBy(o => o.X).ToList();
+            IEnumerable<Room> GetRoomsInThisCol(List<Room> rooms) => rooms.Where(room => room.Col + 1 == GetObj1Col());
+            List<Room> GetRoomsBetween(List<Room> rooms,  int min, int max) => GetRoomsInThisCol(rooms).Where(room => room.Row >= min - 1 && room.Row <= max - 1).OrderBy(o => o.Y).ToList();
+
+            bool OnSameRow()
             {
-                var (greater, smaller) = GetMaxMinRange(obj2Col, obj1Col)
+                (int greater, int smaller) = GetMaxMinRange(GetObj2Col(), GetObj1Col())
                     .ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+               
 
-                var roomsInThisRow = _rooms.Where(o => o.Row + 1 == obj1Row);
-                var cropped = roomsInThisRow.Where(o =>
-                    o.Col >= smaller - 1 &&
-                    o.Col <= greater - 1).OrderBy(o => o.X).ToList();
-
-                for (var i = 0; i < cropped.Count - 1; i++)
+                for (var i = 0; i < GetRooomsBetween(_rooms, greater, smaller).Count - 1; i++)
                 {
-                    var hasARightSide = HasSide(Room.Side.Right, cropped[i].HasSides);
+                    var hasARightSide = HasSide(Room.Side.Right, GetRooomsBetween(_rooms, greater, smaller)[i].HasSides);
                     if (hasARightSide) return false;
-                    var rightRoomExists = cropped[i].RoomRight > 0;
+                    var rightRoomExists = GetRooomsBetween(_rooms, greater, smaller)[i].RoomRight > 0;
                     if (!rightRoomExists) return false;
-                    var rightHasLeft = _level.GetRoom(cropped[i].RoomRight).Match(None: () => false, Some: room => HasSide(Room.Side.Left, room.HasSides)); 
+                    var rightHasLeft = _level.GetRoom(GetRooomsBetween(_rooms, greater, smaller)[i].RoomRight).Match(None: () => false, Some: room => HasSide(Room.Side.Left, room.HasSides)); 
                     if (rightHasLeft) return false;
                 }
 
                 return true;
             }
 
-            if (isSameCol)
+            bool OnSameCol()
             {
-                var minMax = GetMaxMinRange(obj2Row, obj1Row).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+                var minMax = GetMaxMinRange(GetObj2Row(), GetObj1Row()).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
-                var roomsInThisCol = _rooms.Where(o => o.Col + 1 == obj1Col);
-                var cropped = roomsInThisCol.Where(o =>
-                    o.Row >= minMax.smaller - 1 &&
-                    o.Row <= minMax.greater - 1).OrderBy(o => o.Y).ToList();
-                for (var i = 0; i < cropped.Count - 1; i++)
+                
+                for (var i = 0; i < GetRoomsBetween(_rooms, minMax.smaller, minMax.greater).Count - 1; i++)
                 {
-                    var hasABottom = HasSide(Room.Side.Bottom, cropped[i].HasSides);
+                    var hasABottom = HasSide(Room.Side.Bottom, GetRoomsBetween(_rooms, minMax.smaller, minMax.greater)[i].HasSides);
                     if (hasABottom) return false;
-                    var bottomRoomExists = cropped[i].RoomBelow > 0;
+                    var bottomRoomExists = GetRoomsBetween(_rooms, minMax.smaller, minMax.greater)[i].RoomBelow > 0;
                     if (!bottomRoomExists) return false;
-                    var bottomHasATop = _level.GetRoom(cropped[i].RoomBelow).Match(None: () => false, Some: room => HasSide(Room.Side.Top, room.HasSides));
+                    var bottomHasATop = _level.GetRoom(GetRoomsBetween(_rooms, minMax.smaller, minMax.greater)[i].RoomBelow).Match(None: () => false, Some: room => HasSide(Room.Side.Top, room.HasSides));
                     if (bottomHasATop) return false;
                 }
 
                 return true;
             }
 
-            return false;
+            return (from sameRow in MaybeTrue(()=>IsSameRow())
+                                        .BiMap(Some: (unit)=>OnSameRow(), None:()=>false).ToEither().ShortCirtcutOnTrue()
+                    from sameCol in MaybeTrue(()=>IsSameCol())
+                                        .BiMap(Some: (unit)=>OnSameCol(), None:()=>false).ToEither().ShortCirtcutOnTrue()
+                    select (sameRow || sameRow)).IgnoreFailureOfAs(typeof(ShortCircuitFailure), true);
+            
         });
 
         public Either<IFailure, Unit> SetPlayerStatistics(int health = 100, int points = 0)
