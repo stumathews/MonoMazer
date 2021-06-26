@@ -396,16 +396,16 @@ namespace MazerPlatformer
                 from soundPlayerCollisionResult in SoundPlayerCollision(gameObject1, gameObject2)
                 select Nothing;
 
-            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) => Ensure(() =>
-            {
-                if (go1.Id == Level.Player.Id)
-                    go2.Active = go2.Type == GameObjectType.Room;
-            });
+            Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) => 
+                MaybeTrue(()=> (go1.Id == Level.Player.Id))
+                .Iter((unit)=>
+                {
+                    go2.Active = go2.Type == GameObjectType.Room; 
+                })
+                .ToEither();
+            
 
-            Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() =>
-            {
-                OnGameWorldCollision?.Invoke(obj1, obj2);
-            });
+            Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() => OnGameWorldCollision?.Invoke(obj1, obj2));
 
             Either < IFailure, Unit> SoundPlayerCollision(GameObject go1, GameObject go2) => Ensure(() =>
             {
