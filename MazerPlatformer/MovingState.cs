@@ -1,6 +1,7 @@
 ﻿using LanguageExt;
 using Microsoft.Xna.Framework;
 using static MazerPlatformer.Statics;
+using static MazerPlatformer.MovingStateStatics;
 
 namespace MazerPlatformer
 {
@@ -56,31 +57,7 @@ namespace MazerPlatformer
                 return Npc.MoveInDirection(Npc.CurrentDirection, gameTime);
             });
 
-            Either<IFailure, bool> ChangeDirection(bool sameCol, bool sameRow, GameWorld gameWorld, Player player, int myRow, int playerRow, int myCol, int playerCol) => EnsureWithReturn(() =>
-            {
-                var changeDirection = !sameCol || !sameRow;
-                var playerSeen = false;
-
-                if (sameCol && gameWorld.IsPathAccessibleBetween(player, Npc).ThrowIfFailed())
-                {
-                    if (changeDirection)
-                        Npc.ChangeDirection(myRow < playerRow
-                            ? Character.CharacterDirection.Down
-                            : Character.CharacterDirection.Up);
-                    playerSeen = true;
-                }
-
-                if (sameRow && gameWorld.IsPathAccessibleBetween(player, Npc).ThrowIfFailed())
-                {
-                    if (changeDirection)
-                        Npc.ChangeDirection(myCol < playerCol
-                            ? Character.CharacterDirection.Right
-                            : Character.CharacterDirection.Left);
-                    playerSeen = true;
-                }
-
-                return playerSeen;
-            });
+            
 
             bool ChangeDirectionIfHitRoom(Room npcRoom, int playerRow, int myRow, int playerCol, int myCol, GameWorld gameWorld, Player player)
             {
@@ -90,7 +67,7 @@ namespace MazerPlatformer
                     var sameCol = playerCol == myCol;
 
                     // Reports if player was seen when changing direction
-                    return ChangeDirection(sameCol, sameRow, gameWorld, player, myRow, playerRow, myCol, playerCol).ThrowIfFailed();
+                    return ChangeDirection(sameCol, sameRow, gameWorld, player, Npc, myRow, playerRow, myCol, playerCol).ThrowIfFailed();
                 }
 
                 return false;
