@@ -142,5 +142,28 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(() 
             => MaybeTrue(() => otherObject.Type == GameObject.GameObjectType.Player)
                 .Iter((success) => room.RemoveSide(side)));
+
+            public static bool IsSameRow(GameObject go1, GameObject go2, int roomHeight) => GetObjRow(go1, roomHeight) == GetObjRow(go2, roomHeight);
+            public static bool IsSameCol(GameObject go1, GameObject go2,int roomWidth) => GetObjCol(go1, roomWidth) == GetObjCol(go2, roomWidth);
+
+            public static int GetObjRow(GameObject go, int roomHeight) => ToRoomRow(go, roomHeight).ThrowIfNone(NotFound.Create($"Could not convert game object {go} to row number"));
+            public static int GetObjCol(GameObject go, int roomWidth) => ToRoomColumn(go, roomWidth).ThrowIfNone(NotFound.Create($"Could not convert game object {go} to column number"));
+            
+
+            public static IEnumerable<Room> GetRoomsInThisRow(List<Room> rooms, GameObject go1, int roomHeight) => rooms.Where(room => room.Row + 1 == GetObjRow(go1, roomHeight));
+            public static  List<Room> GetRooomsBetween(List<Room> rooms, int max, int min, GameObject go1, int roomHeight) => GetRoomsInThisRow(rooms, go1, roomHeight).Where(room => room.Col >= min - 1 && room.Col <= max - 1).OrderBy(o => o.X).ToList();
+            public static IEnumerable<Room> GetRoomsInThisCol(List<Room> rooms, GameObject go1, int roomWidth) => rooms.Where(room => room.Col + 1 == GetObjCol(go1, roomWidth));
+            public static List<Room> GetRoomsBetween(List<Room> rooms,  int min, int max, GameObject go1, int roomWidth) => GetRoomsInThisCol(rooms, go1, roomWidth).Where(room => room.Row >= min - 1 && room.Row <= max - 1).OrderBy(o => o.Y).ToList();
+            public static Option<int> ToRoomColumn(GameObject gameObject1, int roomWidth) => EnsureWithReturn(()
+                =>ToRoomColumnFast(gameObject1, roomWidth)).ToOption();
+
+            public static Option<int> ToRoomRow(GameObject o1, int roomHeight) => EnsureWithReturn(() 
+                => ToRoomRowFast(o1, roomHeight)).ToOption();
+
+            public static int ToRoomColumnFast(GameObject gameObject1, int roomWidth)
+                => roomWidth == 0 ? 0 : (int) Math.Ceiling((float) gameObject1.X / roomWidth);
+
+            public static int ToRoomRowFast(GameObject o1, int roomHeight)
+                => roomHeight == 0 ? 0 : (int) Math.Ceiling((float) o1.Y / roomHeight);
     }
 }

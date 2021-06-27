@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.MovingStateStatics;
-
+using static MazerPlatformer.GameWorldStatics;
 namespace MazerPlatformer
 {
     public class MovingState : NpcState
@@ -31,10 +31,10 @@ namespace MazerPlatformer
                 from component in Npc.FindComponentByType(Component.ComponentType.GameWorld).ToEither(NotFound.Create("gameworld compoennt not found"))
                 from gameWorld in TryCastToT<GameWorld>(component.Value)
                 let npcRoom = gameWorld.GetRoomIn(Npc).ThrowIfNone(NotFound.Create("Room unexpectedly not found"))
-                let myRow = gameWorld.ToRoomRow(Npc).ThrowIfNone(NotFound.Create("Could not find room row for NPC"))
-                let myCol = gameWorld.ToRoomColumn(Npc).ThrowIfNone(NotFound.Create("Could not find room col for NPC"))
-                let playerRow = gameWorld.ToRoomRow(player).ThrowIfNone(NotFound.Create("Could not find room row for player"))
-                let playerCol = gameWorld.ToRoomColumn(player).ThrowIfNone(NotFound.Create("Could not find room col for player"))
+                let myRow = ToRoomRow(Npc, gameWorld.GetRoomHeight()).ThrowIfNone(NotFound.Create("Could not find room row for NPC"))
+                let myCol = ToRoomColumn(Npc, gameWorld.GetRoomWidth()).ThrowIfNone(NotFound.Create("Could not find room col for NPC"))
+                let playerRow = ToRoomRow(player, gameWorld.GetRoomHeight()).ThrowIfNone(NotFound.Create("Could not find room row for player"))
+                let playerCol = ToRoomColumn(player, gameWorld.GetRoomWidth()).ThrowIfNone(NotFound.Create("Could not find room col for player"))
             select CheckForCollision(gameWorld, player, npcRoom, myRow, myCol, playerRow, playerCol);
 
             updatePipeline.ThrowIfFailed();
