@@ -401,6 +401,7 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> SetPlayerStatistics(int health = 100, int points = 0)
             => _level.ResetPlayer(health, points);
+
         public int GetRoomHeight()=>_roomHeight;
         public int GetRoomWidth()=>_roomWidth;
     }
