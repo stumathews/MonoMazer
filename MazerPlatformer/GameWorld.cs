@@ -390,47 +390,8 @@ namespace MazerPlatformer
 
         public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsuringBind(() =>
         {
-            //int GetObj1Row() => ToRoomRow(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to row number"));
-            //int GetObj1Col() => ToRoomColumn(obj1).ThrowIfNone(NotFound.Create($"Could not convert game object {obj1} to column number"));
-            //int GetObj2Row() => ToRoomRow(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to row number"));
-            //int GetObj2Col() => ToRoomColumn(obj2).ThrowIfNone(NotFound.Create($"Could not convert game object {obj2} to column number"));
-            
-            bool OnSameRow()
-            {
-                (int greater, int smaller) = GetMaxMinRange(GetObjCol(obj2, _roomWidth), GetObjCol(obj1, _roomWidth)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
-               
-
-                for (var i = 0; i < GetRooomsBetween(_rooms, greater, smaller, obj1, _roomHeight).Count - 1; i++)
-                {
-                    var hasRightSide = HasSide(Room.Side.Right, GetRooomsBetween(_rooms, greater, smaller, obj1, _roomHeight)[i].HasSides); 
-                    var rightHasLeft = _level.GetRoom(GetRooomsBetween(_rooms, greater, smaller, obj1, _roomHeight)[i].RoomRight).Match(None: () => false, Some: room => HasSide(Room.Side.Left, room.HasSides)); 
-                    var rightRoomExists = GetRooomsBetween(_rooms, greater, smaller, obj1, _roomHeight)[i].RoomRight > 0;
-
-                    if (hasRightSide || !rightRoomExists ||rightHasLeft) return false;
-                }
-
-                return true;
-            }
-
-            bool OnSameCol()
-            {
-                var minMax = GetMaxMinRange(GetObjRow(obj2, _roomHeight), GetObjRow(obj1, _roomHeight)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
-
-                
-                for (var i = 0; i < GetRoomsBetween(_rooms, minMax.smaller, minMax.greater, obj1, _roomWidth).Count - 1; i++)
-                {
-                    var hasBottomSide = HasSide(Room.Side.Bottom, GetRoomsBetween(_rooms, minMax.smaller, minMax.greater, obj1, _roomWidth)[i].HasSides);
-                    var bottomHasATop = _level.GetRoom(GetRoomsBetween(_rooms, minMax.smaller, minMax.greater, obj1, _roomWidth)[i].RoomBelow).Match(None: () => false, Some: room => HasSide(Room.Side.Top, room.HasSides));
-                    var bottomRoomExists = GetRoomsBetween(_rooms, minMax.smaller, minMax.greater, obj1, _roomWidth)[i].RoomBelow > 0;                    
-                    
-                    if (hasBottomSide || !bottomRoomExists || bottomHasATop) return false;
-                }
-
-                return true;
-            }
-
-            return (from sameRow in MaybeTrue(()=>IsSameRow(obj1, obj2, _roomHeight)).BiMap(Some: (unit)=>OnSameRow(), None:()=>false).ToEither().ShortCirtcutOnTrue()
-                    from sameCol in MaybeTrue(()=>IsSameCol(obj1, obj2, _roomWidth)).BiMap(Some: (unit)=>OnSameCol(), None:()=>false).ToEither().ShortCirtcutOnTrue()
+          return (from sameRow in MaybeTrue(()=>IsSameRow(obj1, obj2, _roomHeight)).BiMap(Some: (unit)=>OnSameRow(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None:()=>false).ToEither().ShortCirtcutOnTrue()
+                    from sameCol in MaybeTrue(()=>IsSameCol(obj1, obj2, _roomWidth)).BiMap(Some: (unit)=>OnSameCol(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None:()=>false).ToEither().ShortCirtcutOnTrue()
                         select (sameRow || sameRow)).IgnoreFailureOfAs(typeof(ShortCircuitFailure), true);
             
         });

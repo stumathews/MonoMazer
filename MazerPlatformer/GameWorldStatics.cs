@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using static MazerPlatformer.Statics;
-
+using static MazerPlatformer.RoomStatics;
 namespace MazerPlatformer
 {
     public class GameWorldStatics
@@ -165,5 +165,40 @@ namespace MazerPlatformer
 
             public static int ToRoomRowFast(GameObject o1, int roomHeight)
                 => roomHeight == 0 ? 0 : (int) Math.Ceiling((float) o1.Y / roomHeight);
+
+            public static bool OnSameRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level )
+            {
+                (int greater, int smaller) = GetMaxMinRange(GetObjCol(go2, roomWidth), GetObjCol(go1, roomWidth)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+               
+
+                for (var i = 0; i < GetRooomsBetween(rooms, greater, smaller, go1, roomHeight).Count - 1; i++)
+                {
+                    var hasRightSide = HasSide(Room.Side.Right, GetRooomsBetween(rooms, greater, smaller, go1, roomHeight)[i].HasSides); 
+                    var rightHasLeft = level.GetRoom(GetRooomsBetween(rooms, greater, smaller, go1, roomHeight)[i].RoomRight).Match(None: () => false, Some: room => HasSide(Room.Side.Left, room.HasSides)); 
+                    var rightRoomExists = GetRooomsBetween(rooms, greater, smaller, go1, roomHeight)[i].RoomRight > 0;
+
+                    if (hasRightSide || !rightRoomExists ||rightHasLeft) return false;
+                }
+
+                return true;
+            }
+
+
+            public static bool OnSameCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level )
+            {
+                var minMax = GetMaxMinRange(GetObjRow(go2, roomHeight), GetObjRow(go1, roomHeight)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
+
+                
+                for (var i = 0; i < GetRoomsBetween(rooms, minMax.smaller, minMax.greater, go1, roomWidth).Count - 1; i++)
+                {
+                    var hasBottomSide = HasSide(Room.Side.Bottom, GetRoomsBetween(rooms, minMax.smaller, minMax.greater, go1, roomWidth)[i].HasSides);
+                    var bottomHasATop = level.GetRoom(GetRoomsBetween(rooms, minMax.smaller, minMax.greater, go1, roomWidth)[i].RoomBelow).Match(None: () => false, Some: room => HasSide(Room.Side.Top, room.HasSides));
+                    var bottomRoomExists = GetRoomsBetween(rooms, minMax.smaller, minMax.greater, go1, roomWidth)[i].RoomBelow > 0;                    
+                    
+                    if (hasBottomSide || !bottomRoomExists || bottomHasATop) return false;
+                }
+
+                return true;
+            }
     }
 }
