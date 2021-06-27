@@ -388,13 +388,16 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
             => Level.Player.MoveInDirection(direction, dt);
 
-        public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsuringBind(() =>
-        {
-          return (from sameRow in MaybeTrue(()=>IsSameRow(obj1, obj2, _roomHeight)).BiMap(Some: (unit)=>OnSameRow(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None:()=>false).ToEither().ShortCirtcutOnTrue()
-                    from sameCol in MaybeTrue(()=>IsSameCol(obj1, obj2, _roomWidth)).BiMap(Some: (unit)=>OnSameCol(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None:()=>false).ToEither().ShortCirtcutOnTrue()
-                        select (sameRow || sameRow)).IgnoreFailureOfAs(typeof(ShortCircuitFailure), true);
-            
-        });
+        public Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2) => EnsuringBind(() 
+            => (from sameRow in MaybeTrue(() => IsSameRow(obj1, obj2, _roomHeight))
+                                    .BiMap(Some: (success) => OnSameRow(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None: () => false)
+                                    .ToEither()
+                                    .ShortCirtcutOnTrue()
+                from sameCol in MaybeTrue(() => IsSameCol(obj1, obj2, _roomWidth))
+                                    .BiMap(Some: (success) => OnSameCol(obj1, obj2, _roomWidth, _roomHeight, _rooms, _level), None: () => false)
+                                    .ToEither()
+                                    .ShortCirtcutOnTrue()
+                select (sameRow || sameRow)).IgnoreFailureOfAs(typeof(ShortCircuitFailure), true));
 
         public Either<IFailure, Unit> SetPlayerStatistics(int health = 100, int points = 0)
             => _level.ResetPlayer(health, points);
