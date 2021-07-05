@@ -83,7 +83,7 @@ namespace MazerPlatformer
         /// Add player 
         /// </summary>
         internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
-            from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, SpriteBatch, ContentManager, levelNumber, Random, OnLevelLoad)
+            from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad)
             from gameWorldLevel in (Either<IFailure, Level>)(_level = newLevel) //set the game world's level
             from levelObjects in gameWorldLevel.Load(ContentManager, overridePlayerHealth, overridePlayerScore)
             from added in AddToGameWorld(levelObjects, GameObjects, OnGameObjectAddedOrRemoved)

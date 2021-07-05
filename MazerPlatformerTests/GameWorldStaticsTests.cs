@@ -170,12 +170,5 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(gameObject1CollisionOccuredWithCalled);
             Assert.IsTrue(gameObject2CollisionOccuredWithCalled);
         }
-
-        private Either<IFailure, Unit> GameObject1_OnCollision(Option<GameObject> thisObject, Option<GameObject> otherObject)
-        {
-            throw new NotImplementedException();
-        }
     }
-
-
 }
