@@ -18,6 +18,7 @@ namespace MazerPlatformer
                 levelClearedFunc?.Invoke(level);
         });
 
+
         public static Option<Unit> IsLevelCleared(Level level)
             => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
 
@@ -79,7 +80,7 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random random, Level.LevelLoadInfo onLevelLoadFunc) => EnsureWithReturn(() =>
         {
-            var level = new Level(rows, cols, viewPortWidth, viewPortHeight, spriteBatch, contentManager, levelNumber, random);
+            var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random);
             level.OnLoad += onLevelLoadFunc;
             return level;
         });

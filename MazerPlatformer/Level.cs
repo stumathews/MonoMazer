@@ -63,8 +63,8 @@ namespace MazerPlatformer
         }
 
 
-        public SpriteBatch SpriteBatch { get; }
-        public ContentManager ContentManager { get; }
+        //public SpriteBatch SpriteBatch { get; }
+        //public ContentManager ContentManager { get; }
 
         // Level number 1,2,4 etc...
         public int LevelNumber { get; }
@@ -119,7 +119,7 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(()=> _playerSpottedSound.CreateInstance().Play());
         public Either<IFailure, Unit> PlayLoseSound() => Ensure(() => _loseSound.CreateInstance().Play());
 
-        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, SpriteBatch spriteBatch, ContentManager contentManager, int levelNumber, Random random) 
+        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random) 
         {
             _random = random;
             ViewPortWidth = viewPortWidth;
@@ -128,8 +128,6 @@ namespace MazerPlatformer
             RoomHeight = viewPortHeight / rows;
             Rows = rows;
             Cols = cols;
-            SpriteBatch = spriteBatch;
-            ContentManager = contentManager;
             LevelNumber = levelNumber;
             LevelFileName = $"Level{LevelNumber}.xml";
         }        
@@ -263,7 +261,7 @@ namespace MazerPlatformer
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Either<IFailure, Dictionary<string, GameObject>> Load(int? playerHealth = null, int? playerScore = null)
+        public Either<IFailure, Dictionary<string, GameObject>> Load(ContentManager contentManager, int? playerHealth = null, int? playerScore = null)
         {
             var loadPipeline =
                 from levelFile in GetLevelFile(playerHealth, playerScore)
@@ -273,10 +271,10 @@ namespace MazerPlatformer
                 from rooms in MakeLevelRooms().ToEither()
                 from setRooms in SetRooms(rooms)
                 from gameObjectsWithRooms in AddRoomsToGameObjects()
-                from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, ContentManager)
+                from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, contentManager)
                 from setPLayer in SetPlayer(player)
                 from gameObjectsWithPlayer in AddToLevelGameObjects(Player.Id, player)
-                from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(ContentManager, Rows, Cols), this)
+                from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(contentManager, Rows, Cols), this)
                 from setNPCs in SetNPCs(npcs)
                 from gameObjectsWithNpcs in AddNpcsToGameObjects(npcs)
                 from setNumPickups in SetNumPickups(npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)))
@@ -296,16 +294,16 @@ namespace MazerPlatformer
 
             Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>
             {
-                _jingleSoundEffect = ContentManager.Load<SoundEffect>(@"Music/28_jingle");
-                _playerSpottedSound = ContentManager.Load<SoundEffect>("Music/29_noise");
-                _loseSound = ContentManager.Load<SoundEffect>("Music/64_lose2");
+                _jingleSoundEffect = contentManager.Load<SoundEffect>(@"Music/28_jingle");
+                _playerSpottedSound = contentManager.Load<SoundEffect>("Music/29_noise");
+                _loseSound = contentManager.Load<SoundEffect>("Music/64_lose2");
             });
 
             Either<IFailure, Song> LoadLevelMusic() => EnsuringBind(()
                 => MaybeTrue(()=>!string.IsNullOrEmpty(LevelFile.Music)).ToEither()
                     .Bind<Song>((unit)=>
                     {
-                        _levelMusic = ContentManager.Load<Song>(LevelFile.Music);
+                        _levelMusic = contentManager.Load<Song>(LevelFile.Music);
                         return _levelMusic;
                     }));
 
