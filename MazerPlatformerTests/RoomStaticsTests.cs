@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using MazerPlatformer;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MazerPlatformer.Tests
 {
@@ -13,7 +14,7 @@ namespace MazerPlatformer.Tests
             bool left = false;
             bool right = true;
 
-            bool[] sides = new  bool[4];
+            bool[] sides = new bool[4];
             sides[0] = top;
             sides[1] = right;
             sides[2] = bottom;
@@ -23,6 +24,12 @@ namespace MazerPlatformer.Tests
             Assert.AreEqual(RoomStatics.HasSide(Room.Side.Right, sides), right);
             Assert.AreEqual(RoomStatics.HasSide(Room.Side.Bottom, sides), bottom);
             Assert.AreEqual(RoomStatics.HasSide(Room.Side.Top, sides), top);
+        }
+
+        [TestMethod()]
+        public void InitializeBoundsTest()
+        {
+            Assert.Fail();
         }
     }
 }

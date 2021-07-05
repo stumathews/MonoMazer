@@ -39,13 +39,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="LanguageExt.Core, Version=3.0.0.0, Culture=neutral, PublicKeyToken=null" />
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.2.0.0\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.2.0.0\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
+    <Reference Include="MonoGame.Framework, Version=3.7.1.189, Culture=neutral, processorArchitecture=MSIL" />
     <Reference Include="System" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -56,13 +59,22 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
+    <Compile Include="GameWorldStaticsTests.cs" />
+    <Compile Include="LevelStaticsTests.cs" />
+    <Compile Include="MazerStaticsTests.cs" />
+    <Compile Include="MovingStateStaticsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RoomStaticsTests.cs" />
+    <Compile Include="StaticsTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\GameLib\GameLibFramework\GameLibFramework.csproj">
+      <Project>{A5656886-5F78-40B2-97EF-D6C22BD8FF23}</Project>
+      <Name>GameLibFramework</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MazerPlatformer\MazerPlatformer.csproj">
       <Project>{C038107F-5715-427E-B24A-A3A98AAB5877}</Project>
       <Name>MazerPlatformer</Name>
