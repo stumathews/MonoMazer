@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
 using LanguageExt;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
+
     public class CharacterBuilder
     {
         public const int DefaultNumPirates = 10;
@@ -18,9 +18,9 @@ namespace MazerPlatformer
         public int Cols { get; }
 
         private readonly Random _random = new Random();
-        private ContentManager ContentManager { get; }
+        private IContentManager ContentManager { get; }
 
-        public CharacterBuilder(ContentManager contentManager, int rows, int cols)
+        public CharacterBuilder(IContentManager contentManager, int rows, int cols)
         {
             ContentManager = contentManager;
             Rows = rows;

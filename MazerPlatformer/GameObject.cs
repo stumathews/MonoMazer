@@ -13,7 +13,7 @@ using static MazerPlatformer.Statics;
 namespace MazerPlatformer
 {
     // A fundamental Game Object
-    public abstract class GameObject : IDisposable, PerFrame
+    public abstract class GameObject : IDisposable, PerFrame, IGameObject
     {
         // Types of game object
         public enum GameObjectType { Room, Player, Npc }

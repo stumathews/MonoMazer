@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework;
 
 namespace MazerPlatformer
 {
-    public class SimpleGameTimeTimer
+    public class SimpleGameTimeTimer : ISimpleGameTimer
     {
         public int TimeoutMs { get; }
         private int _milli = 0;

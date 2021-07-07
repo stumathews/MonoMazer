@@ -52,6 +52,8 @@ namespace MazerPlatformer
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
 
+        private GameContentManager GameContentManager = null;
+
         private bool _playerDied = false; // eventually this will be useful and used.
         
         public Mazer()
@@ -64,6 +66,8 @@ namespace MazerPlatformer
             initializationPipeline.ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception from the get-go
         }
 
+        public Either<IFailure, GameContentManager> CreateContentManager() => EnsureWithReturn(()=>new GameContentManager(Content));
+
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
         /// all of your content.
@@ -71,8 +75,8 @@ namespace MazerPlatformer
         protected override void LoadContent()
         {
             var loadContentPipeline = 
-                from loadedFont in Content.TryLoad<SpriteFont>("Sprites/gameFont")
-                from loadedMusic in Content.TryLoad<Song>("Music/bgm_menu")
+                from loadedFont in GameContentManager.TryLoad<SpriteFont>("Sprites/gameFont")
+                from loadedMusic in GameContentManager.TryLoad<Song>("Music/bgm_menu")
                 from setFontResult in SetGameFont(() => _font = loadedFont)
                 from setMusicResult in SetMenuMusic(()=> _menuMusic = loadedMusic)
                 from loadedGameWorld in LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints) 
@@ -192,8 +196,11 @@ namespace MazerPlatformer
             _gameCommands = new CommandManager();
             _gameStateMachine = new FSM(this);
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            GameContentManager =  
+                (from contentManager in CreateContentManager()
+                select contentManager).ThrowIfFailed();
             _gameWorld = from spriteBatch in _spriteBatch
-                         from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, DefaultNumRows, DefaultNumCols, spriteBatch)
+                         from createdWorld in GameWorld.Create(GameContentManager, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, DefaultNumRows, DefaultNumCols, spriteBatch)
                          select createdWorld;
 
             _playingState = new PlayingGameState(this);

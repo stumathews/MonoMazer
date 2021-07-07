@@ -20,7 +20,7 @@ namespace MazerPlatformer
     {
         private readonly int _viewPortWidth;
         private readonly int _viewPortHeight;
-        private ContentManager ContentManager { get; }
+        private GameContentManager ContentManager { get; }
         private SpriteBatch SpriteBatch { get; }
 
         private int Rows { get; set; } // Rows Of rooms
@@ -60,11 +60,11 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, GameWorld> Create(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch) => EnsuringBind(() 
+        public static Either<IFailure, GameWorld> Create(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch) => EnsuringBind(() 
             => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
                select new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
         
-        private GameWorld(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        private GameWorld(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -291,7 +291,7 @@ namespace MazerPlatformer
             from isLevelPickup in IsLevelPickup(gameObject, level).IfSome(unit => RemoveIfLevelPickup(gameObject, level)).ToEither()
             from removePickup in RemoveIfLevelPickup(gameObject, level)
             from isLevelCleared in IsLevelCleared(level).IfSome(unit => NotifyIfLevelCleared(OnLevelCleared, level)).ToEither()
-            from deactivateObjects in DeactivateGameObject(gameObject,GameObjects, id)
+            from deactivateObjects in DeactivateGameObject(gameObject,GameObjects)
                 select Nothing;
 
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>

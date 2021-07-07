@@ -18,7 +18,6 @@ namespace MazerPlatformer
                 levelClearedFunc?.Invoke(level);
         });
 
-
         public static Option<Unit> IsLevelCleared(Level level)
             => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
 
@@ -58,20 +57,20 @@ namespace MazerPlatformer
         public static Either<IFailure, GameObject> GetGameObject(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(() 
             => gameObjects[id]).ThrowIfFailed();
 
-        public static  Either<IFailure, Unit> DeactivateGameObject(GameObject obj, Dictionary<string, GameObject> gameObjects, string id) => Ensure(() =>
+        public static  Either<IFailure, Unit> DeactivateGameObject(GameObject obj, Dictionary<string, GameObject> gameObjects) => Ensure(() =>
         {
             obj.Active = false;
-            gameObjects.Remove(id);
+            gameObjects.Remove(obj.Id);
             obj.Dispose();
         });
 
-        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, string id, GameObject gameObject, GameWorld.GameObjectAddedOrRemoved gameObjectAddedOrRemovedEvent) => Ensure(()=>
+        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, GameObject gameObject, GameWorld.GameObjectAddedOrRemoved gameObjectAddedOrRemovedEvent) => Ensure(()=>
         {
-            gameObjects.Add(id, gameObject);
+            gameObjects.Add(gameObject.Id, gameObject);
             gameObjectAddedOrRemovedEvent?.Invoke(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
         });
 
-        public static Either<IFailure, SimpleGameTimeTimer> StartRemoveWorldTimer(SimpleGameTimeTimer timer) => EnsureWithReturn(() =>
+        public static Either<IFailure, ISimpleGameTimer> StartRemoveWorldTimer(ISimpleGameTimer timer) => EnsureWithReturn(() =>
         {
             timer.Start();
             return timer;
@@ -86,7 +85,7 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> AddToGameWorld(Dictionary<string, GameObject> levelGameObjects, Dictionary<string, GameObject> gameWorldObjects,  GameWorld.GameObjectAddedOrRemoved gameObjectAddedOrRemovedEvent)
             => levelGameObjects
-                .Map(levelGameObject => AddToGameObjects( gameWorldObjects, levelGameObject.Key, levelGameObject.Value, gameObjectAddedOrRemovedEvent))
+                .Map(levelGameObject => AddToGameObjects( gameWorldObjects, levelGameObject.Value, gameObjectAddedOrRemovedEvent))
                 .AggregateUnitFailures();
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace MazerPlatformer
         /// <param name="cols"></param>
         /// <param name="spriteBatch"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> Validate(ContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        public static Either<IFailure, Unit> Validate(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();

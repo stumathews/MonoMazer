@@ -230,7 +230,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, ContentManager contentManager) => EnsureWithReturn(()
+        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IContentManager contentManager) => EnsureWithReturn(()
             =>     (from assetFile in CreateAssetFile(levelFile)
                     from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
                     from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
@@ -261,7 +261,7 @@ namespace MazerPlatformer
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Either<IFailure, Dictionary<string, GameObject>> Load(ContentManager contentManager, int? playerHealth = null, int? playerScore = null)
+        public Either<IFailure, Dictionary<string, GameObject>> Load(IContentManager contentManager, int? playerHealth = null, int? playerScore = null)
         {
             var loadPipeline =
                 from levelFile in GetLevelFile(playerHealth, playerScore)
