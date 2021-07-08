@@ -7,7 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MazerPlatformer", "MazerPla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLibFramework", "..\GameLib\GameLibFramework\GameLibFramework.csproj", "{A5656886-5F78-40B2-97EF-D6C22BD8FF23}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmutableTests", "ImmutableTests\ImmutableTests.csproj", "{FACA757B-18E9-4DC4-A078-29BB79CB0C56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MazerPlatformerTests", "MazerPlatformerTests\MazerPlatformerTests.csproj", "{CAE0CD4C-1284-4643-ABDF-22AABE544840}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,14 +33,22 @@ Global
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|x86.ActiveCfg = Release|Any CPU
 		{A5656886-5F78-40B2-97EF-D6C22BD8FF23}.Release|x86.Build.0 = Release|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Debug|x86.Build.0 = Debug|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|x86.ActiveCfg = Release|Any CPU
-		{5EF3F73F-DEBF-4A5A-8F99-3F2F1518F5D3}.Release|x86.Build.0 = Release|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Debug|x86.Build.0 = Debug|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Release|x86.ActiveCfg = Release|Any CPU
+		{FACA757B-18E9-4DC4-A078-29BB79CB0C56}.Release|x86.Build.0 = Release|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Debug|x86.Build.0 = Debug|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Release|x86.ActiveCfg = Release|Any CPU
+		{CAE0CD4C-1284-4643-ABDF-22AABE544840}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

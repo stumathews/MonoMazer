@@ -1,9 +1,7 @@
-﻿using GameLib.EventDriven;
-using GameLibFramework.EventDriven;
+﻿using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework.Media;
 
 namespace MazerPlatformer
 {
@@ -13,6 +11,7 @@ namespace MazerPlatformer
         private readonly CommandManager _playingCommands = new CommandManager();
         public PlayingGameState(Mazer game) : base("PlayingGame") => _game = game;
 
+        // Relies on external library
         public override void Enter(object owner)
         {
             _playingCommands.AddKeyDownCommand(Keys.Up, time => _game.MovePlayerInDirection(Character.CharacterDirection.Up ,time));
@@ -26,12 +25,14 @@ namespace MazerPlatformer
             base.Enter(owner);
         }
 
+        // Relies on external library
         public override void Exit(object owner)
         {
             _playingCommands.Clear();
             base.Exit(owner);
         }
 
+        // Relies on external library
         public override void Update(object owner, GameTime gameTime)
         {
             _game.UpdateGameWorld(gameTime); // Only update/process the game world while we are in the playing state

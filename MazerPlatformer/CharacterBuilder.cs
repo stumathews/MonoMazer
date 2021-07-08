@@ -1,25 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
-using Microsoft.Xna.Framework;
+using LanguageExt;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
     public class CharacterBuilder
     {
-        public int DefaultNumPirates = 10;
+        public const int DefaultNumPirates = 10;
         public const int DefaultNumDodos = 5;
         public const int DefaultNumPickups = 5;
-        public ContentManager ContentManager { get; }
         public int Rows { get; }
         public int Cols { get; }
-        private Random _random = new Random();
+
+        private readonly Random _random = new Random();
+        private ContentManager ContentManager { get; }
 
         public CharacterBuilder(ContentManager contentManager, int rows, int cols)
         {
@@ -28,92 +27,83 @@ namespace MazerPlatformer
             Cols = cols;
         }
 
-        public Npc CreateNpc(List<Room> rooms, string assetName, 
-            int frameWidth = AnimationInfo.DefaultFrameWidth, 
+        public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName,
+            int frameWidth = AnimationInfo.DefaultFrameWidth,
             int frameHeight = AnimationInfo.DefaultFrameHeight,
-            int frameCount = AnimationInfo.DefaultFrameCount, 
+            int frameCount = AnimationInfo.DefaultFrameCount,
             Npc.NpcTypes type = Npc.NpcTypes.Enemy,
             int moveStep = 3)
         {
-            var animationInfo = new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount);
+            return type == Npc.NpcTypes.Pickup 
+                ? MakeNpcInstance()
+                : MakeMovingNpc();
 
-            var randomRoom = rooms[ Level.RandomGenerator.Next(0, Rows * Cols)];
-            var npc = new Npc((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), 
-                AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, animationInfo, moveStep);
+            Either<IFailure, Npc> MakeNpcInstance()
+                => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), moveStep);
 
-            if (type != Npc.NpcTypes.Enemy) return npc;
+            Either<IFailure, Npc> MakeMovingNpc() =>
+                from npc in MakeNpcInstance()
+                from nonMovingNpcOnly in Must(type, () => type != Npc.NpcTypes.Pickup)
+                from configuredNpc in SetNpcDefaultStates(npc)
+                select configuredNpc;
 
-            var decisionState = new DecisionState("default", npc);
-            var movingState = new MovingState("moving", npc);
-            var collidingState = new CollidingState("colliding", npc);
+            Either<IFailure, Npc> SetNpcDefaultStates(Npc npc) => EnsureWithReturn(() =>
+            {
+                var decisionState = new DecisionState("default", npc);
+                var movingState = new MovingState("moving", npc);
+                var collidingState = new CollidingState("colliding", npc);
 
-            decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcState == Npc.NpcStates.Moving));
-            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcState == Npc.NpcStates.Colliding));
-            collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcState == Npc.NpcStates.Deciding));
-            
-            npc.AddState(movingState);
-            npc.AddState(collidingState);
-            npc.AddState(decisionState);
+                decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcState == Npc.NpcStates.Moving));
+                movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcState == Npc.NpcStates.Colliding));
+                collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcState == Npc.NpcStates.Deciding));
 
-            return npc;
+                npc.AddState(movingState);
+                npc.AddState(collidingState);
+                npc.AddState(decisionState);
+                return npc;
+            });
         }
 
-        public void GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level)
+        
+
+        public Either<IFailure, Unit> GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => EnsuringBind(() =>
         {
-            int numPirates = DefaultNumPirates;
-            int numDodos = DefaultNumDodos;
-            int numPickups = DefaultNumPickups;
-            // Add some enemy pirates
-            for (int i = 0; i < numPirates; i++)
+            return
+                from pirates in CreateWith(DefaultNumPirates, () => Create($@"Sprites\pirate{_random.Next(1, 4)}", 40, Npc.NpcTypes.Enemy, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                from dodos in CreateWith(DefaultNumDodos, () => Create($@"Sprites\dodo", 40, Npc.NpcTypes.Enemy, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                from green in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-green", 10, Npc.NpcTypes.Pickup, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                from blue in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-blue", 20, Npc.NpcTypes.Pickup, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                from orange in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-orange", 30, Npc.NpcTypes.Pickup, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                from pink in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-pink", 40, Npc.NpcTypes.Pickup, level, rooms))
+                    .BindT(AddToNpcList).AggregateFailures()
+                select Nothing;
+
+            IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator)
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\pirate{_random.Next(1, 4)}");
-                npc.AddComponent(Component.ComponentType.HitPoints, 40);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
-                npcs.Add(npc);
+                for (var i = 0; i < num; i++)
+                    yield return creator();
             }
 
-            // Add some Enemy Dodos - more dangerous!
-            for (var i = 0; i < numDodos; i++)
+            Either<IFailure, List<Npc>> AddToNpcList(Npc npc) => EnsuringBind(() =>
             {
-                var npc = this.CreateNpc(rooms, $@"Sprites\dodo", type: Npc.NpcTypes.Enemy);
-                npc.AddComponent(Component.ComponentType.HitPoints, 40);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy);
                 npcs.Add(npc);
-            }
+                return  npcs.ToEither();
+            });
+        });
 
-            // Lets add some pick ups in increasing order of value
+        private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, Level level, List<Room> rooms) =>
+            from randomRoom in GetRandomRoom(level.Rows, level.Cols, rooms, level)
+            from npc in CreateNpc(randomRoom, assetName) 
+            from hitPointComponent in npc.AddComponent(Component.ComponentType.HitPoints, hitPoints) 
+            from npcTypeComponent in npc.AddComponent(Component.ComponentType.NpcType, npcType) 
+            select npc;
 
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-green", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(Component.ComponentType.Points, 10);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-blue", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(Component.ComponentType.Points, 20);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-orange", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(Component.ComponentType.Points, 30);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-
-            for (var i = 0; i < numPickups; i++)
-            {
-                var npc = this.CreateNpc(rooms, $@"Sprites\balloon-pink", type: Npc.NpcTypes.Pickup);
-                npc.AddComponent(Component.ComponentType.Points, 40);
-                npc.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
-                npcs.Add(npc);
-            }
-        }
+        private Either<IFailure,Room> GetRandomRoom(int Rows, int cols, List<Room> rooms, Level level) 
+            => EnsureWithReturn(() => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)], NotFound.Create("Random Room could not be found"));
     }
 }

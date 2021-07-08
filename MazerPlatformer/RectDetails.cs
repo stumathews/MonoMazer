@@ -1,35 +1,33 @@
-﻿using System;
-using System.Runtime.Remoting.Messaging;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 
-namespace Assets
+namespace MazerPlatformer
 {
     public class RectDetails
     {
-        private Rectangle _rect;
-
-        public Rectangle Rectangle => _rect;
+        public Rectangle Rectangle { get; }
         
-        public RectDetails(int X, int Y, int w, int h)
-        {
-            _rect.X = X;
-            _rect.Y = Y;
-            _rect.Width = w;
-            _rect.Height = h;
-        }
-        public int GetAx(){ return _rect.X; }
-        public int GetAy(){ return _rect.Y; }
-        public int GetBx(){ return GetAx()+_rect.Width;}
-        public int GetBy(){ return GetAy();}
-        public int GetCx(){ return GetBx();}
-        public  int GetCy(){ return GetBy()+_rect.Height;}
-        public int GetDx(){ return GetAx();}
-        public int GetDy(){ return GetAy()+_rect.Height;}
+        [JsonConstructor]
+        public RectDetails(Rectangle rectangle) 
+            => Rectangle = rectangle;
 
-        public int GetAB() { return GetBx() - GetAx(); }
+        public RectDetails(int x, int y, int w, int h) => 
+            Rectangle = new Rectangle(x, y, w, h) {X = x, Y = y, Width = w, Height = h};
+
+        public int GetAx() => Statics.EnsureWithReturn(() => Rectangle.X).ThrowIfFailed();
+        public int GetAy() => Statics.EnsureWithReturn(() =>Rectangle.Y).ThrowIfFailed();
+
+        public int GetBx() => GetAx() +Rectangle.Width;
+        public int GetBy() => GetAy();
+        public int GetCx() => GetBx();
+        public int GetCy() => GetBy() + Rectangle.Height;
+        public int GetDx() => GetAx();
+        public int GetDy() => GetAy() +Rectangle.Height;
+
+        public int GetAB() => GetBx() - GetAx();
         public int GetCD() => GetCx() - GetDx();
         public int GetBC() => GetCy() - GetBy();
-        public int GetAD() => GetDy() - GetAy();
+        public int GetAD() => GetDy() -GetAy();
 
         public Point A() => new Point(GetAx(), GetAy());
         public Point B() => new Point(GetBx(), GetBy());
@@ -37,5 +35,19 @@ namespace Assets
         public Point D() => new Point(GetDx(), GetDy());
 
         
+        protected bool Equals(RectDetails other) 
+            => Rectangle.X == other.Rectangle.X && Rectangle.Y == other.Rectangle.Y &&
+               Rectangle.Width == other.Rectangle.Width && Rectangle.Height == other.Rectangle.Height;
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((RectDetails)obj);
+        }
+
+        public override int GetHashCode() 
+            => Rectangle.GetHashCode();
     }
 }

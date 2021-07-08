@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using C3.XNA;
 using GameLibFramework.FSM;
+using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
 using static System.String;
 using static MazerPlatformer.Statics;
 
@@ -60,12 +61,40 @@ namespace MazerPlatformer
         public event GameObjectComponentChanged OnGameObjectComponentChanged;
         public event CollisionArgs OnCollision;
         
-        public delegate void GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
-        public delegate void CollisionArgs(GameObject thisObject, GameObject otherObject);
+        public delegate Either<IFailure, Unit> GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
+        public delegate Either<IFailure, Unit> CollisionArgs(Option<GameObject> thisObject, Option<GameObject> otherObject);
 
         public delegate void DisposingInfo(GameObject theObject);
 
+        /// <summary>
+        /// Let me know that we are disposing
+        /// </summary>
         public event DisposingInfo OnDisposing;
+
+
+        // Used only for JSON copying
+        [JsonConstructor]
+        protected GameObject(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components)
+        {
+            IsColliding = isColliding;
+            StateMachine = stateMachine ?? new FSM(this);
+            Type = type;
+            _boundingBox = boundingBox;
+            BoundingSphere = boundingSphere;
+            _maxPoint = maxPoint;
+            _centre = centre;
+            X = x;
+            Y = y;
+            Id = id;
+            Width = width;
+            Height = height;
+            InfoText = infoText;
+            SubInfoText = subInfoText;
+            Active = active;
+            StateTransitions = stateTransitions ?? new List<Transition>();
+            States = states ?? new List<State>();
+            Components = components ?? new List<Component>();
+        }
 
         protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
         {
@@ -76,62 +105,11 @@ namespace MazerPlatformer
             Height = height;
             StateMachine = new FSM(this);
             Type = type;
-            CalculateBoundingBox();
             Active = true;
         }
 
         // Determine the centre point of the game object in 2D space
         private Vector2 _centre;
-        public Vector2 GetCentre()
-        {
-            _centre.X = X + Width / 2;
-            _centre.Y = Y + Height / 2;
-            return _centre;
-        }
-
-        private void CalculateBoundingBox()
-        {
-            // Keep track of our centre
-            _centre = GetCentre();
-
-            // Keep track of the max point of the bounding box
-            _maxPoint = _centre;
-            _maxPoint.X = Width;
-            _maxPoint.Y = Height;
-
-            // Every object gets a bounding box, used internally for outlining square bounds of object
-            _boundingBox = new BoundingBox(new Vector3( X, Y, 0), new Vector3((int)_maxPoint.X, (int)_maxPoint.Y,0));
-
-            // Every object gets a bounding sphere and this is used for collision detection
-            BoundingSphere = new BoundingSphere(new Vector3(Centre, 0), 29);
-        }
-
-        // Called every frame
-        public virtual void Update(GameTime gameTime)
-        {
-            if (!Active) return;
-            CalculateBoundingBox();
-            StateMachine.Update(gameTime);
-        }
-
-        // Every object can check if its colliding with another object's bounding box
-        public virtual bool IsCollidingWith(GameObject otherObject)
-        {
-            if (otherObject == null || otherObject.Id == Id) return false;
-            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);// && Active;
-            otherObject.IsColliding = IsColliding;
-            
-            return IsColliding;
-        }
-
-        // Not sure this is a good as it could be because the Game world is what calls this 
-        // as its the game world is what checks for collisions
-        public virtual void CollisionOccuredWith(GameObject otherObject)
-        {
-            var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
-            IsColliding = true;
-            handler?.Invoke(this, otherObject);
-        }
 
         // Get the centre of the game object
         private Vector2 Centre => _centre;
@@ -142,99 +120,163 @@ namespace MazerPlatformer
             set => _maxPoint = value;
         }
 
+
+        private Either<IFailure, Unit> CalculateBoundingBox(int x, int y, int width, int height) => Ensure(() =>
+        {
+            // Keep track of our centre
+            _centre = this.GetCentre();
+
+            // Keep track of the max point of the bounding box
+            _maxPoint = _centre;
+            _maxPoint.X = Width;
+            _maxPoint.Y = Height;
+
+            // Every object gets a bounding box, used internally for outlining square bounds of object
+            _boundingBox = new BoundingBox(new Vector3(x, y, 0), new Vector3((int) _maxPoint.X, (int) _maxPoint.Y, 0));
+
+            // Every object gets a bounding sphere and this is used for collision detection
+            BoundingSphere = new BoundingSphere(new Vector3(_centre, 0), 29);
+        });
+
+        // Called every frame
+        public virtual Either<IFailure, Unit> Update(GameTime gameTime) => Ensure(() =>
+        {
+            if (!Active) return;
+            CalculateBoundingBox(X, Y, Width, Height);
+            StateMachine.Update(gameTime);
+        });
+
+        // Every object can check if its colliding with another object's bounding box
+        public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
+        {
+            if (otherObject == null || otherObject.Id == Id) return false;
+            IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
+            otherObject.IsColliding = IsColliding;
+
+            return IsColliding;
+        });
+
+        // Not sure this is a good as it could be because the Game world is what calls this 
+        // as its the game world is what checks for collisions
+        public virtual Either<IFailure, Unit> CollisionOccuredWith(GameObject otherObject) => Ensure(() =>
+        {
+            var handler = OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
+            IsColliding = true;
+            handler?.Invoke(this, otherObject);
+        });
+
+        
+
         /// <summary>
-        /// Find a component, assuming there is only one of this type otherwise throws
+        /// Find a component, assuming there is only one of this type otherwise None
         /// </summary>
-        /// <remarks>This should throw an exception if more than one of the same component type is found ie programmer error</remarks>
-        public Component FindComponentByType(Component.ComponentType type) => Components.SingleOrDefault(o => o.Type == type);
+        /// <remarks>Returns None if the object is not found or is null</remarks>
+        public Option<Component> FindComponentByType(Component.ComponentType type)
+            => EnsureWithReturn(() => Components.SingleOrDefault(o => o.Type == type))
+                .Map(component => component ?? Option<Component>.None)
+                .IfLeft(Option<Component>.None);
         
         /// <summary>
-        /// Updates by type, throws if more than one type of this component exists in the game object
+        /// Updates by type, returns the updated value, fails otherwise
         /// </summary>
         /// <param name="newValue"></param>
         /// <returns></returns>
-        public bool UpdateComponentByType(Component.ComponentType type, object  newValue) => UpdateComponent(newValue, Components.Single(o => o.Type == type));
+        public Either<IFailure, object> UpdateComponentByType(Component.ComponentType type, object  newValue) 
+            => UpdateComponent(newValue, Components.Single(o => o.Type == type));
 
-        public Component AddComponent(Component.ComponentType type, object value, string id = null)
+        public Either<IFailure, Component> AddComponent(Component.ComponentType type, object value, string id = null) => EnsureWithReturn(() =>
         {
             var component = new Component(type, value, id);
             Components.Add(component);
             return component;
-        }
+        });
 
-        private bool UpdateComponent(object newValue, Component found)
-        {
-            if (found == null) return false;
-            var oldValue = found.Value;
-            found.Value = newValue;
+        private Either<IFailure, object> UpdateComponent(object newValue, Component found)
+            => found == null
+                ? new NotFound($"Component not found to set value to {newValue}").ToEitherFailure<Unit>()
+                : EnsureWithReturn(() =>
+                {
+                    var oldValue = found.Value;
+                    found.Value = newValue;
 
-            OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
-            return true;
-        }
+                    OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
+                    return newValue;
+                });
 
-        public void AddState(State state) => States.Add(state);
+        public Either<IFailure, Unit> AddState(State state) => Ensure(() 
+            => States.Add(state));
 
         #region Diganostics
 
         // Draw the centre point of the object
-        protected void DrawCentrePoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawCentrePoint, ()=> spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f));
-        
+        protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch)
+            => EnsureIf(Diagnostics.DrawCentrePoint, () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
+                .IgnoreFailure();
+
         // Draw the max point (lower right point)
-        protected void DrawMaxPoint(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawMaxPoint, ()=> spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f));
+        protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
+            => EnsureIf(Diagnostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
+                .IgnoreFailure();
 
         // Draw the bounding box
-        protected void DrawGameObjectBoundingBox(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, ()=> spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f));
+        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
+                .IgnoreFailure();
 
         // Draw the bounding sphere
-        protected void DrawGameObjectBoundingSphere(SpriteBatch spriteBatch) => DoIf(Diganostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua));
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
+                .IgnoreFailure();
 
         // Draw all the diagnostics together
-        protected void DrawObjectDiagnostics(SpriteBatch spriteBatch)
+        protected Either<IFailure, Unit> DrawObjectDiagnostics(SpriteBatch spriteBatch) =>
+            DrawCentrePoint(spriteBatch)
+                .Bind(unit => DrawMaxPoint(spriteBatch))
+                .Bind(unit => DrawGameObjectBoundingBox(spriteBatch))
+                .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatch));
+
+        // All game objects can ask to draw some text over it if it wants
+        // dependency on Mazer for game font ok.
+        public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
+            DoIfReturn(!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText, () => DrawText(spriteBatch))
+                .Bind(unit => DrawObjectDiagnostics(spriteBatch))
+                .IgnoreFailure();
+
+        private Either<IFailure, Unit> DrawText(SpriteBatch spriteBatch) => Ensure(() =>
         {
-            DrawCentrePoint(spriteBatch);
-            DrawMaxPoint(spriteBatch);
-            DrawGameObjectBoundingBox(spriteBatch);
-            DrawGameObjectBoundingSphere(spriteBatch);
-        }
-
-        // Specific game objects need to initialize
-        public virtual void Draw(SpriteBatch spriteBatch)
-        {
-            // All game objects can ask to draw some text over it if it wants
-            // dependency on Mazer for game font ok.
-            DoIf(!IsNullOrEmpty(InfoText) && Diganostics.DrawObjectInfoText, () =>
-            {
-                spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
-                spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
-            });
-
-            DrawObjectDiagnostics(spriteBatch);
-        }
-
-        // Specific game objects need to initialize themselves
-        public virtual void Initialize()
-        {
-            // We enter the default state whatever that is
-            foreach(var state in States)
-                StateMachine.AddState(state);
-
-            StateMachine.Initialise(States.Any() 
-                ? States.FirstOrDefault(s=>s.Name == "default")?.Name ?? States.First()?.Name 
-                : null);
-        }
+            spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
+            spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
+        });
 
         #endregion
+
+        // Specific game objects need to initialize themselves
+        public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
+        {
+            // We enter the default state whatever that is
+            foreach (var state in States)
+                StateMachine.AddState(state);
+
+            StateMachine.Initialise(States.Any()
+                ? States.FirstOrDefault(s => s.Name == "default")?.Name ?? States.First()?.Name
+                : null);
+        });
+
+        
 
         protected virtual void Dispose(bool disposing)
         {
             if (!disposing) return;
 
-            OnDisposing?.Invoke(this);
-
-            // Cleanup objects we know we wont need or that other objects should not need.
-            Components.Clear();
-            States.Clear();
-            StateTransitions.Clear();
+            Ensure(() => OnDisposing?.Invoke(this))
+                .EnsuringMap(unit =>
+                {
+                    // Cleanup objects we know we wont need or that other objects should not need.
+                    Components.Clear();
+                    States.Clear();
+                    StateTransitions.Clear();
+                    return Nothing;
+                }).ThrowIfFailed();
         }
 
         public void Dispose()

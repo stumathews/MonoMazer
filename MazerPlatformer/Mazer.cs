@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using GameLib.EventDriven;
 using GameLibFramework.EventDriven;
 using GameLibFramework.FSM;
@@ -11,90 +7,78 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using GeonBit.UI;
 using GeonBit.UI.Entities;
+using LanguageExt;
 using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
+using static MazerPlatformer.MazerStatics;
 using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
     public class Mazer : Game
     {
-        private readonly SpriteBatch _spriteBatch;
+        private Either<IFailure, SpriteBatch> _spriteBatch = UninitializedFailure.Create<SpriteBatch>(nameof(_spriteBatch));
 
         public static SpriteFont GetGameFont() => _font;
-        
-        private Song _menuMusic; // does this really have to be public
+        private Song _menuMusic;
         private static SpriteFont _font;
-
-        // Top level game commands such as start, quit, resume etc
-        private readonly CommandManager _gameCommands;
-
-        // GameWorld, contains, updates and manages the player, npc, pickups and level details - Its distinct from the UI of the game (it has events the UI can subscribe to)
-        private readonly GameWorld _gameWorld;
-
-        // Top level game states such as Pause, Playing etc
-        private readonly FSM _gameStateMachine;
-
-        private readonly PauseState _pauseState;
+        
+        private Either<IFailure, CommandManager> _gameCommands = UninitializedFailure.Create<CommandManager>(nameof(_gameCommands));
+        private Either<IFailure, GameWorld> _gameWorld = UninitializedFailure.Create<GameWorld>(nameof(_gameWorld));
+        private Either<IFailure, FSM> _gameStateMachine = UninitializedFailure.Create<FSM>(nameof(_gameStateMachine));
+        
+        private PauseState _pauseState;
         private PlayingGameState _playingState;
-
-        private enum GameStates { Paused, Playing }
-
+        public enum GameStates { Paused, Playing }
         private GameStates _currentGameState = GameStates.Paused;
+        
+        private const int DefaultNumCols = 10;
+        private const int DefaultNumRows = 10;
 
-        // Our game is divided into rooms
-        private const int NumCols = 10;
-        private const int NumRows = 10;
-        private int _currentLevel = 1;       // We start with level 1
-        private int _playerPoints = 0;      // UI shows player starts off with no points on the screen
-        private int _playerHealth = 0;    // UI shows player has 100 health on screen initially - this can be loaded from a level file later
-        private int _playerPickups = 0;     // number of pickups the player as recieved
+        private int _currentLevel = 1;    // Initial level is 1
+        private int _playerHealth = 100; 
+        private int _playerPickups = 0;
+        private int _playerPoints = 0; 
 
-        /* In game statistics that we get from the game world, we show for testing purposes in the UI */
         private int _numGameCollisionsEvents;
         private int _numCollisionsWithPlayerAndNpCs;
 
-        /* UI provided by Geon.UI */
         private Panel _mainMenuPanel;
         private Panel _gameOverPanel;
         private Panel _controlsPanel;
 
-        /* We track players state, direction, current collision direction - obtained from the game world */
         private CharacterStates _characterState;
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
-        private bool _playerDied = false;
+
+        private bool _playerDied = false; // eventually this will be useful and used.
         
         public Mazer()
         {
-            var graphics = new GraphicsDeviceManager(this);
-            Content.RootDirectory = "Content";
-            graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-            graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-            graphics.ApplyChanges();
+            var initializationPipeline = 
+                from graphics in InitializeGraphicsDevice()
+                from software in CreateInfrastructure()
+                select Nothing;
 
-            _gameCommands = new CommandManager();
-            _gameStateMachine = new FSM(this);
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _gameWorld = new GameWorld(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, NumRows, NumCols, _spriteBatch);
-            _pauseState = new PauseState(this);
-            _playingState = new PlayingGameState(this);
-
-            IsFixedTimeStep = false;
+            initializationPipeline.ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception from the get-go
         }
-        
+
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
         /// all of your content.
         /// </summary>
         protected override void LoadContent()
         {
-            _font = Content.Load<SpriteFont>("Sprites/gameFont");
-            _menuMusic = Content.Load<Song>("Music/bgm_menu");
+            var loadContentPipeline = 
+                from loadedFont in Content.TryLoad<SpriteFont>("Sprites/gameFont")
+                from loadedMusic in Content.TryLoad<Song>("Music/bgm_menu")
+                from setFontResult in SetGameFont(() => _font = loadedFont)
+                from setMusicResult in SetMenuMusic(()=> _menuMusic = loadedMusic)
+                from loadedGameWorld in LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints) 
+                select loadedGameWorld;
 
-            // Load the game world up - creates the level, characters and other aspects of the game world
-            _gameWorld.LoadContent(levelNumber: _currentLevel, 100, 0);
+            loadContentPipeline.ThrowIfFailed();
         }
 
         /// <summary>
@@ -105,53 +89,17 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
         {
-            base.Initialize();
+            var initializePipeline =
+                from init in Ensure(() => base.Initialize())
+                from initializeUi in InitializeUi()
+                from gameStateMachine in _gameStateMachine
+                from stateMachine in InitializeGameStateMachine(gameStateMachine)
+                from initGameWorld in InitializeGameWorld(_gameWorld, _gameCommands)
+                select initGameWorld;
 
-            UserInterface.Initialize(Content, BuiltinThemes.editor);
-            
-            SetupMenuUi();
-            InitializeGameStateMachine();
-            _gameWorld.Initialize();
+            initializePipeline.ThrowIfFailed();
 
-            _gameCommands.AddKeyUpCommand(Keys.S, (time) => StartLevel(_currentLevel));
-            _gameCommands.AddKeyUpCommand(Keys.X, (time) => MediaPlayer.Pause());
-            _gameCommands.AddKeyUpCommand(Keys.Z, (time) => MediaPlayer.Resume());
-            _gameCommands.AddKeyUpCommand(Keys.P, (time) => ProgressToLevel(--_currentLevel));
-            _gameCommands.AddKeyUpCommand(Keys.T, (time) => ToggleSetting(ref Diganostics.DrawTop));
-            _gameCommands.AddKeyUpCommand(Keys.B, (time) => ToggleSetting(ref Diganostics.DrawBottom));
-            _gameCommands.AddKeyUpCommand(Keys.R, (time) => ToggleSetting(ref Diganostics.DrawRight));
-            _gameCommands.AddKeyUpCommand(Keys.L, (time) => ToggleSetting(ref Diganostics.DrawLeft));
-            _gameCommands.AddKeyUpCommand(Keys.D1, (time) => ToggleSetting(ref Diganostics.DrawGameObjectBounds));
-            _gameCommands.AddKeyUpCommand(Keys.D2, (time) => ToggleSetting(ref Diganostics.DrawSquareSideBounds));
-            _gameCommands.AddKeyUpCommand(Keys.D3, (time) => ToggleSetting(ref Diganostics.DrawLines));
-            _gameCommands.AddKeyUpCommand(Keys.D4, (time) => ToggleSetting(ref Diganostics.DrawCentrePoint));
-            _gameCommands.AddKeyUpCommand(Keys.D5, (time) => ToggleSetting(ref Diganostics.DrawMaxPoint));
-            _gameCommands.AddKeyUpCommand(Keys.D6, (time) => ToggleSetting(ref Diganostics.DrawObjectInfoText));
-            _gameCommands.AddKeyUpCommand(Keys.D0, (time) => EnableAllDiagnostics());
-            _gameCommands.AddKeyUpCommand(Keys.N, (time) => ProgressToLevel(++_currentLevel)); // Cheat: complete current level!
-            _gameCommands.AddKeyUpCommand(Keys.Escape, OnEscapeKeyReleased);
-
-            /* Connect the UI to the game world */
-
-            _gameWorld.OnGameWorldCollision += _gameWorld_OnGameWorldCollision;
-            _gameWorld.OnPlayerStateChanged += (state) => _characterState = state;
-            _gameWorld.OnPlayerDirectionChanged += (direction) => _characterDirection = direction;
-            _gameWorld.OnPlayerCollisionDirectionChanged += (direction) => _characterCollisionDirection = direction;
-            _gameWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-            _gameWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            _gameWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-            _gameWorld.OnLevelCleared += (level) => ProgressToLevel(++_currentLevel);
-            _gameWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
         }
-
-        private void OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails)
-        {
-            var playerPoints = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Points)?.Value;
-            var playerHealth = (int?)levelDetails.Player.Components.SingleOrDefault(o => o.Type == Component.ComponentType.Health)?.Value;
-            _playerHealth = playerHealth ?? _playerHealth;
-            _playerPoints = playerPoints ?? _playerPoints;
-        }
-
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -160,7 +108,12 @@ namespace MazerPlatformer
         protected override void UnloadContent()
         {
             // Unload any non ContentManager content here
-            _gameWorld.UnloadContent();
+            var unloadPipeline = 
+                from world in _gameWorld
+                from unload in world.UnloadContent()
+                select Nothing;
+
+            unloadPipeline.ThrowIfFailed();
         }
 
         /// <summary>
@@ -170,12 +123,17 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            UserInterface.Active.Update(gameTime);
+            // Execute the update pipeline
+            var updatePipeline = 
+                from baseUpdateResult in Ensure(() => base.Update(gameTime))
+                 from updateActiveUiComponents in UpdateUi(gameTime)
+                 from updatedGameCommandsResult in UpdateCommands(_gameCommands, gameTime) // get input
+                 from set in _gameCommands = updatedGameCommandsResult
+                 from gameStateMachine in _gameStateMachine
+                 from stateMachineResult in UpdateStateMachine(gameTime, gameStateMachine)// NB: game world is updated by PlayingGameState
+                select Nothing;
 
-            _gameCommands.Update(gameTime); // get input
-            _gameStateMachine.Update(gameTime); // NB: game world is updated by PlayingGameState
-
-            base.Update(gameTime);
+            updatePipeline.ThrowIfFailed();
         }
 
         /// <summary>
@@ -184,221 +142,38 @@ namespace MazerPlatformer
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            base.Draw(gameTime);
+            var drawPipeline = 
+                from baseDrawResult in Ensure(() => base.Draw(gameTime))
+                from clearResult in ClearGraphicsDevice(_currentGameState, GraphicsDevice)
+                from spriteBatch in _spriteBatch
+                from beginResult in BeginSpriteBatch(spriteBatch)
+                from drawGameWorldResult in DrawGameWorld(spriteBatch, _gameWorld)
+                from statResult in DrawPlayerStatistics(spriteBatch, _font, GraphicsDevice, _currentLevel, _playerHealth, _playerPoints).IgnoreFailure()
+                from gameStatsResult in PrintGameStatistics(spriteBatch, gameTime, _font, GraphicsDevice,_numGameObjects,_numGameCollisionsEvents,
+                                                                _numCollisionsWithPlayerAndNpCs, _characterState, _characterDirection,
+                                                                _characterCollisionDirection, _currentGameState).IgnoreFailure()
+                from spriteBatchAfterEnd in EndSpriteBatch(spriteBatch)
+                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatchAfterEnd))
+                select Nothing;
 
-            GraphicsDevice.Clear( _currentGameState == GameStates.Playing ? Color.CornflowerBlue : Color.Silver);
-            _spriteBatch.Begin();
-
-            _gameWorld.Draw(_spriteBatch);
-            DrawPlayerStats(_spriteBatch);
-            DrawInGameStats(gameTime);
-
-            _spriteBatch.End();
-            UserInterface.Active.Draw(_spriteBatch);
+            drawPipeline.ThrowIfFailed();
         }
 
-        private void DrawPlayerStats(SpriteBatch spriteBatch)
+        // Initialization functions
+
+        private Either<IFailure, Unit> InitializeGameStateMachine(FSM gameStateMachine) => Ensure(() =>
         {
-            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-            _spriteBatch.DrawString(_font, $"Level: {_currentLevel}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Player Health: {_playerHealth}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 30),
-                Color.White);
-            _spriteBatch.DrawString(_font, $"Player Points: {_playerPoints}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 60),
-                Color.White);
-        }
-
-
-        private void ProgressToLevel(int level) 
-            => StartLevel(level, isFreshStart: false, _playerHealth, _playerPoints);
-
-        /// <summary>
-        /// Start a new levl
-        /// </summary>
-        /// <param name="level"></param>
-        /// <param name="isFreshStart"></param>
-        /// <param name="overridePlayerHealth">player health from previous level, overrides any within level file</param>
-        /// <param name="overridePlayerScore">player score from previous level, overrides any within level file</param>
-        private void StartLevel(int level, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-        {
-            _playerDied = false;
-            _gameWorld.UnloadContent();
-            _gameWorld.LoadContent(levelNumber: level, overridePlayerHealth, overridePlayerScore);
-            _gameWorld.Initialize(); // We need to reinitialize things once we've reload content
-            StartOrContinueLevel(isFreshStart: isFreshStart);
-        }
-
-        private void PlayMenuMusic() => MediaPlayer.Play(_menuMusic);
-
-        // This allows the playing state to indirectly move the player in the game world 
-        internal void MovePlayerInDirection(CharacterDirection dir, GameTime dt) => _gameWorld.MovePlayer(dir, dt);
-
-        // This allows the Playing state to indirectly update the gameWorld
-        internal void UpdateGameWorld(GameTime dt) => _gameWorld.Update(dt);
-
-        // This allows the playing state to indirectly send player commands to game world
-        internal void OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) => _gameWorld.OnKeyUp(sender, keyboardEventArgs);
-
-        // Hide the menu and ask the game world to start or continue
-        internal void StartOrContinueLevel(bool isFreshStart)
-        {
-            HideMenu();
-            _currentGameState = GameStates.Playing;
-            _gameWorld.StartOrResumeLevelMusic();
-
-            // If we're continuing then we want to keep whatever the player's current health/points are, otherwise reset them
-            if (!isFreshStart)
-                return;
-            ResetPlayerStatistics();
-        }
-
-        private void ResetPlayerStatistics()
-        {
-            _playerHealth = 100;
-            _playerPoints = 0;
-            _playerPickups = 0;
-
-            // Inform the game world that we're intending to reset the players state(vitals) 
-            _gameWorld.SetPlayerStatistics(_playerHealth, _playerPoints);
-        }
-
-        private void ShowGameOverScreen()
-        {
-            SetupGameOverMenu();
-            _gameOverPanel.Visible = true;
-        }
-
-        // Creates the UI elements that the menu will use
-        private void SetupMenuUi()
-        {
-            _mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-            _gameOverPanel = new Panel();
-            _controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default);
-
-            SetupMainMenuPanel();
-            SetupInstructionsPanel();
-            SetupGameOverMenu();
-
-            /* Local functions */
-
-            void SetupMainMenuPanel()
+            var transitions = new[] 
             {
-                var diagnostics = new Button("Diagnostics On/Off");
-                var controlsButton = new Button("Controls", ButtonSkin.Fancy);
-                var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
-                var startGameButton = new Button("New");
-                var saveGameButton = new Button("Save");
-                var loadGameButton = new Button("Load");
-
-                HideMenu();
-
-                _mainMenuPanel.AdjustHeightAutomatically = true;
-                _mainMenuPanel.AddChild(new Header("Main Menu"));
-                _mainMenuPanel.AddChild(new HorizontalLine());
-                _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
-                _mainMenuPanel.AddChild(startGameButton);
-                _mainMenuPanel.AddChild(saveGameButton);
-                _mainMenuPanel.AddChild(loadGameButton);
-                _mainMenuPanel.AddChild(controlsButton);
-                _mainMenuPanel.AddChild(diagnostics);
-                _mainMenuPanel.AddChild(quitButton);
-
-                startGameButton.OnClick += (Entity entity) =>
-                {
-                    _currentLevel = 1;
-                    StartLevel(_currentLevel);
-                };
-                saveGameButton.OnClick += (e) =>
-                {
-                    _gameWorld.SaveLevel();
-                    StartOrContinueLevel(isFreshStart: false);
-                };
-                loadGameButton.OnClick += (e) => StartLevel(_currentLevel, isFreshStart: false);
-                diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
-                quitButton.OnClick += (Entity entity) => QuitGame();
-                controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
-            }
-
-            void SetupInstructionsPanel()
-            {
-                var closeControlsPanelButton = new Button("Back");
-
-                _controlsPanel.Visible = false;
-                _controlsPanel.AdjustHeightAutomatically = true;
-                _controlsPanel.AddChild(new Header("Mazer's Controls"));
-                _controlsPanel.AddChild(new RichParagraph(
-                    "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
-                    "A level is cleared when all the baloons are collected.\n\n" +
-                    "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
-                    "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
-                    "{{BOLD}}Good Luck!"));
-                _controlsPanel.AddChild(closeControlsPanelButton);
-                closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
-            }
-
-            // Add the panels to the UI
-            UserInterface.Active.AddEntity(_mainMenuPanel);
-            UserInterface.Active.AddEntity(_controlsPanel);
-            UserInterface.Active.AddEntity(_gameOverPanel);
-        }
-
-        private void QuitGame()
-            => Exit();
-
-        private void SetupGameOverMenu()
-        {
-            var closeButton = new Button("Return to main menu");
-            var restartLevel = new Button("Try again");
-            var quit = new Button("Quit game");
-
-            _gameOverPanel.ClearChildren();
-            _gameOverPanel.AddChild(new Header("You died!"));
-            _gameOverPanel.AddChild(new RichParagraph("You had {{YELLOW}}" + _playerPoints + "{{DEFAULT}} points.{{DEFAULT}}"));
-            _gameOverPanel.AddChild(new RichParagraph("You picked up {{YELLOW}}" + _playerPickups + "{{DEFAULT}} pick-ups.{{DEFAULT}}"));
-            _gameOverPanel.AddChild(new RichParagraph("You reach level {{YELLOW}}" + _currentLevel + "{{DEFAULT}}.{{DEFAULT}}\n"));
-            _gameOverPanel.AddChild(new RichParagraph("Try again to {{BOLD}}improve!\n"));
-            _gameOverPanel.AddChild(restartLevel);
-            _gameOverPanel.AddChild(closeButton);
-            _gameOverPanel.Visible = false;
-
-            closeButton.OnClick += (button) =>
-            {
-                _playerDied = false;
-                _gameOverPanel.Visible = false;
-                _currentGameState = GameStates.Paused;
+                new Transition(_pauseState, () => _currentGameState == GameStates.Paused),
+                new Transition(_playingState, () => _currentGameState == GameStates.Playing)
             };
 
-            restartLevel.OnClick += (button) =>
-            {
-                _playerDied = false;
-                _gameOverPanel.Visible = false;
-                StartLevel(_currentLevel);
-            };
+            gameStateMachine.AddState(_pauseState);
+            gameStateMachine.AddState(_playingState);
 
-            quit.OnClick += (b) => QuitGame();
-        }
-
-        internal void ShowMenu() => _mainMenuPanel.Visible = true; // used by internal pause state
-        private void HideMenu() => _mainMenuPanel.Visible = false;
-
-        // Sets up the main game playing states (Playing, Paused) and initialize the state machine for the top level game (Character states are separate and are within the game world)
-        private void InitializeGameStateMachine()
-        {
-            var toPausedTransition = new Transition(_pauseState, () => _currentGameState == GameStates.Paused);
-            var toPlayingTransition = new Transition(_playingState, () => _currentGameState == GameStates.Playing);
-
-            var states = new State[] { _pauseState, _playingState };
-            var transitions = new[] { toPausedTransition, toPlayingTransition };
-
-            _gameStateMachine.AddState(_pauseState);
-            _gameStateMachine.AddState(_playingState);
-
-            // Allow each state to go into any other state, except itself. (Paused -> playing and PLaying -> Paused)
-            foreach (var state in states)
+            // Allow each state to go into any other state, except itself. (Paused -> playing and Playing -> Paused)
+            foreach (var state in new State[] {_pauseState, _playingState})
             {
                 state.Initialize();
                 foreach (var transition in transitions)
@@ -408,129 +183,318 @@ namespace MazerPlatformer
                 }
             }
 
-            // The pause state will inform us when its entered and we can act accordingly 
-            _pauseState.OnStateChanged += OnPauseStateChanged;
+            
 
-            // Ready the state machine and put it into the default state of 'idle' state            
-            _gameStateMachine.Initialise(_pauseState.Name);
-        }
+            // Ready the state machine and put it into the default state of 'pause' state            
+            gameStateMachine.Initialise(_pauseState.Name);
+        });
 
-        /// <summary>
-        /// Draw current level, score, number of collisions etc
-        /// </summary>
-        /// <param name="gameTime"></param>
-        private void DrawInGameStats(GameTime gameTime)
+        private Either<IFailure, Unit> CreateInfrastructure() => Ensure(() =>
         {
-            if (_currentGameState != GameStates.Playing || !Diganostics.ShowPlayerStats) return;
+            _gameCommands = new CommandManager();
+            _gameStateMachine = new FSM(this);
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _gameWorld = from spriteBatch in _spriteBatch
+                         from createdWorld in GameWorld.Create(Content, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, DefaultNumRows, DefaultNumCols, spriteBatch)
+                         select createdWorld;
 
-            var leftSidePosition = GraphicsDevice.Viewport.TitleSafeArea.X + 10;
-            // Consider making GameObjectCount private and getting the info via an event instead
-            _spriteBatch.DrawString(_font, $"Game Object Count: {_numGameObjects}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 90),
-                            Color.White);
-            _spriteBatch.DrawString(_font, $"Collision Events: {_numGameCollisionsEvents}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 120),
-                Color.White);
+            _playingState = new PlayingGameState(this);
+            _pauseState = new PauseState(); 
+            _pauseState.OnStateChanged += (state, reason) => OnPauseStateChanged(state, reason).ThrowIfFailed();
 
-            _spriteBatch.DrawString(_font, $"NPC Collisions: {_numCollisionsWithPlayerAndNpCs}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 150),
-                Color.White);
+            Content.RootDirectory = "Content";
+            IsFixedTimeStep = false;
+        }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
 
-            _spriteBatch.DrawString(_font, $"Frame rate(ms): {gameTime.ElapsedGameTime.TotalMilliseconds}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 180),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Player State: {_characterState}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 210),
-                Color.White);
-
-            _spriteBatch.DrawString(_font, $"Player Direction: {_characterDirection}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 240),
-                Color.White);
-            _spriteBatch.DrawString(_font, $"Player Coll Direction: {_characterCollisionDirection}", new Vector2(
-                    leftSidePosition, GraphicsDevice.Viewport.TitleSafeArea.Y + 270),
-                Color.White);
-        }
-
-        private static void EnableAllDiagnostics()
-        {
-            Diganostics.DrawMaxPoint = !Diganostics.DrawMaxPoint;
-            Diganostics.DrawSquareSideBounds = !Diganostics.DrawSquareSideBounds;
-            Diganostics.DrawSquareBounds = !Diganostics.DrawSquareBounds;
-            Diganostics.DrawGameObjectBounds = !Diganostics.DrawGameObjectBounds;
-            Diganostics.DrawObjectInfoText = !Diganostics.DrawObjectInfoText;
-            Diganostics.ShowPlayerStats = !Diganostics.ShowPlayerStats;
-        }
-
-        private void OnEscapeKeyReleased(GameTime time)
-        {
-            if (_currentGameState == GameStates.Playing)
+        private Either<IFailure, GraphicsDevice> InitializeGraphicsDevice() => EnsureWithReturn(() =>
             {
+                var graphicsDeviceManager = new GraphicsDeviceManager(this)
+                {
+                    GraphicsProfile = GraphicsProfile.Reach,
+                    HardwareModeSwitch = false,
+                    IsFullScreen = false,
+                    PreferMultiSampling = false,
+                    PreferredBackBufferFormat = SurfaceFormat.Color,
+                    PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+                    PreferredDepthStencilFormat = DepthFormat.None,
+                    SupportedOrientations = DisplayOrientation.Default,
+                    SynchronizeWithVerticalRetrace = false,
+                    PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+                };
+                graphicsDeviceManager.ApplyChanges();
+
+                return GraphicsDevice;
+        }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
+
+        private Either<IFailure, Unit> InitializeUi() =>
+            from init in Ensure(() => UserInterface.Initialize(Content, BuiltinThemes.editor))
+            from setupMenuUi in 
+                from panels in CreatePanels()
+                from setup in SetupMainMenuPanel()
+                from instructions in SetupInstructionsPanel()
+                from gameOver in SetupGameOverMenu(_gameOverPanel)
+                from addResult in AddPanelsToUi()
+                select Nothing
+            select setupMenuUi;
+
+        private Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
+             from world in gameWorld
+             from commands in gameCommands
+             from init in world.Initialize()
+             from setup in SetupGameCommands(commands)
+             from connectedGameWorld in ConnectToGameWorld(world)
+             select connectedGameWorld;
+
+        private Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
+        {
+            // Diagnostic keyboard shortcuts
+            commands.AddKeyUpCommand(Keys.T, time => ToggleSetting(ref Diagnostics.DrawTop));
+            commands.AddKeyUpCommand(Keys.B, time => ToggleSetting(ref Diagnostics.DrawBottom));
+            commands.AddKeyUpCommand(Keys.R, time => ToggleSetting(ref Diagnostics.DrawRight));
+            commands.AddKeyUpCommand(Keys.L, time => ToggleSetting(ref Diagnostics.DrawLeft));
+            commands.AddKeyUpCommand(Keys.D1, time => ToggleSetting(ref Diagnostics.DrawGameObjectBounds));
+            commands.AddKeyUpCommand(Keys.D2, time => ToggleSetting(ref Diagnostics.DrawSquareSideBounds));
+            commands.AddKeyUpCommand(Keys.D3, time => ToggleSetting(ref Diagnostics.DrawLines));
+            commands.AddKeyUpCommand(Keys.D4, time => ToggleSetting(ref Diagnostics.DrawCentrePoint));
+            commands.AddKeyUpCommand(Keys.D5, time => ToggleSetting(ref Diagnostics.DrawMaxPoint));
+            commands.AddKeyUpCommand(Keys.D6, time => ToggleSetting(ref Diagnostics.DrawObjectInfoText));
+            commands.AddKeyUpCommand(Keys.D0, time => EnableAllDiagnostics());
+
+            // Basic game commands
+            commands.AddKeyUpCommand(Keys.S, time => StartLevel(_currentLevel,   _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.N, time => StartLevel(++_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed()); // Cheat: complete current level!
+            commands.AddKeyUpCommand(Keys.P, time => StartLevel(--_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.Escape, time => OnEscapeKeyReleased().ThrowIfFailed());
+            
+            // Music controls
+            commands.AddKeyUpCommand(Keys.X, time => Ensure(MediaPlayer.Pause).ThrowIfFailed());
+            commands.AddKeyUpCommand(Keys.Z, time => Ensure(MediaPlayer.Resume).ThrowIfFailed());
+            return commands;
+        });
+
+        private Either<IFailure, GameWorld> ConnectToGameWorld(GameWorld gameWorld) 
+            => from connectedGameWorld in EnsureWithReturn(gameWorld, SubscribeToGameWorldEvents)
+            select connectedGameWorld;
+        
+        // UI functions
+
+        private Either<IFailure, Unit> ShowGameOverScreen() =>
+            from setup in SetupGameOverMenu(_gameOverPanel)
+            from visible in MakeGameOverPanelVisible(()=>_gameOverPanel.Visible = true)
+            select Nothing;
+
+        private Either<IFailure, Unit> MakeGameOverPanelVisible(Action setVisible) => Ensure(setVisible);
+
+        private Either<IFailure, Unit> AddPanelsToUi() => Ensure(() =>
+        {
+            UserInterface.Active.AddEntity(_mainMenuPanel);
+            UserInterface.Active.AddEntity(_controlsPanel);
+            UserInterface.Active.AddEntity(_gameOverPanel);
+        });
+
+        private Either<IFailure, Unit> CreatePanels() => EnsureWithReturn(() =>
+            from mainMenuPanel in (Either<IFailure, Panel>) (_mainMenuPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
+            from gameOverPanel in (Either<IFailure, Panel>) (_gameOverPanel = new Panel())
+            from controlsPanel in (Either<IFailure, Panel>) (_controlsPanel = new Panel(size: new Vector2(500, 500), skin: PanelSkin.Default))
+            select Nothing).UnWrap();
+
+        private Either<IFailure, Unit> SetupMainMenuPanel() => Ensure(() =>
+        {
+            var diagnostics = new Button("Diagnostics On/Off");
+            var controlsButton = new Button("Controls", ButtonSkin.Fancy);
+            var quitButton = new Button(text: "Quit Game", skin: ButtonSkin.Alternative);
+            var startGameButton = new Button("New");
+            var saveGameButton = new Button("Save");
+            var loadGameButton = new Button("Load");
+
+            HideMenu(SetMenuPanelNotVisibleFn);
+
+            _mainMenuPanel.AdjustHeightAutomatically = true;
+            _mainMenuPanel.AddChild(new Header("Main Menu"));
+            _mainMenuPanel.AddChild(new HorizontalLine());
+            _mainMenuPanel.AddChild(new Paragraph("Welcome to Mazer", Anchor.AutoCenter));
+            _mainMenuPanel.AddChild(startGameButton);
+            _mainMenuPanel.AddChild(saveGameButton);
+            _mainMenuPanel.AddChild(loadGameButton);
+            _mainMenuPanel.AddChild(controlsButton);
+            _mainMenuPanel.AddChild(diagnostics);
+            _mainMenuPanel.AddChild(quitButton);
+
+            startGameButton.OnClick += (Entity entity) =>
+            {
+                _currentLevel = 1;
+                StartLevel(_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied);
+            };
+
+            saveGameButton.OnClick += (e) =>
+            {
+                _gameWorld.Bind(world => world.SaveLevel());
+                StartOrContinueLevel(isFreshStart: false, theGameWorld: _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState, ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups);
+            };
+
+            loadGameButton.OnClick += (e) => StartLevel(_currentLevel, _gameWorld,SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false);
+            diagnostics.OnClick += (Entity entity) => EnableAllDiagnostics();
+            quitButton.OnClick += (Entity entity) => QuitGame().ThrowIfFailed();
+            controlsButton.OnClick += (entity) => _controlsPanel.Visible = true;
+        }, ExternalLibraryFailure.Create("Unable to setup main menu panel"));
+
+        private void SetMenuPanelNotVisibleFn() => _mainMenuPanel.Visible = false;
+
+        private Either<IFailure, Unit> SetupInstructionsPanel() => Ensure(() =>
+        {
+            var closeControlsPanelButton = new Button("Back");
+
+            _controlsPanel.Visible = false;
+            _controlsPanel.AdjustHeightAutomatically = true;
+            _controlsPanel.AddChild(new Header("Mazer's Controls"));
+            _controlsPanel.AddChild(new RichParagraph(
+                "Hi welcome to {{BOLD}}Mazer{{DEFAULT}}, the goal of the game is to {{YELLOW}}collect{{DEFAULT}} all the balloons, while avoiding the enemies.\n\n" +
+                "A level is cleared when all the ballons are collected.\n\n" +
+                "You can move the player using the {{YELLOW}}arrows keys{{DEFAULT}}.\n\n" +
+                "You have the ability to walk through walls but your enemies can't - however any walls you do remove will allow enemies to see and follow you!\n\n" +
+                "{{BOLD}}Good Luck!"));
+            _controlsPanel.AddChild(closeControlsPanelButton);
+            closeControlsPanelButton.OnClick += (entity) => _controlsPanel.Visible = false;
+        }, ExternalLibraryFailure.Create("Failed to setup instructions panel"));
+
+        private Either<IFailure, Unit> SetupGameOverMenu(Panel gameOverPanel) => Ensure(() =>
+        {
+            var closeButton = new Button("Return to main menu");
+            var restartLevel = new Button("Try again");
+            var quit = new Button("Quit game");
+
+            gameOverPanel.ClearChildren();
+            gameOverPanel.AddChild(new Header("You died!"));
+            gameOverPanel.AddChild(new RichParagraph("You had {{YELLOW}}" + _playerPoints + "{{DEFAULT}} points.{{DEFAULT}}"));
+            gameOverPanel.AddChild(new RichParagraph("You picked up {{YELLOW}}" + _playerPickups +
+                                                      "{{DEFAULT}} pick-ups.{{DEFAULT}}"));
+            gameOverPanel.AddChild(new RichParagraph("You reach level {{YELLOW}}" + _currentLevel + "{{DEFAULT}}.{{DEFAULT}}\n"));
+            gameOverPanel.AddChild(new RichParagraph("Try again to {{BOLD}}improve!\n"));
+            gameOverPanel.AddChild(restartLevel);
+            gameOverPanel.AddChild(closeButton);
+            gameOverPanel.Visible = false;
+
+            closeButton.OnClick += (button) =>
+            {
+                SetPlayerDied(false);
+                gameOverPanel.Visible = false;
                 _currentGameState = GameStates.Paused;
-                ShowMenu();
-            }
-            else
+            };
+
+            restartLevel.OnClick += (button) =>
             {
-                // resume
-                HideMenu();
-                StartOrContinueLevel(isFreshStart: false);
-            }
-        }
+                _playerDied = false;
+                gameOverPanel.Visible = false;
+                StartLevel(_currentLevel, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied);
+            };
 
-        private void OnGameWorldOnOnPlayerDied(List<Component> components)
-        {
-            // We don't have a game over state, as we use the pause state and then show a game over screen
-            _playerDied = true;
-            ShowGameOverScreen();
-            _currentGameState = GameStates.Paused;
-        }
+            quit.OnClick += (b) => QuitGame().ThrowIfFailed();
+        });
+        
+        // Utility functions
 
-        private void OnPauseStateChanged(State state, State.StateChangeReason reason)
+        private Either<IFailure, int> ReadPlayerHealth(Component healthComponent) 
+            => from value in TryCastToT<int>(healthComponent.Value)
+                from set in (Either<IFailure, int>) SetPlayerHealthScalar(value)
+                select set;
+
+        private Either<IFailure, int> ReadPlayerPoints(Component pointsComponent) 
+            => from value in TryCastToT<int>(pointsComponent.Value)
+                from set in (Either<IFailure, int>) SetPlayerPointsScalar(value) 
+                select set;
+
+        private Either<IFailure, Unit> ProgressToLevel(int level, int playerHealth, int playerPoints) => StartLevel(level, _gameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false, playerHealth, playerPoints);
+
+        internal Either<IFailure, Unit> MovePlayerInDirection(CharacterDirection dir, GameTime dt) =>
+            from gameWorld in _gameWorld
+            from move in gameWorld.MovePlayer(dir, dt)
+            select Nothing;
+
+        internal Either<IFailure, Unit> UpdateGameWorld(GameTime dt) => // Hides GameWorld from PlayingState
+            from gameWorld in _gameWorld
+            from update in gameWorld.Update(dt)
+            select Nothing;
+
+        private int ResetPlayerPickups() => _playerPickups = 0;
+        private int ResetPlayerPoints() => _playerPoints = 0;
+        private int ResetPlayerHealth() => _playerHealth = 100;
+        private bool SetPlayerDied(bool trueOrFalse) => _playerDied = trueOrFalse;
+        private int SetPlayerHealthScalar(int v) => _playerHealth = v;
+        private int SetPlayerPointsScalar(int v) => _playerPoints = v;
+        private Either<IFailure, Unit> QuitGame() => Ensure(Exit);
+        private Either<IFailure, Unit> ResumeGame(Either<IFailure, GameWorld> theGameWorld)
+            => from hideMenuResult in HideMenu(SetMenuPanelNotVisibleFn)
+                from startOrContinueLevelResult in StartOrContinueLevel(isFreshStart: false, theGameWorld: theGameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups)
+                select startOrContinueLevelResult;
+        private GameStates SetGameToPlayingState() => (_currentGameState = GameStates.Playing);
+        
+        // Subscription functions
+
+        private GameWorld SubscribeToGameWorldEvents(GameWorld theWorld)
         {
-            if (reason == State.StateChangeReason.Enter)
+            theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
+            theWorld.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
+            theWorld.OnPlayerDirectionChanged += direction => Ensure(() => _characterDirection = direction);
+            theWorld.OnPlayerCollisionDirectionChanged += direction => Ensure(() => _characterCollisionDirection = direction);
+            theWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
+            theWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+            theWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+            theWorld.OnLevelCleared += level => ProgressToLevel(++_currentLevel, _playerHealth, _playerPoints).ThrowIfFailed();
+            theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            return theWorld;
+        }
+        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) =>
+            from world in _gameWorld
+            from result in world.OnKeyUp(sender, keyboardEventArgs)
+            select Nothing;
+        private Either<IFailure, Unit> OnEscapeKeyReleased() =>
+            IsPlayingGame(_currentGameState) 
+                ? PauseGame(()=>_currentGameState = GameStates.Paused, ()=>_mainMenuPanel.Visible = true) 
+                : ResumeGame(_gameWorld);
+        private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() => EnsureWithReturn(() =>
+            from playerDied in (Either<IFailure, bool>) (_playerDied = true)
+            from result in ShowGameOverScreen() // We don't have a game over state, as we use the pause state and then show a game over screen
+            from currentGameState in (Either<IFailure, GameStates>) (_currentGameState = GameStates.Paused)
+            select Nothing).UnWrap();
+        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) 
+            => IsStateEntered(reason)
+                ? from playResult in PlayMenuMusic(_menuMusic)
+                  from showResult in ShowMenu(()=>_mainMenuPanel.Visible = true)
+                    select showResult
+                : Nothing;
+        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount)
+        {
+            _numGameObjects = runningTotalCount; // We'll keep track of how many pickups the player picks up over time
+
+            return gameObject.Match( Some:IncrementPlayerPickupCount, 
+                                     None: () => NotFound.Create("Game Object was invalid").ToEitherFailure<Unit>());
+
+            Either<IFailure, Unit> IncrementPlayerPickupCount(GameObject o) => Ensure(() =>
             {
-                PlayMenuMusic();
-                ShowMenu();
-            }
+                if (o.IsNpcType(Npc.NpcTypes.Pickup) && removed)
+                    _playerPickups++;
+            });
+
         }
-
-        // Inform the UI that game objects have been removed or added
-        private void OnGameObjectAddedOrRemoved(GameObject gameObject, bool removed, int runningTotalCount)
-        {
-            _numGameObjects = runningTotalCount;
-
-            // We'll keep track of how many pickups the player picks up over time
-            if (gameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
-                _playerPickups++;
-        }
-
-        // Update the UI when something interesting about the player's inventory changes (health, damage)
-        private void OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
-        {
-            switch (componentType)
-            {
-                // Player changed somehow
-                case Component.ComponentType.Health:
-                    _playerHealth = (int)newValue;
-                    break;
-                case Component.ComponentType.Points:
-                    _playerPoints = (int)newValue;
-                    break;
-            }
-        }
-
-
-        /// <summary>
-        /// Update collision events statistics received from the game world
-        /// </summary>
-        /// <param name="object1">object involved in collision</param>
-        /// <param name="object2">other object involved in collisions</param>
-        private void _gameWorld_OnGameWorldCollision(GameObject object1, GameObject object2)
-        {
-            if (object1.Type == GameObject.GameObjectType.Npc)
-                _numCollisionsWithPlayerAndNpCs++;
-
-            _numGameCollisionsEvents++;
-        }
+        private Either<IFailure, Unit> OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
+            from value in TryCastToT<int>(newValue)
+            from setResult in SetPlayerDetails(componentType, value, 
+                SetPlayerHealthScalar,
+                SetPlayerPointsScalar)
+            select Nothing;
+        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
+            from points in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Points, "Could not find points component on player")
+                .Map(ReadPlayerPoints)
+            from health in levelDetails.Player.Components
+                .SingleOrFailure(o => o.Type == Component.ComponentType.Health, "could not find the health component on the player")
+                .Map(ReadPlayerHealth)
+            select Nothing;
+        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/) =>
+            from gameObject1 in object1.ToEither(NotFound.Create("Game Object was invalid or not found"))
+            from result in IncrementCollisionStats(gameObject1, 
+                ()=> _numCollisionsWithPlayerAndNpCs++, 
+                    ()=>  _numGameCollisionsEvents++)
+            select Nothing;
     }
 }
