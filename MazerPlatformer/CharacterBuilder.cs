@@ -18,9 +18,9 @@ namespace MazerPlatformer
         public int Cols { get; }
 
         private readonly Random _random = new Random();
-        private IContentManager ContentManager { get; }
+        private IGameContentManager ContentManager { get; }
 
-        public CharacterBuilder(IContentManager contentManager, int rows, int cols)
+        public CharacterBuilder(IGameContentManager contentManager, int rows, int cols)
         {
             ContentManager = contentManager;
             Rows = rows;

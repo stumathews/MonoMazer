@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using C3.XNA;
+using GameLibFramework.Drawing;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -134,7 +135,7 @@ namespace MazerPlatformer
                 CD = Bottom
                 AD = Left  
         */
-        public static Either<IFailure, Unit> DrawSide(Room.Side side, Dictionary<Room.Side, SideCharacteristic> sideProperties, RectDetails rectangle, SpriteBatch spriteBatch, bool[] hasSides) => Ensure(() =>
+        public static Either<IFailure, Unit> DrawSide(Room.Side side, Dictionary<Room.Side, SideCharacteristic> sideProperties, RectDetails rectangle, ISpriteBatcher spriteBatcher, bool[] hasSides) => Ensure(() =>
         {
 
             DrawTheSide(side, strategy: (sde) => topStrategy(sde));
@@ -142,18 +143,18 @@ namespace MazerPlatformer
             DrawTheSide(side, strategy: (sde) => bottomStrategy(sde));
             DrawTheSide(side, strategy: (sde) => leftStrategy(sde));
 
-            void DrawTopLine(Room.Side sde) => spriteBatch.DrawLine(rectangle.GetAx(), rectangle.GetAy(), rectangle.GetBx(), rectangle.GetBy(), sideProperties[sde].Color, Room.WallThickness);
-            void DrawBottomLine(Room.Side sde) => spriteBatch.DrawLine(rectangle.GetCx(), rectangle.GetCy(), rectangle.GetDx(), rectangle.GetDy(), sideProperties[sde].Color, Room.WallThickness);
-            void DrawRightLine(Room.Side sde) => spriteBatch.DrawLine(rectangle.GetBx(), rectangle.GetBy(), rectangle.GetCx(), rectangle.GetCy(), sideProperties[sde].Color, Room.WallThickness);
-            void DrawLeftLine(Room.Side sde) => spriteBatch.DrawLine(rectangle.GetDx(), rectangle.GetDy(), rectangle.GetAx(), rectangle.GetAy(), sideProperties[sde].Color, Room.WallThickness);
+            void DrawTopLine(Room.Side sde) => spriteBatcher.DrawLine(rectangle.GetAx(), rectangle.GetAy(), rectangle.GetBx(), rectangle.GetBy(), sideProperties[sde].Color, Room.WallThickness);
+            void DrawBottomLine(Room.Side sde) => spriteBatcher.DrawLine(rectangle.GetCx(), rectangle.GetCy(), rectangle.GetDx(), rectangle.GetDy(), sideProperties[sde].Color, Room.WallThickness);
+            void DrawRightLine(Room.Side sde) => spriteBatcher.DrawLine(rectangle.GetBx(), rectangle.GetBy(), rectangle.GetCx(), rectangle.GetCy(), sideProperties[sde].Color, Room.WallThickness);
+            void DrawLeftLine(Room.Side sde) => spriteBatcher.DrawLine(rectangle.GetDx(), rectangle.GetDy(), rectangle.GetAx(), rectangle.GetAy(), sideProperties[sde].Color, Room.WallThickness);
 
             Either<IFailure, Room.Side> DrawTheSide(Room.Side desiredSide, Func<Room.Side, Either<IFailure, Room.Side>> strategy) => 
                     from canDrawLine in MaybeTrue(() => Diagnostics.DrawLines && HasSide(desiredSide, hasSides)).ToEither()
                     from strategyResult in strategy(desiredSide)
                     from canDrawRectangle in MaybeTrue(()=>Diagnostics.DrawSquareSideBounds).ToEither()
-                    from rectangleDrawn in Ensure(()=>spriteBatch.DrawRectangle(sideProperties[side].Bounds, Color.White, 2.5f))
+                    from rectangleDrawn in Ensure(()=>spriteBatcher.DrawRectangle(sideProperties[side].Bounds, Color.White, 2.5f))
                     from drawFullRectangle in MaybeTrue(()=>Diagnostics.DrawSquareBounds).ToEither()
-                    from fullResult in Ensure(()=>spriteBatch.DrawRectangle(rectangle.Rectangle, Color.White, 2.5f))
+                    from fullResult in Ensure(()=>spriteBatcher.DrawRectangle(rectangle.Rectangle, Color.White, 2.5f))
                     select desiredSide;
 
             Either<IFailure, Room.Side> topStrategy(Room.Side sde) =>

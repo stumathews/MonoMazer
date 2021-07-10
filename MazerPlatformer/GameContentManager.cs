@@ -2,7 +2,7 @@
 
 namespace MazerPlatformer
 {
-    public class GameContentManager : IContentManager
+    public class GameContentManager : IGameContentManager
     {
         public GameContentManager(ContentManager content)
         {

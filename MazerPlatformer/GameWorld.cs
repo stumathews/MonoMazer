@@ -10,18 +10,19 @@ using LanguageExt;
 using static MazerPlatformer.GameWorldStatics;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
+using GameLibFramework.Drawing;
 
 namespace MazerPlatformer
 {
     /// <summary>
     /// Game world is contains the game elements such as characters, level objects etc that can be updated/drawn each frame
     /// </summary>
-    public class GameWorld : PerFrame
+    public class GameWorld : IGameWorld, PerFrame
     {
         private readonly int _viewPortWidth;
         private readonly int _viewPortHeight;
-        private GameContentManager ContentManager { get; }
-        private SpriteBatch SpriteBatch { get; }
+        private IGameContentManager ContentManager { get; }
+        private ISpriteBatcher SpriteBatcher { get; }
 
         private int Rows { get; set; } // Rows Of rooms
         private int Cols { get; set; } // Columns of rooms
@@ -60,11 +61,11 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, GameWorld> Create(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch) => EnsuringBind(() 
+        public static Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch) => EnsuringBind(() 
             => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
-               select new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
+               select (IGameWorld) new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
         
-        private GameWorld(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        private GameWorld(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -73,7 +74,7 @@ namespace MazerPlatformer
             _roomHeight = viewPortHeight / rows;
             Rows = rows;
             Cols = cols;
-            SpriteBatch = spriteBatch;
+            SpriteBatcher = spriteBatch;
         }
 
         /// <summary>
@@ -82,7 +83,7 @@ namespace MazerPlatformer
         /// Add rooms
         /// Add player 
         /// </summary>
-        internal Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
+        public Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
             from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad)
             from gameWorldLevel in (Either<IFailure, Level>)(_level = newLevel) //set the game world's level
             from levelObjects in gameWorldLevel.Load(ContentManager, overridePlayerHealth, overridePlayerScore)
@@ -212,7 +213,7 @@ namespace MazerPlatformer
         /// We ask each game object within the game world to draw itself
         /// </summary>
         /// <param name="spriteBatch"></param>
-        public Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
+        public Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch)
             => _unloading ? Nothing
                           : GameObjects.Values
                               .Where(obj => obj.Active)

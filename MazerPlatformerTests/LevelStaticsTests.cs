@@ -11,10 +11,6 @@ namespace MazerPlatformer.Tests
     [TestClass()]
     public class LevelStaticsTests
     {
-        [TestMethod()]
-        public void CreateAssetFileTest()
-        {
-            Assert.Fail();
-        }
+        
     }
 }

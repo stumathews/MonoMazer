@@ -1,5 +1,6 @@
 ﻿using C3.XNA;
 using GameLibFramework.Animation;
+using GameLibFramework.Drawing;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -33,7 +34,7 @@ namespace MazerPlatformer
                
 
         // I can draw myself!
-        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch)
+        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch)
         {
             base.Draw(spriteBatch);
 

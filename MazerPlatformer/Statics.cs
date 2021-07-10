@@ -368,7 +368,7 @@ namespace MazerPlatformer
                 ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
                 : either.Value;
 
-        public static Either<IFailure, T> TryLoad<T>(this IContentManager content, string assetName) => EnsureWithReturn(()
+        public static Either<IFailure, T> TryLoad<T>(this IGameContentManager content, string assetName) => EnsureWithReturn(()
             => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}"));
 
         [PureFunction]

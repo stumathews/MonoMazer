@@ -7,6 +7,8 @@ using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.GameObject;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.RoomStatics;
+using GameLibFramework.Drawing;
+
 namespace MazerPlatformer
 {
     public class GameWorldStatics
@@ -98,7 +100,7 @@ namespace MazerPlatformer
         /// <param name="cols"></param>
         /// <param name="spriteBatch"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> Validate(GameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, SpriteBatch spriteBatch)
+        public static Either<IFailure, Unit> Validate(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch)
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using GameLibFramework.Drawing;
 using GameLibFramework.FSM;
 using LanguageExt;
 using Microsoft.Xna.Framework;
@@ -87,12 +88,12 @@ namespace MazerPlatformer
         }
 
         // Draw pipeline for drawing a Room (all drawing operations must succeed - benefit)
-        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
-            from baseDraw in base.Draw(spriteBatch)
-            from topDraw in DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatch, HasSides)
-            from rightDraw in DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatch, HasSides)
-            from bottomDraw in DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatch, HasSides)
-            from leftDraw in DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatch, HasSides)
+        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher) =>
+            from baseDraw in base.Draw(spriteBatcher)
+            from topDraw in DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatcher, HasSides)
+            from rightDraw in DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatcher, HasSides)
+            from bottomDraw in DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatcher, HasSides)
+            from leftDraw in DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatcher, HasSides)
                 select Nothing;
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior

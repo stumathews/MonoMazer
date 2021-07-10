@@ -1,4 +1,5 @@
 ﻿using GameLibFramework.Animation;
+using GameLibFramework.Drawing;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -211,7 +212,7 @@ namespace MazerPlatformer
             => SetCharacterDirection(dir);
 
         // both call into external libs
-        public override Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
+        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch) =>
             from baseDraw in base.Draw(spriteBatch)
             from animationDraw in Ensure(() => Animation.Draw(spriteBatch))
             select Nothing;

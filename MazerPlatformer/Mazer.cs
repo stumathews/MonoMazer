@@ -12,19 +12,23 @@ using Microsoft.Xna.Framework.Media;
 using static MazerPlatformer.Character;
 using static MazerPlatformer.MazerStatics;
 using static MazerPlatformer.Statics;
+using GameLibFramework.Drawing;
 
 namespace MazerPlatformer
 {
+
+
     public class Mazer : Game
     {
-        private Either<IFailure, SpriteBatch> _spriteBatch = UninitializedFailure.Create<SpriteBatch>(nameof(_spriteBatch));
+        private Either<IFailure, ISpriteBatcher> _spriteBatch = UninitializedFailure.Create<ISpriteBatcher>(nameof(_spriteBatch));
 
-        public static SpriteFont GetGameFont() => _font;
+        public static IGameSpriteFont GetGameFont() => _font;
         private Song _menuMusic;
-        private static SpriteFont _font;
+        //private static SpriteFont _font;
+        private static IGameSpriteFont _font;
         
-        private Either<IFailure, CommandManager> _gameCommands = UninitializedFailure.Create<CommandManager>(nameof(_gameCommands));
-        private Either<IFailure, GameWorld> _gameWorld = UninitializedFailure.Create<GameWorld>(nameof(_gameWorld));
+        private Either<IFailure, ICommandManager> _gameCommands = UninitializedFailure.Create<ICommandManager>(nameof(_gameCommands));
+        private Either<IFailure, IGameWorld> _gameWorld = UninitializedFailure.Create<IGameWorld>(nameof(_gameWorld));
         private Either<IFailure, FSM> _gameStateMachine = UninitializedFailure.Create<FSM>(nameof(_gameStateMachine));
         
         private PauseState _pauseState;
@@ -53,6 +57,9 @@ namespace MazerPlatformer
         private int _numGameObjects;
 
         private GameContentManager GameContentManager = null;
+        private IGameUserInterface gameUserInterface = null;
+        private IMusicPlayer musicPlayer = new MusicPlayer();
+        private IGameGraphicsDevice gameGraphicsDevice = null;
 
         private bool _playerDied = false; // eventually this will be useful and used.
         
@@ -60,6 +67,7 @@ namespace MazerPlatformer
         {
             var initializationPipeline = 
                 from graphics in InitializeGraphicsDevice()
+                from set in EnsureWithReturn(()=> gameGraphicsDevice = graphics)
                 from software in CreateInfrastructure()
                 select Nothing;
 
@@ -77,7 +85,7 @@ namespace MazerPlatformer
             var loadContentPipeline = 
                 from loadedFont in GameContentManager.TryLoad<SpriteFont>("Sprites/gameFont")
                 from loadedMusic in GameContentManager.TryLoad<Song>("Music/bgm_menu")
-                from setFontResult in SetGameFont(() => _font = loadedFont)
+                from setFontResult in SetGameFont(() => _font = (IGameSpriteFont) new GameSpriteFont(loadedFont))
                 from setMusicResult in SetMenuMusic(()=> _menuMusic = loadedMusic)
                 from loadedGameWorld in LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints) 
                 select loadedGameWorld;
@@ -130,9 +138,9 @@ namespace MazerPlatformer
             // Execute the update pipeline
             var updatePipeline = 
                 from baseUpdateResult in Ensure(() => base.Update(gameTime))
-                 from updateActiveUiComponents in UpdateUi(gameTime)
-                 from updatedGameCommandsResult in UpdateCommands(_gameCommands, gameTime) // get input
-                 from set in _gameCommands = updatedGameCommandsResult
+                 from updateActiveUiComponents in UpdateUi(gameTime, gameUserInterface)
+                 //from updatedGameCommandsResult in UpdateCommands(_gameCommands, gameTime) // get input
+                 from set in (_gameCommands = UpdateCommands(_gameCommands, gameTime))
                  from gameStateMachine in _gameStateMachine
                  from stateMachineResult in UpdateStateMachine(gameTime, gameStateMachine)// NB: game world is updated by PlayingGameState
                 select Nothing;
@@ -148,16 +156,16 @@ namespace MazerPlatformer
         {
             var drawPipeline = 
                 from baseDrawResult in Ensure(() => base.Draw(gameTime))
-                from clearResult in ClearGraphicsDevice(_currentGameState, GraphicsDevice)
+                from clearResult in ClearGraphicsDevice(_currentGameState, gameGraphicsDevice)
                 from spriteBatch in _spriteBatch
                 from beginResult in BeginSpriteBatch(spriteBatch)
                 from drawGameWorldResult in DrawGameWorld(spriteBatch, _gameWorld)
-                from statResult in DrawPlayerStatistics(spriteBatch, _font, GraphicsDevice, _currentLevel, _playerHealth, _playerPoints).IgnoreFailure()
-                from gameStatsResult in PrintGameStatistics(spriteBatch, gameTime, _font, GraphicsDevice,_numGameObjects,_numGameCollisionsEvents,
+                from statResult in DrawPlayerStatistics(spriteBatch, _font, gameGraphicsDevice, _currentLevel, _playerHealth, _playerPoints).IgnoreFailure()
+                from gameStatsResult in PrintGameStatistics(spriteBatch, gameTime, _font, gameGraphicsDevice,_numGameObjects,_numGameCollisionsEvents,
                                                                 _numCollisionsWithPlayerAndNpCs, _characterState, _characterDirection,
                                                                 _characterCollisionDirection, _currentGameState).IgnoreFailure()
                 from spriteBatchAfterEnd in EndSpriteBatch(spriteBatch)
-                from uiDrawResult in Ensure(() => UserInterface.Active.Draw(spriteBatchAfterEnd))
+                from uiDrawResult in Ensure(() => gameUserInterface.Draw())
                 select Nothing;
 
             drawPipeline.ThrowIfFailed();
@@ -195,7 +203,9 @@ namespace MazerPlatformer
         {
             _gameCommands = new CommandManager();
             _gameStateMachine = new FSM(this);
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            var sp = new SpriteBatch(GraphicsDevice);
+            _spriteBatch = new SpriteBatcher(sp);
+            gameUserInterface = new GameUserInterface(sp);
             GameContentManager =  
                 (from contentManager in CreateContentManager()
                 select contentManager).ThrowIfFailed();
@@ -211,7 +221,7 @@ namespace MazerPlatformer
             IsFixedTimeStep = false;
         }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
 
-        private Either<IFailure, GraphicsDevice> InitializeGraphicsDevice() => EnsureWithReturn(() =>
+        private Either<IFailure, IGameGraphicsDevice> InitializeGraphicsDevice() => EnsureWithReturn(() =>
         {
             var graphicsDeviceManager = new GraphicsDeviceManager(this)
             {
@@ -228,7 +238,7 @@ namespace MazerPlatformer
             };
             graphicsDeviceManager.ApplyChanges();
 
-            return GraphicsDevice;
+            return (IGameGraphicsDevice) new GameGraphicsDevice(GraphicsDevice);
         }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
 
         private Either<IFailure, Unit> InitializeUi() =>
@@ -242,7 +252,7 @@ namespace MazerPlatformer
                 select Nothing
             select setupMenuUi;
 
-        private Either <IFailure, GameWorld> InitializeGameWorld(Either<IFailure, GameWorld> gameWorld, Either<IFailure,CommandManager> gameCommands) =>
+        private Either <IFailure, IGameWorld> InitializeGameWorld(Either<IFailure, IGameWorld> gameWorld, Either<IFailure,ICommandManager> gameCommands) =>
              from world in gameWorld
              from commands in gameCommands
              from init in world.Initialize()
@@ -250,7 +260,7 @@ namespace MazerPlatformer
              from connectedGameWorld in ConnectToGameWorld(world)
              select connectedGameWorld;
 
-        private Either<IFailure, CommandManager> SetupGameCommands(CommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
+        private Either<IFailure, ICommandManager> SetupGameCommands(ICommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
         {
             // Diagnostic keyboard shortcuts
             commands.AddKeyUpCommand(Keys.T, time => ToggleSetting(ref Diagnostics.DrawTop));
@@ -277,7 +287,7 @@ namespace MazerPlatformer
             return commands;
         });
 
-        private Either<IFailure, GameWorld> ConnectToGameWorld(GameWorld gameWorld) 
+        private Either<IFailure, IGameWorld> ConnectToGameWorld(IGameWorld gameWorld) 
             => from connectedGameWorld in EnsureWithReturn(gameWorld, SubscribeToGameWorldEvents)
             select connectedGameWorld;
         
@@ -427,7 +437,7 @@ namespace MazerPlatformer
         private int SetPlayerHealthScalar(int v) => _playerHealth = v;
         private int SetPlayerPointsScalar(int v) => _playerPoints = v;
         private Either<IFailure, Unit> QuitGame() => Ensure(Exit);
-        private Either<IFailure, Unit> ResumeGame(Either<IFailure, GameWorld> theGameWorld)
+        private Either<IFailure, Unit> ResumeGame(Either<IFailure, IGameWorld> theGameWorld)
             => from hideMenuResult in HideMenu(SetMenuPanelNotVisibleFn)
                 from startOrContinueLevelResult in StartOrContinueLevel(isFreshStart: false, theGameWorld: theGameWorld, SetMenuPanelNotVisibleFn, SetGameToPlayingState,  ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups)
                 select startOrContinueLevelResult;
@@ -435,7 +445,7 @@ namespace MazerPlatformer
         
         // Subscription functions
 
-        private GameWorld SubscribeToGameWorldEvents(GameWorld theWorld)
+        private IGameWorld SubscribeToGameWorldEvents(IGameWorld theWorld)
         {
             theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
             theWorld.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
@@ -467,7 +477,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason) 
             => IsStateEntered(reason)
-                ? from playResult in PlayMenuMusic(_menuMusic)
+                ? from playResult in PlayMenuMusic(musicPlayer, _menuMusic)
                   from showResult in ShowMenu(()=>_mainMenuPanel.Visible = true)
                     select showResult
                 : Nothing;

@@ -1,6 +1,6 @@
 ﻿namespace MazerPlatformer
 {
-    public interface IContentManager
+    public interface IGameContentManager
     {
          T Load<T>(string assetName);
     }

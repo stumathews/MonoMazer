@@ -17,6 +17,8 @@ using static MazerPlatformer.Level;
 namespace MazerPlatformer.Tests
 {
 
+   
+
     internal class DummyGraphicsDeviceManager : IGraphicsDeviceService
     {
       public GraphicsDevice GraphicsDevice { get; private set; }
@@ -95,33 +97,27 @@ namespace MazerPlatformer.Tests
     {
 
 
-        Level BasicLevelObject { get; set; }
-        Player Player1 { get; set; }
-        Player Player2 { get; set; }
-        Player Player3 { get; set; }
-        Npc Npc1 { get; set; }
-        Npc Pickup { get; set; }
-        IContentManager GameContentManager { get; set; }
-        DummyGraphicsDeviceManager DummyGraphicsDeviceManager { get; set; }
-        Dictionary<string, GameObject> GameObjects { get; set; }
-        CharacterBuilder CharacterBuilder { get; set; }
-        List<Room> Rooms { get; set; }
+        public Level BasicLevelObject { get; set; }
+        public Player Player1 { get; set; }
+        public Player Player2 { get; set; }
+        public Player Player3 { get; set; }
+        public Npc Npc1 { get; set; }
+        public Npc Pickup { get; set; }
+        public IGameContentManager GameContentManager { get; set; }
+        public Dictionary<string, GameObject> GameObjects { get; set; }
+        public CharacterBuilder CharacterBuilder { get; set; }
+        public List<Room> Rooms { get; set; }
 
 
         void ResetObjectStates()
         {
-            var mockGameContentManager = new Mock<IContentManager>();
+            var mockGameContentManager = new Mock<IGameContentManager>();
             mockGameContentManager.Setup(x => x.Load<Texture2D>(It.IsAny<string>())).Returns(() => SneakyTexture2D.CreateNamed(""));
-            mockGameContentManager.Setup(x => x.Load<Song>(It.IsAny<string>())).Returns(() => (Song)System.Runtime.Serialization.FormatterServices
-          .GetUninitializedObject(typeof(Song)));
+            mockGameContentManager.Setup(x => x.Load<Song>(It.IsAny<string>())).Returns(() => (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song)));
             GameContentManager = mockGameContentManager.Object;
             BasicLevelObject = new Level(10, 10, 10, 10, 1, new Random());
             BasicLevelObject.Load(GameContentManager);
-            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 1, 1);
-
-
-
-
+            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10);
             Player1 = new Player(1, 1, 1, 1, new GameLibFramework.Animation.AnimationInfo(null, "player1"));
             Player2 = new Player(1, 1, 1, 1, new GameLibFramework.Animation.AnimationInfo(null, "player2"));
             Player3 = new Player(1, 1, 1, 1, new GameLibFramework.Animation.AnimationInfo(null, "player3"));
@@ -137,18 +133,8 @@ namespace MazerPlatformer.Tests
             };
         }
 
-        [AssemblyInitialize]
-        public static void AssemblyInit(TestContext context)
-        {
 
-        }
-
-        [AssemblyCleanup]
-        public static void AssemblyCleanup()
-        {
-
-        }
-
+        
         [ClassInitialize]
         public static void ClassInitialize(TestContext context)
         {
@@ -461,20 +447,237 @@ namespace MazerPlatformer.Tests
             var wasCalled = new List<string>();
             var wasRemoved = new Dictionary<string, bool>();
 
-            Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) =>Ensure(()=>
-            { 
-                wasCalled.Add(gameObject.ThrowIfNone().Id);
-                wasRemoved.Add(gameObject.ThrowIfNone().Id, isRemoved);
-            });
+            Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) => Ensure(() =>
+             {
+                 wasCalled.Add(gameObject.ThrowIfNone().Id);
+                 wasRemoved.Add(gameObject.ThrowIfNone().Id, isRemoved);
+             });
 
-            AddToGameWorld( levelGameObjects, gameWorldObjects, GameObjectAddedOrRemoved );
+            AddToGameWorld(levelGameObjects, gameWorldObjects, GameObjectAddedOrRemoved);
 
-            foreach(var obj in levelGameObjects)
+            foreach (var obj in levelGameObjects)
             {
                 var id = obj.Key;
                 Assert.IsTrue(wasCalled.Contains(id));
                 Assert.IsTrue(wasRemoved[id] == false);
             }
+        }
+
+        [TestMethod()]
+        public void ValidateTest()
+        {
+            Assert.IsTrue(Validate(GameContentManager, 0, 0, 0, 0, null).IsLeft);
+        }
+
+        [TestMethod()]
+        public void SortBySizeTest()
+        {
+            var (greater, smaller) = SortBySize(25, 50);
+            Assert.IsTrue(greater > smaller);
+            Assert.IsTrue(greater == 50);
+            Assert.IsTrue(smaller == 25);
+            (greater, smaller) = SortBySize(1, 0);
+            Assert.IsTrue(greater > smaller);
+            Assert.IsTrue(greater == 1);
+            Assert.IsTrue(smaller == 0);
+            (greater, smaller) = SortBySize(50, 25);
+            Assert.IsTrue(greater > smaller);
+            Assert.IsTrue(greater == 50);
+            Assert.IsTrue(smaller == 25);
+        }
+
+        [TestMethod()]
+        public void GetMaxMinRangeTest()
+        {
+            var (greater, smaller) = GetMaxMinRange(25, 50).ThrowIfNone();
+            Assert.IsTrue(greater > smaller);
+            Assert.IsTrue(greater == 50);
+            Assert.IsTrue(smaller == 25);
+        }
+
+        [TestMethod()]
+        public void OnRoomCollisionTest()
+        {
+            var sideCharacteristic = new SideCharacteristic(Microsoft.Xna.Framework.Color.Blue, new Microsoft.Xna.Framework.Rectangle());
+            var room = Rooms[0];
+            room.HasSides = new bool[] { true, true, true, true };
+            OnRoomCollision(Rooms[0], Player1, Room.Side.Bottom, sideCharacteristic);
+            Assert.IsFalse(room.HasSides[2]);
+            Assert.IsTrue(room.HasSides[0]);
+            Assert.IsTrue(room.HasSides[1]);
+            Assert.IsTrue(room.HasSides[3]);
+        }
+
+        [TestMethod()]
+        public void IsSameRowTest()
+        {
+            Assert.IsTrue(IsSameRow(Rooms[0], Rooms[9], 10));
+            Assert.IsTrue(IsSameRow(Rooms[10], Rooms[19], 10));
+            Assert.IsTrue(IsSameRow(Rooms[20], Rooms[29], 10));
+            Assert.IsTrue(IsSameRow(Rooms[30], Rooms[39], 10));
+            Assert.IsTrue(IsSameRow(Rooms[40], Rooms[49], 10));
+            Assert.IsTrue(IsSameRow(Rooms[50], Rooms[59], 10));
+            Assert.IsTrue(IsSameRow(Rooms[60], Rooms[69], 10));
+            Assert.IsTrue(IsSameRow(Rooms[70], Rooms[79], 10));
+            Assert.IsTrue(IsSameRow(Rooms[80], Rooms[89], 10));
+            Assert.IsTrue(IsSameRow(Rooms[90], Rooms[99], 10));
+        }
+
+        [TestMethod()]
+        public void IsSameColTest()
+        {
+            Assert.IsTrue(IsSameCol(Rooms[0], Rooms[10], 10));
+            Assert.IsTrue(IsSameCol(Rooms[1], Rooms[11], 10));
+            Assert.IsTrue(IsSameCol(Rooms[2], Rooms[12], 10));
+            Assert.IsTrue(IsSameCol(Rooms[3], Rooms[13], 10));
+            Assert.IsTrue(IsSameCol(Rooms[4], Rooms[14], 10));
+            Assert.IsTrue(IsSameCol(Rooms[5], Rooms[15], 10));
+            Assert.IsTrue(IsSameCol(Rooms[6], Rooms[16], 10));
+            Assert.IsTrue(IsSameCol(Rooms[7], Rooms[17], 10));
+            Assert.IsTrue(IsSameCol(Rooms[8], Rooms[18], 10));
+            Assert.IsTrue(IsSameCol(Rooms[9], Rooms[19], 10));
+
+        }
+
+        [TestMethod()]
+        public void GetObjRowTest()
+        {
+            Assert.IsTrue(GetObjRow(Rooms[0], 10) == 0);
+            Assert.IsTrue(GetObjRow(Rooms[11], 10) == 1);
+            Assert.IsTrue(GetObjRow(Rooms[22], 10) == 2);
+            Assert.IsTrue(GetObjRow(Rooms[33], 10) == 3);
+            Assert.IsTrue(GetObjRow(Rooms[44], 10) == 4);
+            Assert.IsTrue(GetObjRow(Rooms[55], 10) == 5);
+            Assert.IsTrue(GetObjRow(Rooms[66], 10) == 6);
+            Assert.IsTrue(GetObjRow(Rooms[77], 10) == 7);
+            Assert.IsTrue(GetObjRow(Rooms[88], 10) == 8);
+            Assert.IsTrue(GetObjRow(Rooms[99], 10) == 9);
+
+        }
+
+        [TestMethod()]
+        public void GetObjColTest()
+        {
+            Assert.IsTrue(GetObjCol(Rooms[0], 10) == 0);
+            Assert.IsTrue(GetObjCol(Rooms[11], 10) == 1);
+            Assert.IsTrue(GetObjCol(Rooms[22], 10) == 2);
+            Assert.IsTrue(GetObjCol(Rooms[33], 10) == 3);
+            Assert.IsTrue(GetObjCol(Rooms[44], 10) == 4);
+            Assert.IsTrue(GetObjCol(Rooms[55], 10) == 5);
+            Assert.IsTrue(GetObjCol(Rooms[66], 10) == 6);
+            Assert.IsTrue(GetObjCol(Rooms[77], 10) == 7);
+            Assert.IsTrue(GetObjCol(Rooms[88], 10) == 8);
+            Assert.IsTrue(GetObjCol(Rooms[99], 10) == 9);
+        }
+
+        [TestMethod()]
+        public void GetRoomsInThisRowTest()
+        {
+            var row = GetObjRow(Rooms[25], 10) - 1 ; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
+            foreach( var rowRoom in GetRoomsInThisRow(Rooms, Rooms[25], 10))
+            {
+                Assert.IsTrue(GetObjRow(rowRoom, 10) == row);
+            }
+        }
+
+        [TestMethod()]
+        public void GetRooomsBetweenTest()
+        {
+            var col = GetObjCol(Rooms[3], 10) -1;
+            foreach( var colRoom in GetRoomsBetween(Rooms, 1, 3, Rooms[3], 10))
+            {
+                Assert.IsTrue(GetObjCol(colRoom, 10) == col);
+            }
+        }
+
+        [TestMethod()]
+        public void GetRoomsInThisColTest()
+        {
+            var col = GetObjCol(Rooms[3], 10) - 1 ; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
+            foreach( var rowRoom in GetRoomsInThisRow(Rooms, Rooms[3], 10))
+            {
+                Assert.IsTrue(GetObjCol(rowRoom, 10) == col);
+            }
+        }
+
+        [TestMethod()]
+        public void GetRoomsBetweenTest()
+        {
+            GetRooomsBetweenTest();
+        }
+
+        [TestMethod()]
+        public void ToRoomColumnTest()
+        {
+            Assert.IsTrue(ToRoomColumn(Rooms[0], 10).ThrowIfNone() == 0);
+            Assert.IsTrue(ToRoomColumn(Rooms[11], 10).ThrowIfNone() == 1);
+            Assert.IsTrue(ToRoomColumn(Rooms[22], 10).ThrowIfNone() == 2);
+            Assert.IsTrue(ToRoomColumn(Rooms[33], 10).ThrowIfNone() == 3);
+            Assert.IsTrue(ToRoomColumn(Rooms[44], 10).ThrowIfNone() == 4);
+            Assert.IsTrue(ToRoomColumn(Rooms[55], 10).ThrowIfNone() == 5);
+            Assert.IsTrue(ToRoomColumn(Rooms[66], 10).ThrowIfNone() == 6);
+            Assert.IsTrue(ToRoomColumn(Rooms[77], 10).ThrowIfNone() == 7);
+            Assert.IsTrue(ToRoomColumn(Rooms[88], 10).ThrowIfNone() == 8);
+            Assert.IsTrue(ToRoomColumn(Rooms[99], 10).ThrowIfNone() == 9);
+        }
+
+        [TestMethod()]
+        public void ToRoomRowTest()
+        {
+            Assert.IsTrue(ToRoomRow(Rooms[0], 10) == 0);
+            Assert.IsTrue(ToRoomRow(Rooms[11], 10) == 1);
+            Assert.IsTrue(ToRoomRow(Rooms[22], 10) == 2);
+            Assert.IsTrue(ToRoomRow(Rooms[33], 10) == 3);
+            Assert.IsTrue(ToRoomRow(Rooms[44], 10) == 4);
+            Assert.IsTrue(ToRoomRow(Rooms[55], 10) == 5);
+            Assert.IsTrue(ToRoomRow(Rooms[66], 10) == 6);
+            Assert.IsTrue(ToRoomRow(Rooms[77], 10) == 7);
+            Assert.IsTrue(ToRoomRow(Rooms[88], 10) == 8);
+            Assert.IsTrue(ToRoomRow(Rooms[99], 10) == 9);
+        }
+
+        [TestMethod()]
+        public void ToRoomColumnFastTest()
+        {
+            Assert.IsTrue(ToRoomColumnFast(Rooms[0], 10) == 0);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[11], 10) == 1);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[22], 10) == 2);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[33], 10) == 3);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[44], 10) == 4);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[55], 10) == 5);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[66], 10) == 6);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[77], 10) == 7);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[88], 10) == 8);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[99], 10)== 9);
+        }
+
+        [TestMethod()]
+        public void ToRoomRowFastTest()
+        {
+            Assert.IsTrue(ToRoomRowFast(Rooms[0], 10) == 0);
+            Assert.IsTrue(ToRoomRowFast(Rooms[11], 10) == 1);
+            Assert.IsTrue(ToRoomRowFast(Rooms[22], 10) == 2);
+            Assert.IsTrue(ToRoomRowFast(Rooms[33], 10) == 3);
+            Assert.IsTrue(ToRoomRowFast(Rooms[44], 10) == 4);
+            Assert.IsTrue(ToRoomRowFast(Rooms[55], 10) == 5);
+            Assert.IsTrue(ToRoomRowFast(Rooms[66], 10) == 6);
+            Assert.IsTrue(ToRoomRowFast(Rooms[77], 10) == 7);
+            Assert.IsTrue(ToRoomRowFast(Rooms[88], 10) == 8);
+            Assert.IsTrue(ToRoomRowFast(Rooms[99], 10)== 9);
+        }
+
+        [TestMethod()]
+        public void OnSameRowTest()
+        {
+            // Requires Static Room data that is not random
+            Assert.Fail();
+        }
+
+        [TestMethod()]
+        public void OnSameColTest()
+        {
+            // Requires Static Room data that is not random
+            Assert.Fail();
         }
     }
 }

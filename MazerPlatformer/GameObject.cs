@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using C3.XNA;
+using GameLibFramework.Drawing;
 using GameLibFramework.FSM;
 using LanguageExt;
 using Microsoft.Xna.Framework;
@@ -208,40 +209,40 @@ namespace MazerPlatformer
         #region Diganostics
 
         // Draw the centre point of the object
-        protected Either<IFailure, Unit> DrawCentrePoint(SpriteBatch spriteBatch)
-            => EnsureIf(Diagnostics.DrawCentrePoint, () =>  spriteBatch.DrawCircle(Centre, 2, 16, Color.Red, 3f))
+        protected Either<IFailure, Unit> DrawCentrePoint(ISpriteBatcher spriteBatcher)
+            => EnsureIf(Diagnostics.DrawCentrePoint, () =>  spriteBatcher.DrawCircle(Centre, 2, 16, Color.Red, 3f))
                 .IgnoreFailure();
 
         // Draw the max point (lower right point)
-        protected Either<IFailure, Unit> DrawMaxPoint(SpriteBatch spriteBatch) 
-            => EnsureIf(Diagnostics.DrawMaxPoint, () => spriteBatch.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
+        protected Either<IFailure, Unit> DrawMaxPoint(ISpriteBatcher spriteBatcher) 
+            => EnsureIf(Diagnostics.DrawMaxPoint, () => spriteBatcher.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
                 .IgnoreFailure();
 
         // Draw the bounding box
-        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(SpriteBatch spriteBatch) 
-            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
+        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(ISpriteBatcher spriteBatcher) 
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatcher.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
                 .IgnoreFailure();
 
         // Draw the bounding sphere
-        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(SpriteBatch spriteBatch)
-            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatch.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(ISpriteBatcher spriteBatcher)
+            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatcher.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
                 .IgnoreFailure();
 
         // Draw all the diagnostics together
-        protected Either<IFailure, Unit> DrawObjectDiagnostics(SpriteBatch spriteBatch) =>
-            DrawCentrePoint(spriteBatch)
-                .Bind(unit => DrawMaxPoint(spriteBatch))
-                .Bind(unit => DrawGameObjectBoundingBox(spriteBatch))
-                .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatch));
+        protected Either<IFailure, Unit> DrawObjectDiagnostics(ISpriteBatcher spriteBatcher) =>
+            DrawCentrePoint(spriteBatcher)
+                .Bind(unit => DrawMaxPoint(spriteBatcher))
+                .Bind(unit => DrawGameObjectBoundingBox(spriteBatcher))
+                .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatcher));
 
         // All game objects can ask to draw some text over it if it wants
         // dependency on Mazer for game font ok.
-        public virtual Either<IFailure, Unit> Draw(SpriteBatch spriteBatch) =>
-            DoIfReturn(!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText, () => DrawText(spriteBatch))
-                .Bind(unit => DrawObjectDiagnostics(spriteBatch))
+        public virtual Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher) =>
+            DoIfReturn(!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText, () => DrawText(spriteBatcher))
+                .Bind(unit => DrawObjectDiagnostics(spriteBatcher))
                 .IgnoreFailure();
 
-        private Either<IFailure, Unit> DrawText(SpriteBatch spriteBatch) => Ensure(() =>
+        private Either<IFailure, Unit> DrawText(ISpriteBatcher spriteBatch) => Ensure(() =>
         {
             spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
             spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);

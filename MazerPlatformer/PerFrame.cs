@@ -1,4 +1,5 @@
-﻿using LanguageExt;
+﻿using GameLibFramework.Drawing;
+using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -13,7 +14,7 @@ namespace MazerPlatformer
         /// Called each frame to draw itself
         /// </summary>
         /// <param name="spriteBatch"></param>
-        Either<IFailure, Unit> Draw(SpriteBatch spriteBatch);
+        Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher);
 
         /// <summary>
         /// Called each frame to update itself
