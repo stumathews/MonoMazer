@@ -29,8 +29,8 @@ namespace MazerPlatformer
 
         public static Option<Component> AddPlayerPointsComponent(Player p) 
         {
-            p.Components.Add(new Component(ComponentType.Health, 100));
-            return GetPlayerHealth(p);
+            p.Components.Add(new Component(ComponentType.Points, 100));
+            return GetPlayerPoints(p);
         }
 
         public static Option<Component> AddPlayerHealthComponent(Player p) 
@@ -75,12 +75,12 @@ namespace MazerPlatformer
             }
         }
 
-       public static Either<IFailure, Unit> SaveLevelFile(Player p, LevelDetails level, string levelFileName)
+       public static Either<IFailure, Unit> SaveLevelFile(Player p, LevelDetails level, IFileSaver fileSaver, string levelFileName)
         {
             // Save Player info into level file
             return 
                 from copy in CopyAnimationInfo(p, level?.Player ?? new LevelPlayerDetails())
-                from saved in Ensure(() => GameLib.Files.Xml.SerializeObject(levelFileName, level))
+                from saved in Ensure(() => fileSaver.SaveLevelFile(level, levelFileName))
                 select Nothing;
         }
 
@@ -109,8 +109,11 @@ namespace MazerPlatformer
                 Ensure(() => { levelDetails.Npcs.Add(details); });
 
         public static Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets, IGrouping<string, Npc> npcByAssetFile)
-            => EnsuringBind<bool>(() => seenAssets.Add(npcByAssetFile.Key)
-                .FailIfTrue(InvalidDataFailure.Create("Could not added")));
+            => EnsuringBind<bool>(() =>
+            {
+                return seenAssets.Add(npcByAssetFile.Key)
+                                .FailIfFalse(InvalidDataFailure.Create($" {npcByAssetFile.Key} Could not added to seen assets"));
+            });
 
         
         // Make sure we actually have health or points for the player
