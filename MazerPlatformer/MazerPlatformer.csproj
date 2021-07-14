@@ -57,6 +57,7 @@
     <Compile Include="Failures\ExceptionFailure.cs" />
     <Compile Include="Failures\ExternalLibraryFailure.cs" />
     <Compile Include="Failures\InvalidDataFailure.cs" />
+    <Compile Include="FileSaver.cs" />
     <Compile Include="GameContentManager.cs" />
     <Compile Include="GameGraphicsDevice.cs" />
     <Compile Include="GameObject.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="GameUserInterface.cs" />
     <Compile Include="GameWorld.cs" />
     <Compile Include="GameWorldStatics.cs" />
+    <Compile Include="IFileSaver.cs" />
     <Compile Include="IGameContentManager.cs" />
     <Compile Include="IFailure.cs" />
     <Compile Include="Failures\InvalidCastFailure.cs" />

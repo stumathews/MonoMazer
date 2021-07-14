@@ -15,6 +15,9 @@ using static MazerPlatformer.LevelStatics;
 
 namespace MazerPlatformer
 {
+
+
+
     // Consider serializing the specification of each type of NPC ie hit values, points etc..
 
     public class Level
@@ -73,7 +76,6 @@ namespace MazerPlatformer
         // Each level has a file
         public string LevelFileName { get; set; }
         public LevelDetails LevelFile { get; internal set; } = new LevelDetails();
-
         // A level is composed of Rooms which contain NPCs and the Player
         public int Rows { get; private set; }
         public int Cols { get; private set; }
@@ -381,10 +383,10 @@ namespace MazerPlatformer
         /// <returns>list of rooms created in the level</returns>
         public Either<IFailure, List<Room>> GetRooms() => EnsureWithReturn(() => _rooms);
 
-        public Either<IFailure, Unit> Unload() => Ensure(() =>
+        public Either<IFailure, Unit> Unload(FileSaver filesaver) => Ensure(() =>
         {
             Maybe(()=>!File.Exists(LevelFileName))
-            .Bind((success)=> Save(shouldSave: true, LevelFile, Player, LevelFileName, Npcs))
+            .Bind((success)=> Save(shouldSave: true, LevelFile, Player, LevelFileName, filesaver, Npcs))
             .ToEither()
             .ThrowIfFailed();
 
@@ -398,14 +400,14 @@ namespace MazerPlatformer
         });
 
         // Save the level information including NPcs and Player info
-        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, List<Npc> npcs) 
+        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, IFileSaver fileSaver, List<Npc> npcs) 
             => MaybeTrue(() => shouldSave)
                     .Match(Some: (unit) => unit.ToEither(),
                            None: () => ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
                     .Bind((either) => MaybeTrue(() => npcs.Count == 0).Match(
                         Some: (unit) => Ensure(() => AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed()),
                         None: () => Nothing.ToEither())
-                    .Bind((unit) => SaveLevelFile(player, levelFile, levelFileName)));
+                    .Bind((unit) => SaveLevelFile(player, levelFile, fileSaver, levelFileName)));
 
         public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
             => Player.SetPlayerVitals(health, points);

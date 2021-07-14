@@ -23,7 +23,7 @@ namespace MazerPlatformer
         private readonly int _viewPortHeight;
         private IGameContentManager ContentManager { get; }
         private ISpriteBatcher SpriteBatcher { get; }
-
+        public FileSaver FileSaver { get; }
         private int Rows { get; set; } // Rows Of rooms
         private int Cols { get; set; } // Columns of rooms
 
@@ -75,6 +75,7 @@ namespace MazerPlatformer
             Rows = rows;
             Cols = cols;
             SpriteBatcher = spriteBatch;
+            FileSaver = new FileSaver();
         }
 
         /// <summary>
@@ -100,14 +101,14 @@ namespace MazerPlatformer
         {
             _unloading = true;
             GameObjects.Clear();
-            _level.Unload(); // TODO: I/O
+            _level.Unload(FileSaver); // TODO: I/O
             _unloading = false;
             _rooms.Clear();
             _removeWallTimer.Stop();
         });
 
         public Either<IFailure, Unit> SaveLevel() 
-            => Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, Level.Npcs);
+            => Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, FileSaver, Level.Npcs);
 
         /// <summary>
         /// The game world will listen events raised by game objects
