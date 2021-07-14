@@ -36,8 +36,8 @@ namespace MazerPlatformer
         {
             
             bool IsComponentFound(GameObject go) => go.FindComponentByType(Component.ComponentType.NpcType)
-                    .Map(found=>(Npc.NpcTypes)found.Value == type)                            
-                    .Match(Some: (o)=>true, None:()=>false);
+                    .Map(found => (Npc.NpcTypes)found.Value == type)                     
+                    .Match(Some: (o)=>o, None:()=>false);
 
             return MaybeTrue(()=>!IsNpc(gameObject))
                     .Match(Some: (unit)=> false, None: ()=> IsComponentFound(gameObject));
