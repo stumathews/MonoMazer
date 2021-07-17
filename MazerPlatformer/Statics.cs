@@ -43,6 +43,7 @@ namespace MazerPlatformer
                     .Match(Some: (unit)=> false, None: ()=> IsComponentFound(gameObject));
         }
 
+        // very impure
         public static Either<IFailure, T> GetRandomEnumValue<T>() => EnsureWithReturn(() =>
         {
             Array GetValues() => Enum.GetValues(typeof(T));
@@ -197,17 +198,9 @@ namespace MazerPlatformer
         public static Either<IFailure, T> EnsureWithReturn<T>(T arg, Func<T, T> action, bool returnInput = false)
             => action.TryThis<T>(arg, returnInput);
 
-        /// <summary>
-        /// Returns the argument that is modified by the supplied function
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="arg"></param>
-        /// <param name="action"></param>
-        /// <returns></returns>
-        public static Either<IFailure, T> EnsureUpdateWithReturn<T>(T arg, Action action)
-            => action.TryThis<T>(arg, true);
-
-        public static Either<L, T> _ensuringBindReturn<L, T>(Func<T> action, L left) where L : IFailure
+        
+        // not tested directly
+        internal static Either<L, T> _ensuringBindReturn<L, T>(Func<T> action, L left) where L : IFailure
             => action._ensuringBindTry<L, T>(left);
 
         public static void IfFailed<R>(this Either<IFailure, R> either, Action<IFailure> action)
@@ -245,7 +238,7 @@ namespace MazerPlatformer
             : Option<bool>.Some(false);
 
         public static Option<T> ToSome<T>(this T t) 
-            => Prelude.Some<T>(t);
+            => t == null ? Prelude.None : Prelude.Some<T>(t);
 
         public static Option<T> ToOption<T>(this T thing) 
             => thing != null 
@@ -261,12 +254,8 @@ namespace MazerPlatformer
         public static Either<L, bool> FailIfFalse<L>(this bool theBool, L theFailure)
             => theBool ? theBool.ToEither<L, bool>() : theFailure.ToEitherFailure<L, bool>();
 
-        public static Either<L, bool> FailIfFalse<L>(this Either<L, bool> theBool, L theFailure)
-            => theBool ? theBool.FailIfFalse(theFailure) : theFailure.ToEitherFailure<L, bool>();
+        public static Either<L, bool> FailIfFalse<L>(this Either<L, bool> theBool, L theFailure) => theBool.Bind((boolean) => boolean == true ? boolean.ToEither<L, bool>() : theFailure.ToEitherFailure<L, bool>());
 
-        // contains I/O
-        public static void IfFailedLogFailure<R>(this Either<IFailure, R> either) =>
-            either.IfLeft(failure => Console.WriteLine($"Draw failed because '{failure.Reason}'"));
 
         /// <summary>
         /// Captures exceptions and returns a failure
@@ -295,10 +284,6 @@ namespace MazerPlatformer
                 })
                 .Match(unit => unit.ToEither(), exception => new ExternalLibraryFailure(exception));
 
-        public static Either<L, T> TryThis<L,T>(this Func<T, T> action, T arg, L left)
-            => new Try<T>(() => action(arg))
-                .Match(unit => unit.ToEither<L,T>(), exception =>  left);
-
        public static Either<IFailure, T> TryThis<T>(this Func<T> action)
             => new Try<T>(() => action())
                 .Match(
@@ -326,15 +311,9 @@ namespace MazerPlatformer
                     exception => failure);
 
         
-        public static Either<IFailure, T> TryThis2<T>(this Func<T> action, IFailure failure)
-            => new Try<T>(() => action())
-                .Match(
-                    unit => unit == null
-                        ? failure.ToEitherFailure<T>()
-                        : unit.ToEither(),
-                    exception => failure.WithException(exception).ToEitherFailure<T>());
-
-        public static Either<L, T> _ensuringBindTry<L, T>(this Func<T> action, L failure) where L : IFailure
+      
+        // not tested directly
+        internal static Either<L, T> _ensuringBindTry<L, T>(this Func<T> action, L failure) where L : IFailure
             => new Try<T>(() => action())
                 .Match(
                     unit => unit == null
@@ -362,12 +341,7 @@ namespace MazerPlatformer
 
         public static T ThrowIfNone<T>(this Option<T> option, IFailure failure)
             => option.IfNone(() => throw new UnexpectedFailureException(failure));
-
-        public static Either<IFailure, R> Call<R>(this Either<IFailure, R>? either)
-            => either == null
-                ? UnexpectedFailure.Create("Either was null").ToEitherFailure<R>()
-                : either.Value;
-
+                
         public static Either<IFailure, T> TryLoad<T>(this IGameContentManager content, string assetName) => EnsureWithReturn(()
             => content.Load<T>(assetName), AssetLoadFailure.Create($"Could not load asset {assetName}"));
 
@@ -424,12 +398,15 @@ namespace MazerPlatformer
             => either.IfLeft(Nothing);
 
         public static Either<IFailure, Unit> IgnoreFailureOf<IFailure, R>(this Either<IFailure, R> either, Type failureType) 
-            => either.Match(Right: (r) => r.ToEither(),
-                            Left: (l) => MaybeTrue(() => l.GetType() == failureType));
+            => either.Match(Right: (right) => Nothing.ToEither<IFailure, Unit>(),
+                            Left: (failure) => MaybeTrue(() => failure.GetType() == failureType).ToEither()
+                                                .Match(Right: (found) => found.ToEither<IFailure, Unit>(),
+                                                        Left: (notFound) => failure.ToEitherFailure<IFailure, Unit>()));
 
         public static Either<IFailure, R> IgnoreFailureOfAs<IFailure, R>(this Either<IFailure, R> either, Type failureType, R OnFail) 
-            => either.Match(Right: (r) => r,
-                            Left: (l) => MaybeTrue(() => l.GetType() == failureType).Map((unit) => OnFail).ToEither(l));
+            => either.BindLeft((failure) => MaybeTrue(() => failure.GetType() == failureType)
+                     .                      Match(Some: (unit) => OnFail.ToEither<IFailure, R>(), 
+                                                  None: () => failure.ToEitherFailure<IFailure, R>()));
 
         public static Option<Unit> IgnoreNone<T>(this Option<T> option)
             => option.Match(Some: (some)=> Prelude.Some(some), None: ()=>Prelude.Some(Nothing));
@@ -443,11 +420,7 @@ namespace MazerPlatformer
         /// <param name="either"></param>
         /// <param name="transformingFunction"></param>
         /// <returns></returns>
-        public static Either<IFailure, Either<TransformExceptionFailure, T>> EnsuringMapX<L, T>(this Either<IFailure, L> either, Func<L, T> transformingFunction)
-            => either.Map((r) => EnsureWithReturn(()
-                => transformingFunction(r), new TransformExceptionFailure("An exception occured while ensuring a map")));
-
-        public static Either<IFailure, T> EnsuringMap<L, T>(this Either<IFailure, L> either,
+       public static Either<IFailure, T> EnsuringMap<L, T>(this Either<IFailure, L> either,
             Func<L, T> transformingFunction)
             => either.Map((r) => EnsureWithReturn(()
                         => transformingFunction(r),
@@ -458,11 +431,7 @@ namespace MazerPlatformer
                         Left: failure => failure.ToEitherFailure<T>(),
                         Right: t => t.ToEither<T>()));
 
-        public static Either<IFailure, Either<IFailure, Either<IFailure, T>>> EnsuringBindX<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) =>
-            either.Bind<Either<IFailure, Either<IFailure, T>>>(f: right
-                => EnsureWithReturn(() => transformingFunction(right),
-                    TransformExceptionFailure.Create("An exception occured while ensuring a bind")));
-
+       
         public static Either<IFailure, T> EnsuringBind<R, T>(this Either<IFailure, R> either, Func<R, Either<IFailure, T>> transformingFunction) 
             => either
                     .Bind(f: right => _ensuringBindReturn(() => transformingFunction(right), TransformExceptionFailure.Create("An exception occured while ensuring a bind")))
@@ -501,13 +470,6 @@ namespace MazerPlatformer
         public static Either<IFailure, T> Must<T>(T arg, Func<bool> func, IFailure customFailure = null) 
             => !func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
 
-        public static Either<IFailure, T> MustNotBe<T>(T arg, Func<bool> func, IFailure customFailure = null)
-            => func() ? customFailure?.ToEitherFailure<T>() ?? ConditionNotSatisfiedFailure.Create("Require condition not met").ToEitherFailure<T>() : arg.ToEither();
-
-        public static Option<Unit> Must(Func<bool> func)
-            => !func()
-                ? Option<Unit>.None
-                : Nothing;
 
         /// <summary>
         /// Fali if the condition is not met
