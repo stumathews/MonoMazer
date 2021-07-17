@@ -1,6 +1,6 @@
 ﻿namespace MazerPlatformer
 {
-    internal class ShortCircuitFailure : IFailure
+    public class ShortCircuitFailure : IFailure
     {
         public ShortCircuitFailure(string message)
         {
