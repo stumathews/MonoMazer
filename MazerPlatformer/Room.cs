@@ -158,8 +158,10 @@ namespace MazerPlatformer
 
         public override bool Equals(object obj)
         {
+#pragma warning disable IDE0041 // Use 'is null' check
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
+#pragma warning restore IDE0041 // Use 'is null' check
             if (obj.GetType() != this.GetType()) return false;
             return Equals((Room)obj);
         }
