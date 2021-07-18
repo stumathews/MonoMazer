@@ -171,10 +171,12 @@ namespace MazerPlatformer
                 var hashCode = (WallProperties != null ? WallProperties.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HasSides != null ? HasSides.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (RectangleDetail != null ? RectangleDetail.GetHashCode() : 0);
+#pragma warning disable CS0472 // The result of the expression is always the same since a value of this type is never equal to 'null'
                 hashCode = (hashCode * 397) ^ (RoomAbove != null ? RoomAbove.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (RoomBelow != null ? RoomBelow.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (RoomRight != null ? RoomRight.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (RoomLeft != null ? RoomLeft.GetHashCode() : 0);
+                #pragma warning restore CS0472 // The result of the expression is always the same since a value of this type is never equal to 'null'
                 hashCode = (hashCode * 397) ^ RoomNumber;
                 hashCode = (hashCode * 397) ^ Col;
                 hashCode = (hashCode * 397) ^ Row;
