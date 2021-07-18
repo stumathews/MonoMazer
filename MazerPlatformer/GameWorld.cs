@@ -54,7 +54,9 @@ namespace MazerPlatformer
 
         // We can unload and reload the game world to change levels
         private bool _unloading;
+#pragma warning disable IDE0052 // Remove unread private members
         private bool _playerDied = false;
+#pragma warning restore IDE0052 // Remove unread private members
 
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
