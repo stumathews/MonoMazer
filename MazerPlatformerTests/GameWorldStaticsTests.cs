@@ -173,14 +173,6 @@ namespace MazerPlatformer.Tests
             Npcs = new List<Npc> { Npc1, Npc2 };
         }
 
-
-        
-        [ClassInitialize]
-        public static void ClassInitialize(TestContext context)
-        {
-
-        }
-
         public GameWorldStaticsTests()
         {
             ResetObjectStates();

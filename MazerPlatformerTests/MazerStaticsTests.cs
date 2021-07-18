@@ -78,27 +78,9 @@ namespace MazerPlatformer.Tests
         }
 
 
-        [AssemblyCleanup]
-        public static void AssemblyCleanup()
-        {
-
-        }
-
-        [ClassInitialize]
-        public static void ClassInitialize(TestContext context)
-        {
-
-        }
-
         public MazerStaticsTests()
         {
             ResetObjectStates();
-        }
-
-        [TestInitialize]
-        public void TestInitialize()
-        {
-
         }
 
 
@@ -271,12 +253,16 @@ namespace MazerPlatformer.Tests
             bool setPointsCalled = false;
             bool setHealthCalled = false;
 
+#pragma warning disable IDE0039 // Use local function
             Func<int, int> setPlayerHealth = (health) =>
+#pragma warning restore IDE0039 // Use local function
             {
                 setHealthCalled = health == 101;
                 return health;
             };
+#pragma warning disable IDE0039 // Use local function
             Func<int, int> setPlayerPoints = (points) =>
+#pragma warning restore IDE0039 // Use local function
             {
                 setPointsCalled = points == 100;
                 return points;
@@ -331,7 +317,9 @@ namespace MazerPlatformer.Tests
         public void StartOrContinueLevelTest()
         {
             bool isFreshStart = true;
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
             Mazer.GameStates gameState = Mazer.GameStates.Playing;
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
             bool setMenuNotVisiable = false;
             StartOrContinueLevel(isFreshStart, GameWorld.ToEither(), () => setMenuNotVisiable = true, () => gameState = Mazer.GameStates.Playing, () => 100, () => 101, () => 201);
             MockGameWorld.Verify(x => x.StartOrResumeLevelMusic(), Times.Once);

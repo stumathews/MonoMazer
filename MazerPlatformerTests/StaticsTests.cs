@@ -477,7 +477,9 @@ namespace MazerPlatformer.Tests
         public void TryThisTest()
         {
             Assert.IsTrue(Statics.TryThis(() => throw new System.Exception("bad")).IsLeft);
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
             Assert.IsTrue(Statics.TryThis(() => { int i = 12; }).IsRight); ;
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
         }
 
         [TestMethod()]
@@ -669,7 +671,6 @@ namespace MazerPlatformer.Tests
         public void IgnoreNoneTest()
         {
             var none = new Option<int>();
-            none = Prelude.None;
             Assert.IsTrue(Statics.IgnoreNone(none).IsSome);
             var some = 12.ToSome();
             Assert.IsTrue(Statics.IgnoreNone(some).IsSome);
@@ -702,7 +703,9 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void NothingnessTest()
         {
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
             Assert.IsTrue(Nothingness(() => { int i = 12; }).IsRight);
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
             Assert.ThrowsException<Exception>(() => Nothingness(() => throw new Exception("bad")));
         }
 
@@ -715,7 +718,9 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(EnsuringBind<int>(() =>
             {
                 throw new Exception("bad");
+#pragma warning disable CS0162 // Unreachable code detected
                 return 12.ToEither();
+#pragma warning restore CS0162 // Unreachable code detected
             }).IsLeft);
         }
 
@@ -748,7 +753,9 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(EnsureIf<string>(false, () =>
             {
                 throw new Exception("bad");
+#pragma warning disable CS0162 // Unreachable code detected
                 return "stuart";
+#pragma warning restore CS0162 // Unreachable code detected
             }).IsLeft);
         }
 
