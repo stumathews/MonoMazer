@@ -16,25 +16,6 @@ using static MazerPlatformer.Level;
 
 namespace MazerPlatformer.Tests
 {
-
-   
-
-    internal class DummyGraphicsDeviceManager : IGraphicsDeviceService
-    {
-      public GraphicsDevice GraphicsDevice { get; private set; }
-
-      // Not used:
-      public event EventHandler<EventArgs> DeviceCreated;
-      public event EventHandler<EventArgs> DeviceDisposing;
-      public event EventHandler<EventArgs> DeviceReset;
-      public event EventHandler<EventArgs> DeviceResetting;
-
-      public DummyGraphicsDeviceManager(GraphicsDevice graphicsDevice)
-      {
-        GraphicsDevice = graphicsDevice;
-      }
-    }
-
     internal class SneakyTexture2D : Texture2D
     {
         private static readonly object Lockobj = new object();
