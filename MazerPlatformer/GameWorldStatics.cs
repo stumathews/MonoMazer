@@ -46,13 +46,16 @@ namespace MazerPlatformer
                 .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
 
-        public static void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2) =>
-                // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
-                MaybeTrue(() => gameObject1.Type != gameObject2.Type)
-                .Bind<Unit>((success) => MaybeTrue(() => gameObject2.IsCollidingWith(gameObject1).ThrowIfFailed())
-                .BiIter(Some: (yes) => SetCollisionsOccuredEvents(gameObject1, gameObject2),
-                        None: () => gameObject2.IsColliding = gameObject1.IsColliding = false));
-
+        public static void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
+        // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
+        => MaybeTrue(() => gameObject1.Type != gameObject2.Type)
+        .ToEither()
+        .Bind((success) => gameObject2.IsCollidingWith(gameObject1))
+        .Bind((result) => MaybeTrue(()=>result).ToEither())
+        .ToOption()
+        .BiIter(Some: (yes) => SetCollisionsOccuredEvents(gameObject1, gameObject2),
+                None: () => gameObject2.IsColliding = gameObject1.IsColliding = false);
+        
         public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
