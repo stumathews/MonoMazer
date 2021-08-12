@@ -456,8 +456,10 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> PauseGame() => Ensure(()=>
         {
             _currentGameState = GameStates.Paused;
-            ShowMenu(()=> _mainMenuPanel.Visible = true);
+            ShowMenu();
         });
+
+        public Either<IFailure, Unit> ShowMenu() => Statics.Ensure(() => _mainMenuPanel.Visible = true);
 
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() =>
             Ensure(()=> _playerDied = true)
@@ -467,7 +469,7 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason)
             => IsStateEntered(reason)
                 ? musicPlayer.Bind(player => PlayMenuMusic(player, _menuMusic))
-                    .Bind(unit => ShowMenu(() => _mainMenuPanel.Visible = true))
+                    .Bind(unit => ShowMenu())
                 : Nothing;
 
         private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount) 

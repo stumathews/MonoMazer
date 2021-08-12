@@ -277,14 +277,6 @@ namespace MazerPlatformer.Tests
         }
 
         [TestMethod()]
-        public void ShowMenuTest()
-        {
-            bool wasCalled = false;
-            ShowMenu(() => wasCalled = true);
-            Assert.IsTrue(wasCalled);
-        }
-
-        [TestMethod()]
         public void HideMenuTest()
         {
             bool wasCalled = false;

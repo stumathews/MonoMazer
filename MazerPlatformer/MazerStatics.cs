@@ -129,8 +129,6 @@ namespace MazerPlatformer
             return Statics.Nothing.ToEither();
         }
 
-        public static Either<IFailure, Unit> ShowMenu(Action showMenuFn) => Statics.Ensure(showMenuFn);
-
         public static Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart, Either<IFailure, IGameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups) =>
             from state in (Either<IFailure, Mazer.GameStates>)(setGameToPlayingState())
             from hide in HideMenu(setMenuPanelNotVisibleFunction)
