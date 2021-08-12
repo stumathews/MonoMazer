@@ -233,14 +233,16 @@ namespace MazerPlatformer
         /// <param name="playerRoom"></param>
         /// <returns></returns>
         public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager) => EnsureWithReturn(()
-            =>     (from assetFile in CreateAssetFile(levelFile)
-                    from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
-                    from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
-                    from player in CreatePlayer(playerRoom, playerAnimation, levelFile)
-                    from InitializedPlayer in InitializePlayer(levelFile, player)
-                    from playerHealth in GetPlayerHealth(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
-                    from playerPoints in GetPlayerPoints(player).Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
-                    select player).ThrowIfNone());
+        =>     (from assetFile in CreateAssetFile(levelFile)
+                from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
+                from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
+                from player in CreatePlayer(playerRoom, playerAnimation, levelFile)
+                from InitializedPlayer in InitializePlayer(levelFile, player)
+                from playerHealth in GetPlayerHealth(player)
+                    .Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
+                from playerPoints in GetPlayerPoints(player)
+                    .Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
+                select player).ThrowIfNone());
 
         /// <summary>
         /// loading the definition of the enemies into a file.
@@ -292,6 +294,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetNumPickups(int numPickups) => Ensure(() => { NumPickups = numPickups; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
             Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
+
             List<Room> MakeLevelRooms() => MakeRooms(removeRandSides: Diagnostics.RandomSides).ThrowIfFailed();
 
             Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>

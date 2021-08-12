@@ -162,7 +162,9 @@ namespace MazerPlatformer
             return from player in thePlayer.ToEither(NotFound.Create("Player not found"))
                 from gameObject in otherGameObject.ToEither(NotFound.Create("Other not found"))
                 from isNpc in Must(gameObject, () => gameObject.Type == GameObjectType.Npc, "Must be NPC")
-                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType).ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
+                from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType)
+                    // Convert Option<T> to Either<L,R>:
+                    .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
                 from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
                 from collisionResult in ActOnTypeCollision(npcType, player, gameObject)
                     select collisionResult;
@@ -289,14 +291,13 @@ namespace MazerPlatformer
                 : _level.PlaySong();
 
         private Either<IFailure, Unit> RemoveGameObject(string id, Level level)
-        =>
-            from gameObject in GetGameObject(GameObjects, id)
+        =>  from gameObject in GetGameObject(GameObjects, id)
             from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, GameObjects, OnGameObjectAddedOrRemoved)
             from isLevelPickup in IsLevelPickup(gameObject, level).IfSome(unit => RemoveIfLevelPickup(gameObject, level)).ToEither()
             from removePickup in RemoveIfLevelPickup(gameObject, level)
             from isLevelCleared in IsLevelCleared(level).IfSome(unit => NotifyIfLevelCleared(OnLevelCleared, level)).ToEither()
             from deactivateObjects in DeactivateGameObject(gameObject,GameObjects)
-                select Nothing;
+            select Nothing;
 
         private Either<IFailure, Unit> CheckForObjectCollisions(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
         {

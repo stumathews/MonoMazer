@@ -159,6 +159,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, Unit> Ensure(Action action)
             => action.TryThis();
+        
 
         /// <summary>
         /// Same as Ensure()
@@ -211,7 +212,7 @@ namespace MazerPlatformer
                 .Iter((success) => either.IfFailed(action));
 
         public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn(()
-            => (T)value, InvalidCastFailure.Default());
+            => (T)value, InvalidCastFailure.Default(value));
 
         [PureFunction]
         public static Option<bool> ToOption(this bool thing) 

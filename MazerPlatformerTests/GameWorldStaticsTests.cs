@@ -79,24 +79,24 @@ namespace MazerPlatformer.Tests
 
 
         public Level BasicLevelObject { get; set; }
-        public Player Player1 { get; set; }       
+        public Player Player1 { get; set; }
         public Npc Npc1 { get; set; }
         public Npc Npc2 { get; set; }
         public Npc Pickup { get; set; }
         public IGameContentManager GameContentManager { get; set; }
         public Dictionary<string, GameObject> GameObjects { get; set; }
-        public List<Npc> Npcs {get;set;}
+        public List<Npc> Npcs { get; set; }
         public CharacterBuilder CharacterBuilder { get; set; }
         public List<Room> Rooms { get; set; }
-        public Song DummySong {get;set;} = (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song));
-        public Texture2D DummyTexture { get;set; } = SneakyTexture2D.CreateNamed("");
-        public Level.LevelDetails LevelDetails {get;set;}
-        public Level.LevelNpcDetails LevelNpcDetails {get;set;}
-        public string AssetFile {get;set; }
+        public Song DummySong { get; set; } = (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song));
+        public Texture2D DummyTexture { get; set; } = SneakyTexture2D.CreateNamed("");
+        public Level.LevelDetails LevelDetails { get; set; }
+        public Level.LevelNpcDetails LevelNpcDetails { get; set; }
+        public string AssetFile { get; set; }
         public void ResetObjectStates()
         {
             AssetFile = "DummyAssetFile";
-            LevelDetails = new Level.LevelDetails 
+            LevelDetails = new Level.LevelDetails
             {
                 Cols = 10,
                 Rows = 10,
@@ -586,8 +586,8 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void GetRoomsInThisRowTest()
         {
-            var row = GetObjRow(Rooms[25], 10) - 1 ; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
-            foreach( var rowRoom in GetRoomsInThisRow(Rooms, Rooms[25], 10))
+            var row = GetObjRow(Rooms[25], 10) - 1; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
+            foreach (var rowRoom in GetRoomsInThisRow(Rooms, Rooms[25], 10))
             {
                 Assert.IsTrue(GetObjRow(rowRoom, 10) == row);
             }
@@ -596,8 +596,8 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void GetRooomsBetweenTest()
         {
-            var col = GetObjCol(Rooms[3], 10) -1;
-            foreach( var colRoom in GetRoomsBetween(Rooms, 1, 3, Rooms[3], 10))
+            var col = GetObjCol(Rooms[3], 10) - 1;
+            foreach (var colRoom in GetRoomsBetween(Rooms, 1, 3, Rooms[3], 10))
             {
                 Assert.IsTrue(GetObjCol(colRoom, 10) == col);
             }
@@ -606,8 +606,8 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void GetRoomsInThisColTest()
         {
-            var col = GetObjCol(Rooms[3], 10) - 1 ; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
-            foreach( var rowRoom in GetRoomsInThisRow(Rooms, Rooms[3], 10))
+            var col = GetObjCol(Rooms[3], 10) - 1; // rooms are 0 based, row 0 means row 1, row 1 means row 2 etc...
+            foreach (var rowRoom in GetRoomsInThisRow(Rooms, Rooms[3], 10))
             {
                 Assert.IsTrue(GetObjCol(rowRoom, 10) == col);
             }
@@ -661,7 +661,7 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(ToRoomColumnFast(Rooms[66], 10) == 6);
             Assert.IsTrue(ToRoomColumnFast(Rooms[77], 10) == 7);
             Assert.IsTrue(ToRoomColumnFast(Rooms[88], 10) == 8);
-            Assert.IsTrue(ToRoomColumnFast(Rooms[99], 10)== 9);
+            Assert.IsTrue(ToRoomColumnFast(Rooms[99], 10) == 9);
         }
 
         [TestMethod()]
@@ -676,7 +676,7 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(ToRoomRowFast(Rooms[66], 10) == 6);
             Assert.IsTrue(ToRoomRowFast(Rooms[77], 10) == 7);
             Assert.IsTrue(ToRoomRowFast(Rooms[88], 10) == 8);
-            Assert.IsTrue(ToRoomRowFast(Rooms[99], 10)== 9);
+            Assert.IsTrue(ToRoomRowFast(Rooms[99], 10) == 9);
         }
 
         [TestMethod()]
@@ -691,6 +691,14 @@ namespace MazerPlatformer.Tests
         {
             // Requires Static Room data that is not random
             Assert.Inconclusive();
+        }
+
+        [TestMethod()]
+        public void IsSameTypeTest()
+        {
+            Assert.IsTrue(IsSameType(Npc1, Npc2));
+            Assert.IsFalse(IsSameType(Npc1, Player1));
+            Assert.IsFalse(IsSameType(Pickup, Player1));
         }
     }
 }
