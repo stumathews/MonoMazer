@@ -450,8 +450,14 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame(_currentGameState)
-                ? PauseGame(() => _currentGameState = GameStates.Paused, () => _mainMenuPanel.Visible = true)
+                ? PauseGame()
                 : ResumeGame(_gameWorld);
+
+        private Either<IFailure, Unit> PauseGame() => Ensure(()=>
+        {
+            _currentGameState = GameStates.Paused;
+            ShowMenu(()=> _mainMenuPanel.Visible = true);
+        });
 
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() =>
             Ensure(()=> _playerDied = true)

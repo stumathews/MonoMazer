@@ -304,16 +304,6 @@ namespace MazerPlatformer.Tests
         }
 
         [TestMethod()]
-        public void PauseGameTest()
-        {
-            Mazer.GameStates gameState = Mazer.GameStates.Playing;
-            bool showedmenu = false;
-            PauseGame(() => gameState = Mazer.GameStates.Paused, () => showedmenu = true);
-            Assert.IsTrue(showedmenu);
-            Assert.IsTrue(gameState == Mazer.GameStates.Paused);
-        }
-
-        [TestMethod()]
         public void StartOrContinueLevelTest()
         {
             bool isFreshStart = true;
