@@ -3,8 +3,9 @@ using GameLibFramework.Drawing;
 using LanguageExt;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using static MazerPlatformer.Statics;
-
+using System.Collections;
 namespace MazerPlatformer
 {
     public abstract class Character : GameObject
@@ -48,44 +49,34 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> CollisionDirectionChanged(CharacterDirection direction);
         public delegate Either<IFailure, Unit> StateChanged(CharacterStates state);
 
-        protected Character(int x, int y, string id, int width, int height, GameObjectType type, int moveStepIncrement = 3) :
-            base(x, y, id, width, height, type)
-        {
-            _moveStep = moveStepIncrement;
-        }
+        protected Character(int x, int y, string id, int width, int height, GameObjectType type, int moveStepIncrement = 3) : base(x, y, id, width, height, type) 
+            => _moveStep = moveStepIncrement;
 
-        public override Either<IFailure, Unit> Initialize()
-        {
-            return 
-                base.Initialize().Bind(unit => RegisterEvents())
+        public override Either<IFailure, Unit> Initialize() 
+            => base.Initialize()
+                .Bind(unit => RegisterEvents())
                 .Bind(unit => SetInitialDirection())
                 .Bind(unit => InitializeAnimation());
 
-            Either<IFailure, Unit> RegisterEvents() => Ensure(() =>
-            {
-                // We detect our down collisions
-                OnCollision += HandleCharacterCollision;
+        private Either<IFailure, Unit> InitializeAnimation() => Ensure(() 
+            => Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale,  AnimationInfo.Looping, AnimationInfo.FrameTime));
 
-                // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
-                // Should we remove this functionality?
-                OnStateChanged += OnMyStateChanged;
-            });
+        private Either<IFailure, Unit> SetInitialDirection() => Ensure(() =>
+        {
+            // We start of facing down
+            CurrentDirection = CharacterDirection.Down;
+            Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
+        });
 
-            Either<IFailure, Unit> SetInitialDirection() => Ensure(() => 
-            {
-                // We start of facing down
-                CurrentDirection = CharacterDirection.Down;
+        private Either<IFailure, Unit> RegisterEvents() => Ensure(() =>
+        {
+            // We detect our down collisions
+            OnCollision += HandleCharacterCollision;
 
-                Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
-            });
-
-            Either<IFailure, Unit> InitializeAnimation() => Ensure(() =>
-            {
-                Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth,
-                    AnimationInfo.FrameHeight, AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale,
-                    AnimationInfo.Looping, AnimationInfo.FrameTime);
-            });
-        }
+            // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
+            // Should we remove this functionality?
+            OnStateChanged += OnMyStateChanged;
+        });
 
         public Either<IFailure, Unit> SetAsIdle() 
             => SetState(CharacterStates.Idle);
@@ -95,29 +86,11 @@ namespace MazerPlatformer
 
         // Move ie change the character's position
         public Either<IFailure, Unit> MoveInDirection(CharacterDirection direction, GameTime dt)
-        {
-            switch (direction)
-            {
-                case CharacterDirection.Up:
-                    Y -= MoveByStep();
-                    break;
-                case CharacterDirection.Down:
-
-                    Y += MoveByStep();
-                    break;
-                case CharacterDirection.Left:
-
-                    X -= MoveByStep();
-                    break;
-                case CharacterDirection.Right:
-
-                    X += MoveByStep();
-                    break;
-                default:
-                    return new InvalidDirectionFailure(direction);
-            }
-            return SetCharacterDirection(direction);
-        }
+            =>  Switcher(AddCase(when(direction == CharacterDirection.Up, then: ()=> Y -= MoveByStep()))
+                        .AddCase(when(direction == CharacterDirection.Down, then: ()=> Y += MoveByStep()))
+                        .AddCase(when(direction == CharacterDirection.Left, then: ()=> X -= MoveByStep()))
+                        .AddCase(when (direction == CharacterDirection.Right, then: ()=> X += MoveByStep())), @default: new InvalidDirectionFailure(direction))
+                .Bind(result => SetCharacterDirection(direction));
 
         private Either<IFailure, Unit> SetState(CharacterStates state)
         {
@@ -128,15 +101,15 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> SetCharacterDirection(CharacterDirection direction) 
             => SetAnimationDirection(direction, Animation)
                 .EnsuringMap(unit => 
-            {
-                CurrentDirection = direction;
-                OnDirectionChanged?.Invoke(direction);
-                SetState(CharacterStates.Moving);
+                {
+                    CurrentDirection = direction;
+                    OnDirectionChanged?.Invoke(direction);
+                    SetState(CharacterStates.Moving);
 
-                Animation.Idle = false;
-                CanMove = true;
-                return Nothing;
-            });
+                    Animation.Idle = false;
+                    CanMove = true;
+                    return Nothing;
+                });
 
        public static Either<IFailure, bool> SetDirection(CharacterDirection target, CharacterDirection src, Animation ani, Animation.AnimationDirection newDir) 
                 => MaybeTrue(() => src == target)
@@ -171,7 +144,8 @@ namespace MazerPlatformer
         });
 
         [PureFunction]
-        private int MoveByStep(int? moveStep = null) => !CanMove ? 0 : moveStep ?? _moveStep;
+        private int MoveByStep(int? moveStep = null) 
+            => !CanMove ? 0 : moveStep ?? _moveStep;
 
         public static Either<IFailure, bool> MoveInDirection(CharacterDirection target, CharacterDirection src, System.Action how) => MaybeTrue(() => src == target).ToEither()
                     .Map((b) => { how(); return Nothing; })
@@ -196,14 +170,14 @@ namespace MazerPlatformer
                     .Match(Left: (failure) => false, Right: (unit) => true).ToEither();
 
         // impure
-        public Either<IFailure, Unit> SwapDirection() => (
-                   from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
+        public Either<IFailure, Unit> SwapDirection() 
+            => (   from maybeUp in SetDirection(CurrentDirection, CharacterDirection.Up, to: CharacterDirection.Down).ShortCirtcutOnTrue()
                    from maybeDown in SetDirection(CurrentDirection, CharacterDirection.Down, to: CharacterDirection.Up).ShortCirtcutOnTrue()
                    from maybeLeft in SetDirection(CurrentDirection, CharacterDirection.Left, to: CharacterDirection.Right).ShortCirtcutOnTrue()
                    from maybeRight in SetDirection(CurrentDirection, CharacterDirection.Right, to: CharacterDirection.Left).ShortCirtcutOnTrue()
                    from handled in Maybe(() => maybeUp || maybeDown || maybeLeft || maybeRight).ToEither(InvalidDirectionFailure.Create(CurrentDirection))
                    select Nothing
-                   ).IgnoreFailureOf(typeof(ShortCircuitFailure));
+                ).IgnoreFailureOf(typeof(ShortCircuitFailure));
 
         //impure
         public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir) 

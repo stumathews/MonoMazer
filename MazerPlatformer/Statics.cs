@@ -541,5 +541,42 @@ namespace MazerPlatformer
 
         public static bool DictValueEquals<K, V>(IDictionary<K, V> dic1, IDictionary<K, V> dic2) 
             => dic1.Count == dic2.Count && !dic1.Except(dic2).Any();
+
+        /// <summary>
+        /// A expression based replacement for a Switch conditional statement
+        /// </summary>
+        /// <param name="cases"></param>
+        /// <param name="default"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> Switcher(Either<IFailure, bool>[] cases, IFailure @default) 
+            => cases.All((@case) => @case.FailIfFalse(ShortCircuitFailure.Create("No case match")).IsLeft) // No cases matched?
+                .ToOption()
+                .Match(Some: (boolean) => @default.ToEitherFailure<Unit>(), // yes, execute default
+                       None: () => Nothing.ToEither());
+
+        public static Either<IFailure, bool> when(bool match, Action then) 
+            => MaybeTrue(() => match)            
+                .ToEither()
+                .Bind(unit => Ensure(() => then()))
+                .BiMap<bool>(Right: (unit) => true, Left: (failure) => false);
+
+        public static Either<IFailure, bool>[] Cases()
+        {
+            return new Either<IFailure, bool>[] { };
+        }
+
+        public static Either<IFailure, bool>[] AddCase(this Either<IFailure, bool>[] cases, Either<IFailure, bool> @case)
+        {
+            var list = new List<Either<IFailure, bool>>();
+            list.AddRange(cases);
+            list.Add(@case);
+            return list.ToArray();
+        }
+        public static Either<IFailure, bool>[] AddCase(Either<IFailure, bool> @case)
+        {
+            var list = new List<Either<IFailure, bool>>();
+            list.Add(@case);
+            return list.ToArray();
+        }
     }
 }

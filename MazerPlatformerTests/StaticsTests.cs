@@ -791,29 +791,86 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void DictValueEqualsTest()
         {
-            var dict1 = new Dictionary<int, string>() 
+            var dict1 = new Dictionary<int, string>()
             {
                 { 1, "uno"},
                 { 2, "dos" },
                 { 3, "tres" }
             };
 
-            var dict2 = new Dictionary<int, string>() 
-            {             
+            var dict2 = new Dictionary<int, string>()
+            {
                 { 1, "uno"},
                 { 2, "dos" },
                 { 3, "tres" }
             };
 
-            var dict3 = new Dictionary<int, string>() 
-            {             
+            var dict3 = new Dictionary<int, string>()
+            {
                 { 1, "uno"},
                 { 2, "dos" },
                 { 3, "tres" },
                 { 4, "quatro" }
             };
-            Assert.IsTrue(Statics.DictValueEquals(dict1, dict2));
-            Assert.IsFalse(Statics.DictValueEquals(dict1, dict3));
+            Assert.IsTrue(DictValueEquals(dict1, dict2));
+            Assert.IsFalse(DictValueEquals(dict1, dict3));
+        }
+
+        [TestMethod()]
+        public void SwitcherTest()
+        {
+            int choice = 3;
+            bool correct = false;
+            var result = Switcher(Cases()
+                .AddCase(when(choice == 3, then: () => correct = true))
+                .AddCase(when(choice == 2, () => correct = false))
+                .AddCase(when(choice == 1, () => correct = false)), ShortCircuitFailure.Create("Failed"));
+
+            Assert.IsTrue(result.IsRight);
+            Assert.IsTrue(correct);
+
+            choice = 2;
+            correct = false;
+            result = Switcher(Cases()
+               .AddCase(when(choice == 3, then: () => correct = true))
+               .AddCase(when(choice == 2, () => correct = false))
+               .AddCase(when(choice == 1, () => correct = false)), ShortCircuitFailure.Create("Failed"));
+
+            Assert.IsTrue(result.IsRight);
+            Assert.IsFalse(correct);
+
+            choice = 9;
+            correct = false;
+            result = Switcher(Cases()
+               .AddCase(when(choice == 3, then: () => correct = true))
+               .AddCase(when(choice == 2, () => correct = false))
+               .AddCase(when(choice == 1, () => correct = false)), ShortCircuitFailure.Create("Failed"));
+
+            Assert.IsTrue(result.IsLeft);
+            Assert.IsFalse(correct);
+
+        }
+
+        [TestMethod()]
+        public void whenTest()
+        {
+            Assert.IsTrue(when(1 == 1, () => { }).ThrowIfFailed());
+            Assert.IsFalse(when(1 == 2, () => { }).ThrowIfFailed());
+        }
+
+        [TestMethod()]
+        public void AddCaseTest()
+        {
+            Assert.IsTrue(AddCase(when(1 == 1, then: () => { })).Length == 1);
+        }
+
+        [TestMethod()]
+        public void AddCaseTest1()
+        {
+            var cases = Cases().AddCase(when(1 == 1, then: () => { }))
+                                .AddCase(when(1 == 1, then: () => { }));
+
+            Assert.IsTrue(cases.Length == 2);
         }
     }
 }
