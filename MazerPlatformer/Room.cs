@@ -55,11 +55,9 @@ namespace MazerPlatformer
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
         public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
-            =>  from isValid in IsValid(x, y, width, height, roomNumber, row, col)
-                from room in EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
-                from initializedRoom in InitializeBounds(room)
-                select initializedRoom;
-                    
+            =>  IsValid(x, y, width, height, roomNumber, row, col)
+                .Bind(unit => EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
+                .Bind(room => InitializeBounds(room)));                    
 
         // ctor
         private Room(int x, int y, int width, int height, int roomNumber, int row, int col) 
@@ -89,12 +87,11 @@ namespace MazerPlatformer
 
         // Draw pipeline for drawing a Room (all drawing operations must succeed - benefit)
         public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher) =>
-            from baseDraw in base.Draw(spriteBatcher)
-            from topDraw in DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatcher, HasSides)
-            from rightDraw in DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatcher, HasSides)
-            from bottomDraw in DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatcher, HasSides)
-            from leftDraw in DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatcher, HasSides)
-                select Nothing;
+            base.Draw(spriteBatcher)
+            .Bind( unit => DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatcher, HasSides))
+            .Bind( unit => DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatcher, HasSides))
+            .Bind( unit => DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatcher, HasSides))
+            .Bind( unit => DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatcher, HasSides));
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
         public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>

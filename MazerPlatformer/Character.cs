@@ -57,11 +57,9 @@ namespace MazerPlatformer
         public override Either<IFailure, Unit> Initialize()
         {
             return 
-                from init in base.Initialize()
-                from registerEvents in RegisterEvents()
-                from setInitialDirection in SetInitialDirection()
-                from animation in InitializeAnimation()
-                select Nothing;
+                base.Initialize().Bind(unit => RegisterEvents())
+                .Bind(unit => SetInitialDirection())
+                .Bind(unit => InitializeAnimation());
 
             Either<IFailure, Unit> RegisterEvents() => Ensure(() =>
             {
@@ -213,14 +211,12 @@ namespace MazerPlatformer
 
         // both call into external libs
         public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch) =>
-            from baseDraw in base.Draw(spriteBatch)
-            from animationDraw in Ensure(() => Animation.Draw(spriteBatch))
-            select Nothing;
+            base.Draw(spriteBatch)
+            .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
 
         // both call into external libs
         public override Either<IFailure, Unit> Update(GameTime gameTime) =>
-            from baseUpdate in base.Update(gameTime)
-            from animationUpdate in Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y))
-            select Nothing;
+            base.Update(gameTime)
+            .Bind(unit => Ensure(() => Animation.Update(gameTime, (int) this.GetCentre().X, (int) this.GetCentre().Y)));
     }
 }

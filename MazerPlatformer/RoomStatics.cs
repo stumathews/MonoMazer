@@ -38,14 +38,13 @@ namespace MazerPlatformer
         /// <param name="room"></param>
         /// <returns></returns>
         [PureFunction]
-        public static Either<IFailure, Room> InitializeBounds(Room room) => EnsureWithReturn(() 
-            => from roomCopy in room.Copy()
-                from addedTop in AddWallCharacteristic(roomCopy, Room.Side.Top, new SideCharacteristic(Color.Black, TopBounds(room)))
-                from addedRight in AddWallCharacteristic(addedTop, Room.Side.Right, new SideCharacteristic(Color.Black, RightBounds(room)))
-                from addedBottom in AddWallCharacteristic(addedRight, Room.Side.Bottom, new SideCharacteristic(Color.Black, BottomBounds(room)))
-                from addedLeft in AddWallCharacteristic(addedBottom, Room.Side.Left, new SideCharacteristic(Color.Black, LeftBounds(room)))
-                let finalRoom = addedLeft
-                select finalRoom).UnWrap();
+        public static Either<IFailure, Room> InitializeBounds(Room room)
+            => room.Copy()
+        .EnsuringBind(roomCopy => AddWallCharacteristic(roomCopy, Room.Side.Top, new SideCharacteristic(Color.Black, TopBounds(room))))
+        .EnsuringBind(addedTop => AddWallCharacteristic(addedTop, Room.Side.Right, new SideCharacteristic(Color.Black, RightBounds(room))))
+        .EnsuringBind(addedRight => AddWallCharacteristic(addedRight, Room.Side.Bottom, new SideCharacteristic(Color.Black, BottomBounds(room))))
+        .EnsuringBind(addedBottom => AddWallCharacteristic(addedBottom, Room.Side.Left, new SideCharacteristic(Color.Black, LeftBounds(room))));
+        
 
         [PureFunction] public static Rectangle TopBounds(Room room) 
             => new Rectangle(x: room.RectangleDetail.GetAx(), y: room.RectangleDetail.GetAy(), width: room.RectangleDetail.GetAB(), height: 1);
@@ -149,37 +148,32 @@ namespace MazerPlatformer
             void DrawLeftLine(Room.Side sde) => spriteBatcher.DrawLine(rectangle.GetDx(), rectangle.GetDy(), rectangle.GetAx(), rectangle.GetAy(), sideProperties[sde].Color, Room.WallThickness);
 
             Either<IFailure, Room.Side> DrawTheSide(Room.Side desiredSide, Func<Room.Side, Either<IFailure, Room.Side>> strategy) => 
-                    from canDrawLine in MaybeTrue(() => Diagnostics.DrawLines && HasSide(desiredSide, hasSides)).ToEither()
-                    from strategyResult in strategy(desiredSide)
-                    from canDrawRectangle in MaybeTrue(()=>Diagnostics.DrawSquareSideBounds).ToEither()
-                    from rectangleDrawn in Ensure(()=>spriteBatcher.DrawRectangle(sideProperties[side].Bounds, Color.White, 2.5f))
-                    from drawFullRectangle in MaybeTrue(()=>Diagnostics.DrawSquareBounds).ToEither()
-                    from fullResult in Ensure(()=>spriteBatcher.DrawRectangle(rectangle.Rectangle, Color.White, 2.5f))
-                    select desiredSide;
+                    MaybeTrue(() => Diagnostics.DrawLines && HasSide(desiredSide, hasSides)).ToEither()
+                    .Bind( unit => strategy(desiredSide))
+                    .Bind( theSide => MaybeTrue(()=>Diagnostics.DrawSquareSideBounds).Map(unit => theSide).ToEither())
+                    .Bind( theSide => Ensure(()=>spriteBatcher.DrawRectangle(sideProperties[theSide].Bounds, Color.White, 2.5f)).Map(Unit => theSide))
+                    .Bind( theSide => MaybeTrue(()=>Diagnostics.DrawSquareBounds).Map(unit => theSide).ToEither())
+                    .Bind( theSide => Ensure(()=>spriteBatcher.DrawRectangle(rectangle.Rectangle, Color.White, 2.5f)).Map(unit => theSide));
 
             Either<IFailure, Room.Side> topStrategy(Room.Side sde) =>
-                    from sideMatches in MaybeTrue(() => sde == Room.Side.Top).ToEither()
-                    from drawTop in MaybeTrue(() => Diagnostics.DrawTop).ToEither()
-                    from drawn in Ensure(() => DrawTopLine(sde))
-                    select sde;
+                    MaybeTrue(() => sde == Room.Side.Top).ToEither()
+                    .Bind(unit => MaybeTrue(() => Diagnostics.DrawTop).ToEither())
+                    .Bind(unit => Ensure(() => DrawTopLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> bottomStrategy(Room.Side sde) =>
-                    from sideMatches in MaybeTrue(() => sde == Room.Side.Bottom).ToEither()
-                    from drawBottom in MaybeTrue(() => Diagnostics.DrawBottom).ToEither()
-                    from drawn in Ensure(() => DrawBottomLine(sde))
-                    select sde;
+                    MaybeTrue(() => sde == Room.Side.Bottom).ToEither()
+                    .Bind(unit => MaybeTrue(() => Diagnostics.DrawBottom).ToEither())
+                    .Bind(unit => Ensure(() => DrawBottomLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> rightStrategy(Room.Side sde) =>
-                    from sideMatches in MaybeTrue(() => sde == Room.Side.Right).ToEither()
-                    from drawRight in MaybeTrue(() => Diagnostics.DrawRight).ToEither()
-                    from drawn in Ensure(() => DrawRightLine(sde))
-                    select sde;
+                    MaybeTrue(() => sde == Room.Side.Right).ToEither()
+                    .Bind( unit => MaybeTrue(() => Diagnostics.DrawRight).ToEither())
+                    .Bind( unit => Ensure(() => DrawRightLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> leftStrategy(Room.Side sde) =>
-                    from sideMatches in MaybeTrue(() => sde == Room.Side.Left).ToEither()
-                    from drawLeft in MaybeTrue(() => Diagnostics.DrawLeft).ToEither()
-                    from drawn in Ensure(() => DrawLeftLine(sde))
-                    select sde;
+                    MaybeTrue(() => sde == Room.Side.Left).ToEither()
+                    .Bind( unit => MaybeTrue(() => Diagnostics.DrawLeft).ToEither())
+                    .Bind( unit => Ensure(() => DrawLeftLine(sde)).Map(result => sde));
             
         });
 

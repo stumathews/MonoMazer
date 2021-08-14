@@ -370,9 +370,7 @@ namespace MazerPlatformer
                 from invokeResult in RaiseOnGameWorldCollisionEvent()
                 from setRoomToActiveResult in SetRoomToActive(gameObject1, gameObject2)
                 from soundPlayerCollisionResult in SoundPlayerCollision(gameObject1, gameObject2)
-                select Nothing;
-
-            
+                select Nothing;           
             
 
             Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() => OnGameWorldCollision?.Invoke(obj1, obj2));

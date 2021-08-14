@@ -56,9 +56,7 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> UpdateStateMachine(GameTime time, IFSM stateMachine) => Statics.Ensure(() => stateMachine.Update(time));
 
         public static Either<IFailure, Unit> DrawGameWorld(ISpriteBatcher spriteBatch, Either<IFailure, IGameWorld> gameWorld) => Statics.EnsuringBind(() =>
-            from world in gameWorld
-            from draw in world.Draw(spriteBatch)
-            select Statics.Nothing);
+            gameWorld.Bind(world => world.Draw(spriteBatch)));
 
         public static Either<IFailure, Unit> DrawPlayerStatistics(ISpriteBatcher spriteBatcher, IGameSpriteFont font, IGameGraphicsDevice graphicsDevice, int currentLevel, int playerHealth, int playerPoints) => Statics.Ensure(() =>
         {
@@ -70,8 +68,8 @@ namespace MazerPlatformer
 
         // See how we transform the input and return the output that was modified or in 
         public static Either<IFailure, ISpriteBatcher> EndSpriteBatch(ISpriteBatcher spriteBatcher) =>
-            from result in Statics.Ensure(spriteBatcher.End)
-            select spriteBatcher;
+            Statics.Ensure(spriteBatcher.End)
+            .Map(unit => spriteBatcher);
 
         public static Either<IFailure, Unit> PrintGameStatistics(ISpriteBatcher spriteBatcher, GameTime time, IGameSpriteFont font, IGameGraphicsDevice graphicsDevice, int numGameObjects, int numGameCollisionsEvents, int numCollisionsWithPlayerAndNpCs, Character.CharacterStates characterState, Character.CharacterDirection characterDirection, Character.CharacterDirection characterCollisionDirection, Mazer.GameStates currentGameState) 
             => !IsPlayingGame(currentGameState) || !Diagnostics.ShowPlayerStats
@@ -130,15 +128,11 @@ namespace MazerPlatformer
         }
 
         public static Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart, Either<IFailure, IGameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups) =>
-            from state in (Either<IFailure, Mazer.GameStates>)(setGameToPlayingState())
-            from hide in HideMenu(setMenuPanelNotVisibleFunction)
-            from gameWorld in theGameWorld
-            from startOrResumeLevelMusic in gameWorld.StartOrResumeLevelMusic()
-            from reset in ResetPlayerStatistics(isFreshStart, 
-                setPlayerHealth, 
-                setPlayerPoints, 
-                setPLayerPickups, theGameWorld)
-            select Statics.Nothing;
+            Statics.Ensure(()=>setGameToPlayingState())
+            .Bind(unit => HideMenu(setMenuPanelNotVisibleFunction))
+            .Bind(unit => theGameWorld)
+            .Bind(gameWorld => gameWorld.StartOrResumeLevelMusic())
+            .Bind(unit => ResetPlayerStatistics(isFreshStart, setPlayerHealth, setPlayerPoints, setPLayerPickups, theGameWorld));
 
         // Not pure - depends on static state and changes it
         public static Unit EnableAllDiagnostics()
@@ -153,18 +147,17 @@ namespace MazerPlatformer
         }
 
         public static Either<IFailure, Unit> StartLevel(int level, Either<IFailure, IGameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups, Func<bool, bool> setPlayerDied, bool isFreshStart = true, int? overridePlayerHealth = null, int? overridePlayerScore = null) =>
-            from setPlayerNotDead in (Either<IFailure, bool>)( setPlayerDied(false))
-            from gameWorld in theGameWorld
-            from unload in gameWorld.UnloadContent()
-            from load in gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore)
-            from init in gameWorld.Initialize() // We need to reinitialize things once we've reload content
-            from start in StartOrContinueLevel(isFreshStart, theGameWorld, setMenuPanelNotVisibleFunction, setGameToPlayingState,  setPlayerHealth, setPlayerPoints, setPLayerPickups)
-            select Statics.Nothing;
+            Statics.Ensure(()=> setPlayerDied(false))
+            .Bind(unit => theGameWorld)
+            .Bind(gameWorld => gameWorld.UnloadContent().Map(unit => gameWorld))
+            .Bind(gameWorld => gameWorld.LoadContent(level, overridePlayerHealth, overridePlayerScore).Map(unit => gameWorld))
+            .Bind(gameWorld => gameWorld.Initialize()) // We need to reinitialize things once we've reload content
+            .Bind(unit => StartOrContinueLevel(isFreshStart, theGameWorld, setMenuPanelNotVisibleFunction, setGameToPlayingState,  setPlayerHealth, setPlayerPoints, setPLayerPickups));
 
-        public static Either<IFailure, IGameWorld> LoadGameWorldContent(Either<IFailure, IGameWorld> theGameWworld, int currentLevel, int playerHealth = 100, int playerPoints = 0) =>
-        from world in theGameWworld
-        from load in world.LoadContent(levelNumber: currentLevel, playerHealth, playerPoints)
-            select world;
+        public static Either<IFailure, IGameWorld> LoadGameWorldContent(Either<IFailure, IGameWorld> theGameWorld, int currentLevel, int playerHealth = 100, int playerPoints = 0)
+            => theGameWorld
+            .Bind(world => world.LoadContent(levelNumber: currentLevel, playerHealth, playerPoints)
+            .Map(unit => world));
 
         public static Either<IFailure, Unit> SetGameFont(Action setGameFont) => Statics.Ensure(setGameFont);
         public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic) => Statics.Ensure(setMenuMusic);

@@ -42,10 +42,9 @@ namespace MazerPlatformer
                 => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), moveStep);
 
             Either<IFailure, Npc> MakeMovingNpc() =>
-                from npc in MakeNpcInstance()
-                from nonMovingNpcOnly in Must(type, () => type != Npc.NpcTypes.Pickup)
-                from configuredNpc in SetNpcDefaultStates(npc)
-                select configuredNpc;
+                MakeNpcInstance()
+                .Bind(npc => Must(type, () => type != Npc.NpcTypes.Pickup).Map( result => npc))
+                .Bind(npc => SetNpcDefaultStates(npc));
 
             Either<IFailure, Npc> SetNpcDefaultStates(Npc npc) => EnsureWithReturn(() =>
             {
@@ -97,11 +96,10 @@ namespace MazerPlatformer
         });
 
         private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, Level level, List<Room> rooms) =>
-            from randomRoom in GetRandomRoom(level.Rows, level.Cols, rooms, level)
-            from npc in CreateNpc(randomRoom, assetName) 
-            from hitPointComponent in npc.AddComponent(Component.ComponentType.HitPoints, hitPoints) 
-            from npcTypeComponent in npc.AddComponent(Component.ComponentType.NpcType, npcType) 
-            select npc;
+            GetRandomRoom(level.Rows, level.Cols, rooms, level)
+            .Bind(randomRoom => CreateNpc(randomRoom, assetName))
+            .Bind(npc => npc.AddComponent(Component.ComponentType.HitPoints, hitPoints).Map(component => npc))
+            .Bind(npc => npc.AddComponent(Component.ComponentType.NpcType, npcType).Map(component => npc));
 
         private Either<IFailure,Room> GetRandomRoom(int Rows, int cols, List<Room> rooms, Level level) 
             => EnsureWithReturn(() => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)], NotFound.Create("Random Room could not be found"));
