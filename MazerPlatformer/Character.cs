@@ -186,18 +186,17 @@ namespace MazerPlatformer
                 select Nothing
                 ).IgnoreFailureOf(typeof(ShortCircuitFailure));
 
-        //impure
         public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir)
             => SetCharacterDirection(dir);
 
         // both call into external libs
         public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch) =>
             base.Draw(spriteBatch)
-            .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
+                .Bind(unit => Ensure(() => Animation.Draw(spriteBatch)));
 
         // both call into external libs
         public override Either<IFailure, Unit> Update(GameTime gameTime) =>
             base.Update(gameTime)
-            .Bind(unit => Ensure(() => Animation.Update(gameTime, (int)this.GetCentre().X, (int)this.GetCentre().Y)));
+                .Bind(unit => Ensure(() => Animation.Update(gameTime, (int)this.GetCentre().X, (int)this.GetCentre().Y)));
     }
 }

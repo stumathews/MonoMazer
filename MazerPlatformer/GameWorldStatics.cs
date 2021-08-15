@@ -16,14 +16,16 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> NotifyIfLevelCleared(GameWorld.LevelClearedInfo levelClearedFunc, Level level) => Ensure(() =>
         {
             // Remove number of known pickups...this is an indicator of level clearance
-            if (level.NumPickups == 0)
-                levelClearedFunc?.Invoke(level);
+            MaybeTrue(()=> level.NumPickups == 0)
+                .Iter(unit => Ensure(()=>levelClearedFunc?.Invoke(level)));
+
         });
 
         public static Option<Unit> IsLevelCleared(Level level)
             => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
 
-        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, GameWorld.GameObjectAddedOrRemoved func) => Ensure(() =>
+        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, GameWorld.GameObjectAddedOrRemoved func) => Ensure(() 
+            =>
         {
             // We want subscribers to inspect the object before we dispose of it below
             func?.Invoke(obj, isRemoved: true, runningTotalCount: gameObjects.Count);
@@ -55,9 +57,7 @@ namespace MazerPlatformer
                 None: () => gameObject2.IsColliding = gameObject1.IsColliding = false);
 
         public static bool IsSameType(GameObject gameObject1, GameObject gameObject2)
-        {
-            return gameObject1.Type == gameObject2.Type;
-        }
+            => gameObject1.Type == gameObject2.Type;
 
         public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;

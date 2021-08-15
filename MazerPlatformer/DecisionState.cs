@@ -20,9 +20,10 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
            base.Update(owner, gameTime);
-           IsWithin(100, gameTime).ShortCirtcutOnTrue()
-                        .Bind((boolean) => Npc.SwapDirection())
-                        .IfRight((u) => Npc.NpcState = Npc.NpcStates.Moving);
+           IsWithin(100, gameTime)
+                .ShortCirtcutOnTrue()
+                .Bind((boolean) => Npc.SwapDirection())
+                .IfRight((u) => Npc.NpcState = Npc.NpcStates.Moving);
         }
     }
 }

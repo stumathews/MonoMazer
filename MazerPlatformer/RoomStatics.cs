@@ -178,28 +178,16 @@ namespace MazerPlatformer
         });
 
         [PureFunction]
-        public static Either<IFailure, Room> RemoveSide(Room theRoom, Room.Side side) => theRoom.Copy().EnsuringBind(room =>
-        {
-            switch (side)
-            {
-                case Room.Side.Top:
-                    room.HasSides[0] = false;
-                    break;
-                case Room.Side.Right:
-                    room.HasSides[1] = false;
-                    break;
-                case Room.Side.Bottom:
-                    room.HasSides[2] = false;
-                    break;
-                case Room.Side.Left:
-                    room.HasSides[3] = false;
-                    break;
-                default:
-                    return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Room>();
-            }
-
-            return room.ToEither();
-        });
+        public static Either<IFailure, Room> RemoveSide(Room theRoom, Room.Side side) 
+                => theRoom.Copy()
+                        .EnsuringBind(room 
+                            => Switcher(Cases()
+                                        .AddCase(when(side == Room.Side.Top, then: () => room.HasSides[0] = false))
+                                        .AddCase(when(side == Room.Side.Right, then: () => room.HasSides[1] = false))
+                                        .AddCase(when(side == Room.Side.Bottom, then: () => room.HasSides[2] = false))
+                                        .AddCase(when(side == Room.Side.Left, then: () => room.HasSides[3] = false))
+                                        , UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs"))
+                .Bind<Room>(unit => room));
 
         public static bool DoesRoomNumberExist(int roomNumber, int totalCols, int totalRows) 
             => roomNumber >= 0 && roomNumber <= ((totalRows * totalCols) - 1);

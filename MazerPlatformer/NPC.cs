@@ -40,16 +40,12 @@ namespace MazerPlatformer
                 CurrentDirection = GetRandomEnumValue<CharacterDirection>().ThrowIfFailed();
             });
 
-        private Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject)
-        {
-            NpcState = NpcStates.Colliding;
-
-            return otherObject
+        private Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 
+            => Ensure(() => NpcState = NpcStates.Colliding)
+                .Bind(unit => otherObject
                 .Map(NudgePlayerOutOfCollision)
-                .ToEither(NotFound.Create("Game object was not found or null"));
+                .ToEither(NotFound.Create("Game object was not found or null")));
 
-            Unit NudgePlayerOutOfCollision(GameObject o) 
-                => o.IsPlayer() ? Nothing : NudgeOutOfCollision().ThrowIfFailed();
-        }
+        private Unit NudgePlayerOutOfCollision(GameObject o) => o.IsPlayer() ? Nothing : NudgeOutOfCollision().ThrowIfFailed();
     }
 }

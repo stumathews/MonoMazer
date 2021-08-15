@@ -75,14 +75,10 @@ namespace MazerPlatformer
             }
         }
 
-       public static Either<IFailure, Unit> SaveLevelFile(Player p, LevelDetails level, IFileSaver fileSaver, string levelFileName)
-        {
-            // Save Player info into level file
-            return 
-                from copy in CopyAnimationInfo(p, level?.Player ?? new LevelPlayerDetails())
-                from saved in Ensure(() => fileSaver.SaveLevelFile(level, levelFileName))
-                select Nothing;
-        }
+        // Save Player info into level file
+        public static Either<IFailure, Unit> SaveLevelFile(Player p, LevelDetails level, IFileSaver fileSaver, string levelFileName) 
+            => CopyAnimationInfo(p, level?.Player ?? new LevelPlayerDetails())
+                 .Bind(unit => Ensure(() => fileSaver.SaveLevelFile(level, levelFileName)));
 
         public static Either<IFailure, Unit> CopyOrUpdateComponents(Character @from, LevelCharacterDetails to) => EnsuringBind(() 
                 => @from.Components.Map(fromComponent => fromComponent.Type == ComponentType.GameWorld || fromComponent.Type == ComponentType.Player 
@@ -108,12 +104,9 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> AddNpcDetailsToLevelFile(LevelDetails levelDetails, LevelNpcDetails details) =>
                 Ensure(() => { levelDetails.Npcs.Add(details); });
 
-        public static Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets, IGrouping<string, Npc> npcByAssetFile)
-            => EnsuringBind<bool>(() =>
-            {
-                return seenAssets.Add(npcByAssetFile.Key)
-                                .FailIfFalse(InvalidDataFailure.Create($" {npcByAssetFile.Key} Could not added to seen assets"));
-            });
+        public static Either<IFailure, bool> AddToSeen(System.Collections.Generic.HashSet<string> seenAssets, IGrouping<string, Npc> npcByAssetFile) => EnsuringBind<bool>(() 
+            => seenAssets.Add(npcByAssetFile.Key)
+                           .FailIfFalse(InvalidDataFailure.Create($" {npcByAssetFile.Key} Could not added to seen assets")));
 
         
         // Make sure we actually have health or points for the player
@@ -130,11 +123,11 @@ namespace MazerPlatformer
         }
 
         public static Either<IFailure, Npc> AttachComponents(LevelNpcDetails levelNpc, Npc npc1)
-            {
-                levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
+        {
+            levelNpc.Components.Iter((comp) => npc1.AddComponent(comp.Type, comp.Value));
                             
-                return npc1;
-            }
+            return npc1;
+        }
 
         public static Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: () 
             => characters.Add(npc));

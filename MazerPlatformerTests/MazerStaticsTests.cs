@@ -311,6 +311,12 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void EnableAllDiagnosticsTest()
         {
+            Diagnostics.DrawMaxPoint = false;
+            Diagnostics.DrawSquareSideBounds = false;
+            Diagnostics.DrawSquareBounds = false;
+            Diagnostics.DrawGameObjectBounds = false;
+            Diagnostics.DrawObjectInfoText = false;
+            Diagnostics.ShowPlayerStats = false;
             EnableAllDiagnostics();
 
             Assert.IsTrue(Diagnostics.DrawMaxPoint);

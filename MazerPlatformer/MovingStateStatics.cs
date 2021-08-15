@@ -24,10 +24,9 @@ namespace MazerPlatformer
             return true;
         }).Match(Right: (b)=>true, Left:(failure)=>false);
 
-        public static Either<IFailure, bool> ChangeDirection(bool sameCol, bool sameRow, IGameWorld gameWorld, Player player, Npc npc, int myRow, int playerRow, int myCol, int playerCol) => EnsureWithReturn(() =>
-        {
-            return GetSeenInCol(sameCol, sameRow, gameWorld, player, npc, myRow, playerRow) || GetSeenInRow(sameCol, sameRow, gameWorld, player, npc, myCol, playerCol);
-        });
+        public static Either<IFailure, bool> ChangeDirection(bool sameCol, bool sameRow, IGameWorld gameWorld, Player player, Npc npc, int myRow, int playerRow, int myCol, int playerCol) => EnsureWithReturn(() 
+            => GetSeenInCol(sameCol, sameRow, gameWorld, player, npc, myRow, playerRow) || 
+               GetSeenInRow(sameCol, sameRow, gameWorld, player, npc, myCol, playerCol));
         
     }
 }

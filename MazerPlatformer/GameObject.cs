@@ -148,13 +148,15 @@ namespace MazerPlatformer
 
         // Every object can check if its colliding with another object's bounding box
         public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsuringBind(() 
-            => MaybeTrue(() => otherObject == null || otherObject.Id == Id).ToEither()
-                .BiBind<bool>(Right: (unit) => false, Left: (ifailure) =>
-                  {
-                      IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
-                      otherObject.IsColliding = IsColliding;
-                      return IsColliding;
-                  }));
+            => MaybeTrue(() => otherObject == null || otherObject.Id == Id)
+                .ToEither()
+                .BiBind<bool>(Right: (unit) => false, 
+                              Left: (ifailure) =>
+                              {
+                                  IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere); // && Active;
+                                  otherObject.IsColliding = IsColliding;
+                                  return IsColliding;
+                              }));
 
         // Not sure this is a good as it could be because the Game world is what calls this 
         // as its the game world is what checks for collisions
@@ -192,16 +194,20 @@ namespace MazerPlatformer
         });
 
         private Either<IFailure, object> UpdateComponent(object newValue, Component found)
-            => found == null
-                ? new NotFound($"Component not found to set value to {newValue}").ToEitherFailure<Unit>()
-                : EnsureWithReturn(() =>
-                {
-                    var oldValue = found.Value;
-                    found.Value = newValue;
+            => MaybeTrue(()=> found == null)
+                .Match(Some: truth => new NotFound($"Component not found to set value to {newValue}").ToEitherFailure<Unit>(),
+                       None: ()=> EnsureWithReturn(() => OnGameObjectComponentChanged
+                                    .ToOption()
+                                    .ToEither()
+                                    .BiBind(Right: trigger => trigger.Invoke(this, found.Id, found.Type, ReplaceOld(newValue, found), newValue),
+                                            Left: (ifailure) => ShortCircuitFailure.Create($"No subscribers on {nameof(OnGameObjectComponentChanged)}").ToEitherFailure<Unit>())));
 
-                    OnGameObjectComponentChanged?.Invoke(this, found.Id, found.Type, oldValue, newValue);
-                    return newValue;
-                });
+        private static object ReplaceOld(object newValue, Component found)
+        {
+            var oldValue = found.Value;
+            found.Value = newValue;
+            return oldValue;
+        }
 
         public Either<IFailure, Unit> AddState(State state) => Ensure(() 
             => States.Add(state));
@@ -261,16 +267,17 @@ namespace MazerPlatformer
         });
 
         protected virtual void Dispose(bool disposing) => 
-            MaybeTrue(() => disposing).ToEither()
-            .Bind((unit) => Ensure(() => OnDisposing?.Invoke(this)))
-            .EnsuringMap(unit =>
-            {
-                // Cleanup objects we know we wont need or that other objects should not need.
-                Components.Clear();
-                States.Clear();
-                StateTransitions.Clear();
-                return Nothing;
-            }).ThrowIfFailed();
+            MaybeTrue(() => disposing)
+                .ToEither()
+                .Bind((unit) => Ensure(() => OnDisposing?.Invoke(this)))
+                .EnsuringMap(unit =>
+                {
+                    // Cleanup objects we know we wont need or that other objects should not need.
+                    Components.Clear();
+                    States.Clear();
+                    StateTransitions.Clear();
+                    return Nothing;
+                }).ThrowIfFailed();
 
         public void Dispose()
         {

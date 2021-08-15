@@ -12,9 +12,8 @@ namespace MazerPlatformer
     public static class ImmutableCopy
     {
         public static Either<IFailure, T> DeepCloneXml<T>(this T original)
-            => from xml in XmlUtilities<T>.ObjectToXml(original)
-                from copy in XmlUtilities<T>.XmlToObject(xml)
-                select copy;
+            => XmlUtilities<T>.ObjectToXml(original)
+                              .Bind( xml => XmlUtilities<T>.XmlToObject(xml));
 
         // This is probably faster than xml serializer but then i'll need to use [XmlSerialize] on my classes - not a trainsmash if xmlserializer is too slow
         public static Either<IFailure, T> DeepCloneBinary<T>(this T obj) => Statics.EnsureWithReturn(() =>

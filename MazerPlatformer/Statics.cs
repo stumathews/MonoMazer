@@ -560,10 +560,8 @@ namespace MazerPlatformer
                 .Bind(unit => Ensure(() => then()))
                 .BiMap<bool>(Right: (unit) => true, Left: (failure) => false);
 
-        public static Either<IFailure, bool>[] Cases()
-        {
-            return new Either<IFailure, bool>[] { };
-        }
+        public static Either<IFailure, bool>[] Cases() 
+            => new Either<IFailure, bool>[] { };
 
         public static Either<IFailure, bool>[] AddCase(this Either<IFailure, bool>[] cases, Either<IFailure, bool> @case)
         {

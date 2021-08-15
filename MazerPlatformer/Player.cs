@@ -31,16 +31,13 @@ namespace MazerPlatformer
                 // Get notified when I collide with another object (collision handled in base class)
                 OnCollision += HandleCollision;
             });
-               
+
 
         // I can draw myself!
-        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch)
-        {
-            base.Draw(spriteBatch);
-
-            return MaybeTrue(()=>Diagnostics.DrawPlayerRectangle)
-                    .Iter((success)=> spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray));
-        }
+        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch) 
+            => base.Draw(spriteBatch)
+                .Bind(unit => MaybeTrue(() => Diagnostics.DrawPlayerRectangle))
+                .Iter((success) => Ensure(() => spriteBatch.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray)));
 
         // I can handle my own collisions
         public Either<IFailure, Unit> HandleCollision(Option<GameObject> thisObject, Option<GameObject> otherObject) 

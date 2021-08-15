@@ -118,28 +118,13 @@ namespace MazerPlatformer
         });
 
 
-        public Either<IFailure, Unit> RemoveSide(Side side)
-        {
-            switch (side)
-            {
-                case Side.Top:
-                    HasSides[0] = false;
-                    break;
-                case Side.Right:
-                    HasSides[1] = false;
-                    break;
-                case Side.Bottom:
-                    HasSides[2] = false;
-                    break;
-                case Side.Left:
-                    HasSides[3] = false;
-                    break;
-                default:
-                    return UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs").ToEitherFailure<Unit>();
-            }
-
-            return Nothing.ToEither();
-        }
+        public Either<IFailure, Unit> RemoveSide(Side side) 
+            => Switcher(Cases()
+                    .AddCase(when(side == Side.Top, then: () => HasSides[0] = false))
+                    .AddCase(when(side == Side.Right, then: () => HasSides[1] = false))
+                    .AddCase(when(side == Side.Bottom, then: () => HasSides[2] = false))
+                    .AddCase(when(side == Side.Left, then: () => HasSides[3] = false))
+                , UnexpectedFailure.Create("hasSides ArgumentOutOfRangeException in Room.cs"));
 
         protected bool Equals(Room other) 
                 => HasSides.SequenceEqual(other.HasSides) &&

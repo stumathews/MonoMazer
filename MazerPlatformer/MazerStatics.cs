@@ -113,26 +113,16 @@ namespace MazerPlatformer
         });
 
         public static Either<IFailure, Unit> SetPlayerDetails(Component.ComponentType type, int value, Func<int, int> setPlayerHealth, Func<int, int> setPlayerPoints)
-        {
-            switch (type)
-            {
-                case Component.ComponentType.Health:
-                    setPlayerHealth(value);
-                    break;
-                case Component.ComponentType.Points:
-                    setPlayerPoints(value);
-                    break;
-            }
+            => Statics.Switcher(Statics.Cases()
+                                        .AddCase(Statics.when(type == Component.ComponentType.Health, then: () => setPlayerHealth(value)))
+                                        .AddCase(Statics.when(type == Component.ComponentType.Points, then: () => setPlayerPoints(value))), ShortCircuitFailure.Create("Unknown Type"));
 
-            return Statics.Nothing.ToEither();
-        }
-
-        public static Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart, Either<IFailure, IGameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups) =>
-            Statics.Ensure(()=>setGameToPlayingState())
-            .Bind(unit => HideMenu(setMenuPanelNotVisibleFunction))
-            .Bind(unit => theGameWorld)
-            .Bind(gameWorld => gameWorld.StartOrResumeLevelMusic())
-            .Bind(unit => ResetPlayerStatistics(isFreshStart, setPlayerHealth, setPlayerPoints, setPLayerPickups, theGameWorld));
+        public static Either<IFailure, Unit> StartOrContinueLevel(bool isFreshStart, Either<IFailure, IGameWorld> theGameWorld, Action setMenuPanelNotVisibleFunction, Func<Mazer.GameStates> setGameToPlayingState, Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups) 
+            => Statics.Ensure(()=>setGameToPlayingState())
+                        .Bind(unit => HideMenu(setMenuPanelNotVisibleFunction))
+                        .Bind(unit => theGameWorld)
+                        .Bind(gameWorld => gameWorld.StartOrResumeLevelMusic())
+                        .Bind(unit => ResetPlayerStatistics(isFreshStart, setPlayerHealth, setPlayerPoints, setPLayerPickups, theGameWorld));
 
         // Not pure - depends on static state and changes it
         public static Unit EnableAllDiagnostics()
@@ -159,7 +149,9 @@ namespace MazerPlatformer
             .Bind(world => world.LoadContent(levelNumber: currentLevel, playerHealth, playerPoints)
             .Map(unit => world));
 
-        public static Either<IFailure, Unit> SetGameFont(Action setGameFont) => Statics.Ensure(setGameFont);
-        public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic) => Statics.Ensure(setMenuMusic);
+        public static Either<IFailure, Unit> SetGameFont(Action setGameFont) 
+            => Statics.Ensure(setGameFont);
+        public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic)
+            => Statics.Ensure(setMenuMusic);
     }
 }

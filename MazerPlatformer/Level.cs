@@ -394,7 +394,7 @@ namespace MazerPlatformer
             .ThrowIfFailed();
 
             Player.Dispose();
-            
+
             foreach (var npc in Npcs) npc.Dispose();
             foreach (var room in _rooms) room.Dispose();
 

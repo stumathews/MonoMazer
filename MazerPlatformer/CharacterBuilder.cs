@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameLibFramework.Animation;
 using GameLibFramework.FSM;
 using LanguageExt;
@@ -27,43 +28,38 @@ namespace MazerPlatformer
             Cols = cols;
         }
 
-        public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName,
-            int frameWidth = AnimationInfo.DefaultFrameWidth,
-            int frameHeight = AnimationInfo.DefaultFrameHeight,
-            int frameCount = AnimationInfo.DefaultFrameCount,
-            Npc.NpcTypes type = Npc.NpcTypes.Enemy,
-            int moveStep = 3)
+        public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName, int frameWidth = AnimationInfo.DefaultFrameWidth,
+            int frameHeight = AnimationInfo.DefaultFrameHeight, int frameCount = AnimationInfo.DefaultFrameCount,
+            Npc.NpcTypes type = Npc.NpcTypes.Enemy, int moveStep = 3) 
+            => MaybeTrue(() => type == Npc.NpcTypes.Pickup)
+                    .Match(Some: unit => MakeNpcInstance(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep),
+                            None: () => MakeMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, type, moveStep));
+
+        private static Either<IFailure, Npc> SetNpcDefaultStates(Npc npc) => EnsureWithReturn(() =>
         {
-            return type == Npc.NpcTypes.Pickup 
-                ? MakeNpcInstance()
-                : MakeMovingNpc();
+            var decisionState = new DecisionState("default", npc);
+            var movingState = new MovingState("moving", npc);
+            var collidingState = new CollidingState("colliding", npc);
 
-            Either<IFailure, Npc> MakeNpcInstance()
-                => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), moveStep);
+            decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcState == Npc.NpcStates.Moving));
+            movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcState == Npc.NpcStates.Colliding));
+            collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcState == Npc.NpcStates.Deciding));
 
-            Either<IFailure, Npc> MakeMovingNpc() =>
-                MakeNpcInstance()
-                .Bind(npc => Must(type, () => type != Npc.NpcTypes.Pickup).Map( result => npc))
-                .Bind(npc => SetNpcDefaultStates(npc));
+            npc.AddState(movingState);
+            npc.AddState(collidingState);
+            npc.AddState(decisionState);
+            return npc;
+        });
 
-            Either<IFailure, Npc> SetNpcDefaultStates(Npc npc) => EnsureWithReturn(() =>
-            {
-                var decisionState = new DecisionState("default", npc);
-                var movingState = new MovingState("moving", npc);
-                var collidingState = new CollidingState("colliding", npc);
+        private Either<IFailure, Npc> MakeMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, Npc.NpcTypes type, int moveStep)
+            => MakeNpcInstance(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep)
+                        .Bind(npc => Must(type, () => type != Npc.NpcTypes.Pickup).Map(result => npc))
+                        .Bind(npc => SetNpcDefaultStates(npc));
 
-                decisionState.Transitions.Add(new Transition(movingState, () => npc.NpcState == Npc.NpcStates.Moving));
-                movingState.Transitions.Add(new Transition(collidingState, () => npc.NpcState == Npc.NpcStates.Colliding));
-                collidingState.Transitions.Add(new Transition(decisionState, () => npc.NpcState == Npc.NpcStates.Deciding));
+        private Either<IFailure, Npc> MakeNpcInstance(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, int moveStep) 
+            => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(), AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight, GameObject.GameObjectType.Npc, new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName, frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), moveStep);
 
-                npc.AddState(movingState);
-                npc.AddState(collidingState);
-                npc.AddState(decisionState);
-                return npc;
-            });
-        }
 
-        
 
         public Either<IFailure, List<Npc>> GenerateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => EnsuringBind(() =>
         {
@@ -72,21 +68,15 @@ namespace MazerPlatformer
                     .BindT(AddToNpcList).AggregateFailures()
                 from dodos in CreateWith(DefaultNumDodos, () => Create($@"Sprites\dodo", 40, Npc.NpcTypes.Enemy, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
-                from green in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-green", 10, Npc.NpcTypes.Pickup, level, rooms))
+                from green in CreateWith(DefaultNumPickups, () => Create($@"Sprites\balloon-green", 10, Npc.NpcTypes.Pickup, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
-                from blue in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-blue", 20, Npc.NpcTypes.Pickup, level, rooms))
+                from blue in CreateWith(DefaultNumPickups, () => Create($@"Sprites\balloon-blue", 20, Npc.NpcTypes.Pickup, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
-                from orange in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-orange", 30, Npc.NpcTypes.Pickup, level, rooms))
+                from orange in CreateWith(DefaultNumPickups, () => Create($@"Sprites\balloon-orange", 30, Npc.NpcTypes.Pickup, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
-                from pink in CreateWith(DefaultNumPickups, ()=> Create($@"Sprites\balloon-pink", 40, Npc.NpcTypes.Pickup, level, rooms))
+                from pink in CreateWith(DefaultNumPickups, () => Create($@"Sprites\balloon-pink", 40, Npc.NpcTypes.Pickup, level, rooms))
                     .BindT(AddToNpcList).AggregateFailures()
                 select npcs;
-
-            IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator)
-            {
-                for (var i = 0; i < num; i++)
-                    yield return creator();
-            }
 
             Either<IFailure, List<Npc>> AddToNpcList(Npc npc) => EnsuringBind(() =>
             {
@@ -94,6 +84,9 @@ namespace MazerPlatformer
                 return  npcs.ToEither();
             });
         });
+
+        private static IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator) 
+            => Enumerable.Range(0, num).Select(index => creator());
 
         private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, Level level, List<Room> rooms) =>
             GetRandomRoom(level.Rows, level.Cols, rooms, level)
