@@ -163,17 +163,17 @@ namespace MazerPlatformer
         /// <param name="otherGameObject"></param>
         /// <returns></returns>
         private Either<IFailure, Unit> PlayerOnOnCollision(Option<GameObject> thePlayer, Option<GameObject> otherGameObject)
-        {
-            return from player in thePlayer.ToEither(NotFound.Create("Player not found"))
-                from gameObject in otherGameObject.ToEither(NotFound.Create("Other not found"))
+            => from player in thePlayer
+                     .ToEither(NotFound.Create("Player not found"))
+                from gameObject in otherGameObject
+                    .ToEither(NotFound.Create("Other not found"))
                 from isNpc in Must(gameObject, () => gameObject.Type == GameObjectType.Npc, "Must be NPC")
                 from npcComponent in gameObject.FindComponentByType(Component.ComponentType.NpcType)
                     // Convert Option<T> to Either<L,R>:
                     .ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
                 from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
                 from collisionResult in ActOnTypeCollision(npcType, player, gameObject)
-                    select collisionResult;
-        }
+                select collisionResult;
 
         private static Either<IFailure, int> DetermineNewHealth(GameObject gameObject1, GameObject otherObject2)
             => from hitPointsComponent in otherObject2.FindComponentByType(Component.ComponentType.HitPoints).ToEither(NotFound.Create("Could not find hit-point component"))

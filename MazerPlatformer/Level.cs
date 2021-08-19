@@ -243,7 +243,7 @@ namespace MazerPlatformer
                 from playerPoints in GetPlayerPoints(player)
                     .Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
                 select player).ThrowIfNone());
-
+        
         /// <summary>
         /// loading the definition of the enemies into a file.
         /// </summary>

@@ -136,7 +136,7 @@ namespace MazerPlatformer
                                 .Bind(UserInterface => UpdateUi(gameTime, UserInterface)))
                 .Bind(unit => SetGameCommands(_gameCommands, gameTime))
                 .Bind(unit => _gameStateMachine
-                            .Bind(gameStateMachine =>UpdateStateMachine(gameTime, gameStateMachine))) // NB: game world is updated by PlayingGameState
+                                .Bind(gameStateMachine =>UpdateStateMachine(gameTime, gameStateMachine))) // NB: game world is updated by PlayingGameState
                 .ThrowIfFailed();        
 
         Either<IFailure, ICommandManager> SetGameCommands(Either<IFailure, ICommandManager> gameCommands, GameTime gameTime) => EnsuringBind(()=>
