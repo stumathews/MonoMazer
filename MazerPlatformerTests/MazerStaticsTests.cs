@@ -1,4 +1,18 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+//-----------------------------------------------------------------------
+
+// <copyright file="MazerStaticsTests.cs" company="Stuart Mathews">
+
+// Copyright (c) Stuart Mathews. All rights reserved.
+
+// <author>Stuart Mathews</author>
+
+// <date>03/10/2021 13:16:11</date>
+
+// </copyright>
+
+//-----------------------------------------------------------------------
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MazerPlatformer;
 using System;
 using System.Collections.Generic;
@@ -40,7 +54,7 @@ namespace MazerPlatformer.Tests
         public void ResetObjectStates()
         {
             var mockGameContentManager = new Mock<IGameContentManager>();
-            mockGameContentManager.Setup(x => x.Load<Texture2D>(It.IsAny<string>())).Returns(() => SneakyTexture2D.CreateNamed(""));
+            mockGameContentManager.Setup(x => x.Load<Texture2D>(It.IsAny<string>())).Returns(() => null);
             mockGameContentManager.Setup(x => x.Load<Song>(It.IsAny<string>())).Returns(() => (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song)));
             GameContentManager = mockGameContentManager.Object;
             BasicLevelObject = new Level(10, 10, 10, 10, 1, new Random());

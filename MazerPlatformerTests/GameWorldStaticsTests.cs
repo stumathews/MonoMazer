@@ -16,6 +16,10 @@ using static MazerPlatformer.Level;
 
 namespace MazerPlatformer.Tests
 {
+
+    /// <summary>
+    /// SneakyTexture2D is by Alexander Brandbyge at https://stackoverflow.com/a/52333394/11660051
+    /// </summary>
     internal class SneakyTexture2D : Texture2D
     {
         private static readonly object Lockobj = new object();
