@@ -28,6 +28,13 @@ using GameLibFramework.Drawing;
 
 namespace MazerPlatformer
 {
+
+    public class LevelMediator
+    {
+
+    }
+
+
     /// <summary>
     /// Game world is contains the game elements such as characters, level objects etc that can be updated/drawn each frame
     /// </summary>
@@ -36,7 +43,6 @@ namespace MazerPlatformer
         private readonly int _viewPortWidth;
         private readonly int _viewPortHeight;
         private IGameContentManager ContentManager { get; }
-        private ISpriteBatcher SpriteBatcher { get; }
         public FileSaver FileSaver { get; }
         private int Rows { get; set; } // Rows Of rooms
         private int Cols { get; set; } // Columns of rooms
@@ -44,6 +50,8 @@ namespace MazerPlatformer
         public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
         private static readonly Random Random = new Random();
+        private readonly LevelMediator LevelFunctionality = new LevelMediator();
+        private readonly PlayerMediator playerMediator = new PlayerMediator();
 
         /* Interface to the Outside world*/
         public event CollisionArgs OnGameWorldCollision;
@@ -77,11 +85,11 @@ namespace MazerPlatformer
 
         private readonly SimpleGameTimeTimer _removeWallTimer = new SimpleGameTimeTimer(1000);
 
-        public static Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch) => EnsuringBind(() 
-            => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch)
-               select (IGameWorld) new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, spriteBatch));
+        public static Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols) => EnsuringBind(() 
+            => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols)
+               select (IGameWorld) new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols));
         
-        private GameWorld(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch)
+        private GameWorld(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -90,7 +98,6 @@ namespace MazerPlatformer
             _roomHeight = viewPortHeight / rows;
             Rows = rows;
             Cols = cols;
-            SpriteBatcher = spriteBatch;
             FileSaver = new FileSaver();
         }
 
@@ -158,16 +165,11 @@ namespace MazerPlatformer
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
 
-            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) 
-                => Ensure(() => OnPlayerStateChanged?.Invoke(state));
-            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) 
-                => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction) 
-                => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) 
-                => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
-            Either<IFailure, Unit> PlayerOnOnPlayerSpotted(Player player) 
-                => _level.PlayPlayerSpottedSound();
+            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => OnPlayerStateChanged?.Invoke(state));
+            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction)  => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
+            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
+            Either<IFailure, Unit> PlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
         });
 
         /// <summary>
@@ -226,14 +228,14 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="spriteBatch"></param>
         
-        public Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch)
+        public Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure)
             => MaybeTrue(()=>_unloading)
                 .ToEither()
                 .Match( Right: (boolean) => Nothing.ToEither(),
                         Left: (failure) => GameObjects // Draw all active game objects
                                                 .Values
                                                 .Where(obj => obj.Active) 
-                                                .Select(gameObject => gameObject.Draw(spriteBatch))
+                                                .Select(gameObject => gameObject.Draw(infrastructure))
                                                 .AggregateUnitFailures());
 
         /// <summary>

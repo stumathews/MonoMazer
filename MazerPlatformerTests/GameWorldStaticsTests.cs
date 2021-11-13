@@ -483,7 +483,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void ValidateTest()
         {
-            Assert.IsTrue(Validate(GameContentManager, 0, 0, 0, 0, null).IsLeft);
+            Assert.IsTrue(Validate(GameContentManager, 0, 0, 0, 0).IsLeft);
         }
 
         [TestMethod()]

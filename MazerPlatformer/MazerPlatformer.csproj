@@ -80,6 +80,7 @@
     <Compile Include="FileSaver.cs" />
     <Compile Include="GameContentManager.cs" />
     <Compile Include="GameGraphicsDevice.cs" />
+    <Compile Include="GameMediator.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GameSpriteFont.cs" />
     <Compile Include="GameUserInterface.cs" />
@@ -94,6 +95,7 @@
     <Compile Include="IGameUserInterface.cs" />
     <Compile Include="IGameWorld.cs" />
     <Compile Include="IMusicPlayer.cs" />
+    <Compile Include="InfrastructureMediator.cs" />
     <Compile Include="ISimpleGameTimer.cs" />
     <Compile Include="LevelStatics.cs" />
     <Compile Include="MazerStatics.cs" />
@@ -109,6 +111,7 @@
     <Compile Include="PerFrame.cs" />
     <Compile Include="NPC.cs" />
     <Compile Include="Player.cs" />
+    <Compile Include="PlayerMediator.cs" />
     <Compile Include="PlayingGameState.cs" />
     <Compile Include="Primatives2D.cs" />
     <Compile Include="Program.cs" />
@@ -126,6 +129,7 @@
     <Compile Include="Failures\UnexpectedFailure.cs" />
     <Compile Include="Failures\UnexpectedFailureException.cs" />
     <Compile Include="Failures\UninitializedFailure.cs" />
+    <Compile Include="UiMediator.cs" />
     <Compile Include="XmlUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -833,6 +837,8 @@
     <MonoGameContentReference Include="Content\Content.mgcb" />
     <None Include="app.config" />
     <None Include="app.manifest" />
+    <None Include="ClassDiagram1.cd" />
+    <None Include="ClassDiagram2.cd" />
     <None Include="Diagrams\GameObject.cd" />
     <None Include="Diagrams\GameWorld.cd" />
     <None Include="Diagrams\TopLevel.cd" />

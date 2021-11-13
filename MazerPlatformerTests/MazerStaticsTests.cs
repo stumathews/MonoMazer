@@ -125,20 +125,20 @@ namespace MazerPlatformer.Tests
             MockCommandManager.Verify(x => x.Update(gameTime), Times.Once);
         }
 
-        [TestMethod()]
-        public void BeginSpriteBatchTest()
-        {
-            BeginSpriteBatch(SpriteBatcher);
-            MockSpriteBatcher.Verify(x => x.Begin(), Times.Once);
-        }
+        //[TestMethod()]
+        //public void BeginSpriteBatchTest()
+        //{
+        //    BeginSpriteBatch(SpriteBatcher);
+        //    MockSpriteBatcher.Verify(x => x.Begin(), Times.Once);
+        //}
 
-        [TestMethod()]
-        public void UpdateUiTest()
-        {
-            var gameTime = new GameTime();
-            UpdateUi(gameTime, GameUserInterface);
-            MockGameUserInterface.Verify(x => x.Update(gameTime), Times.Once);
-        }
+        //[TestMethod()]
+        //public void UpdateUiTest()
+        //{
+        //    var gameTime = new GameTime();
+        //    UpdateUi(gameTime, GameUserInterface);
+        //    MockGameUserInterface.Verify(x => x.Update(gameTime), Times.Once);
+        //}
 
         [TestMethod()]
         public void IsPlayingGameTest()
@@ -156,15 +156,15 @@ namespace MazerPlatformer.Tests
             Assert.IsFalse(IsStateEntered(GameLibFramework.FSM.State.StateChangeReason.Update));
         }
 
-        [TestMethod()]
-        public void DrawGameWorldTest()
-        {
-            var mockGameWorld = new Mock<IGameWorld>();
-            mockGameWorld.Setup(x => x.Draw(SpriteBatcher)).Returns(() => Statics.Nothing.ToEither()).Verifiable();
-            IGameWorld gameWorld = mockGameWorld.Object;
-            DrawGameWorld(SpriteBatcher, gameWorld.ToEither());
-            mockGameWorld.Verify(x => x.Draw(SpriteBatcher), Times.Once);
-        }
+        //[TestMethod()]
+        //public void DrawGameWorldTest()
+        //{
+        //    var mockGameWorld = new Mock<IGameWorld>();
+        //    mockGameWorld.Setup(x => x.Draw(SpriteBatcher)).Returns(() => Statics.Nothing.ToEither()).Verifiable();
+        //    IGameWorld gameWorld = mockGameWorld.Object;
+        //    DrawGameWorld(SpriteBatcher, gameWorld.ToEither());
+        //    mockGameWorld.Verify(x => x.Draw(SpriteBatcher), Times.Once);
+        //}
 
 
         [TestMethod()]
@@ -175,64 +175,64 @@ namespace MazerPlatformer.Tests
             MockMusicPlayer.Verify(x => x.Play(dummySong), Times.Once);
         }
 
-        [TestMethod()]
-        public void ClearGraphicsDeviceTest()
-        {
-            ClearGraphicsDevice(Mazer.GameStates.Playing, GameGraphicsDevice);
-            MockGameGraphicsDevice.Verify(x => x.Clear(Color.CornflowerBlue), Times.Once);
+        //[TestMethod()]
+        //public void ClearGraphicsDeviceTest()
+        //{
+        //    ClearGraphicsDevice(Mazer.GameStates.Playing, GameGraphicsDevice);
+        //    MockGameGraphicsDevice.Verify(x => x.Clear(Color.CornflowerBlue), Times.Once);
 
-            ClearGraphicsDevice(Mazer.GameStates.Paused, GameGraphicsDevice);
-            MockGameGraphicsDevice.Verify(x => x.Clear(Color.Silver), Times.Once);
-        }
+        //    ClearGraphicsDevice(Mazer.GameStates.Paused, GameGraphicsDevice);
+        //    MockGameGraphicsDevice.Verify(x => x.Clear(Color.Silver), Times.Once);
+        //}
 
-        [TestMethod()]
-        public void UpdateStateMachineTest()
-        {
-            var gameTime = new GameTime();
+        //[TestMethod()]
+        //public void UpdateStateMachineTest()
+        //{
+        //    var gameTime = new GameTime();
 
-            var mock = new Mock<IFSM>();
-            mock.Setup(x => x.Update(gameTime)).Verifiable();
-            var fsm = mock.Object;
+        //    var mock = new Mock<IFSM>();
+        //    mock.Setup(x => x.Update(gameTime)).Verifiable();
+        //    var fsm = mock.Object;
 
-            UpdateStateMachine(gameTime, fsm);
+        //    UpdateStateMachine(gameTime, fsm);
 
-            mock.Verify(x => x.Update(gameTime), Times.Once);
-        }
+        //    mock.Verify(x => x.Update(gameTime), Times.Once);
+        //}
 
-        [TestMethod()]
-        public void DrawPlayerStatisticsTest()
-        {
-            DrawPlayerStatistics(SpriteBatcher, GameSpriteFont, GameGraphicsDevice, 1, 100, 0);
-            MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.AtMost(3));
+        //[TestMethod()]
+        //public void DrawPlayerStatisticsTest()
+        //{
+        //    DrawPlayerStatistics(SpriteBatcher, GameSpriteFont, GameGraphicsDevice, 1, 100, 0);
+        //    MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.AtMost(3));
 
-        }
+        //}
 
-        [TestMethod()]
-        public void EndSpriteBatchTest()
-        {
-            EndSpriteBatch(SpriteBatcher);
-            MockSpriteBatcher.Verify(x => x.End(), Times.Once);
-        }
+        //[TestMethod()]
+        //public void EndSpriteBatchTest()
+        //{
+        //    EndSpriteBatch(SpriteBatcher);
+        //    MockSpriteBatcher.Verify(x => x.End(), Times.Once);
+        //}
 
-        [TestMethod()]
-        public void PrintGameStatisticsPlayingTest()
-        {
-            var gameTime = new GameTime();
-            Diagnostics.ShowPlayerStats = true;
-            PrintGameStatistics(SpriteBatcher, gameTime, GameSpriteFont, GameGraphicsDevice, 1, 2, 3, Character.CharacterStates.Moving, Character.CharacterDirection.Down, Character.CharacterDirection.Down, Mazer.GameStates.Playing);
-            MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.AtLeast(7));
+        //[TestMethod()]
+        //public void PrintGameStatisticsPlayingTest()
+        //{
+        //    var gameTime = new GameTime();
+        //    Diagnostics.ShowPlayerStats = true;
+        //    PrintGameStatistics(SpriteBatcher, gameTime, GameSpriteFont, GameGraphicsDevice, 1, 2, 3, Character.CharacterStates.Moving, Character.CharacterDirection.Down, Character.CharacterDirection.Down, Mazer.GameStates.Playing);
+        //    MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.AtLeast(7));
 
 
-        }
+        //}
 
-        [TestMethod()]
-        public void PrintGameStatisticsPausedTest()
-        {
-            var gameTime = new GameTime();
-            Diagnostics.ShowPlayerStats = true;
-            PrintGameStatistics(SpriteBatcher, gameTime, GameSpriteFont, GameGraphicsDevice, 1, 2, 3, Character.CharacterStates.Moving, Character.CharacterDirection.Down, Character.CharacterDirection.Down, Mazer.GameStates.Paused);
-            MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.Never);
-        }
+        //[TestMethod()]
+        //public void PrintGameStatisticsPausedTest()
+        //{
+        //    var gameTime = new GameTime();
+        //    Diagnostics.ShowPlayerStats = true;
+        //    PrintGameStatistics(SpriteBatcher, gameTime, GameSpriteFont, GameGraphicsDevice, 1, 2, 3, Character.CharacterStates.Moving, Character.CharacterDirection.Down, Character.CharacterDirection.Down, Mazer.GameStates.Paused);
+        //    MockSpriteBatcher.Verify(x => x.DrawString(GameSpriteFont, It.IsAny<string>(), It.IsAny<Vector2>(), It.IsAny<Color>()), Times.Never);
+        //}
 
         [TestMethod()]
         public void ResetPlayerStatisticsTest()

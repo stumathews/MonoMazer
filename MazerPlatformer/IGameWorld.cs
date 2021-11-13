@@ -32,7 +32,7 @@ namespace MazerPlatformer
         event GameWorld.LevelClearedInfo OnLevelCleared;
 
         //Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, ISpriteBatcher spriteBatch);
-        Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatch);
+        Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure);
         int GetRoomHeight();
         Option<Room> GetRoomIn(GameObject gameObject);
         int GetRoomWidth();

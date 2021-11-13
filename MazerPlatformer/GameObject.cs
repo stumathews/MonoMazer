@@ -229,44 +229,67 @@ namespace MazerPlatformer
         #region Diganostics
 
         // Draw the centre point of the object
-        protected Either<IFailure, Unit> DrawCentrePoint(ISpriteBatcher spriteBatcher)
-            => EnsureIf(Diagnostics.DrawCentrePoint, () =>  spriteBatcher.DrawCircle(Centre, 2, 16, Color.Red, 3f))
-                .IgnoreFailure();
+        protected Either<IFailure, Unit> DrawCentrePoint(Option<InfrastructureMediator> infrastructure)
+            => from infra in infrastructure.ToEither()
+               from enabled in ( from result in MaybeTrue(()=>Diagnostics.DrawCentrePoint).ToEither()
+                                   from draw in infra.DrawCircle(Centre, 2, 16, Color.Red, 3f)
+                                   select Nothing).IgnoreFailure()
+               select Success;
 
         // Draw the max point (lower right point)
-        protected Either<IFailure, Unit> DrawMaxPoint(ISpriteBatcher spriteBatcher) 
-            => EnsureIf(Diagnostics.DrawMaxPoint, () => spriteBatcher.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f))
-                .IgnoreFailure();
+        protected Either<IFailure, Unit> DrawMaxPoint(Option<InfrastructureMediator> infrastructure) 
+            => from infra in infrastructure.ToEither()
+               from enabled in ( from result in MaybeTrue(()=>Diagnostics.DrawMaxPoint).ToEither()
+                                 from draw in infra.DrawCircle(MaxPoint, 2, 8, Color.Yellow, 3f)
+                                 select Nothing).IgnoreFailure()
+               select Success;
 
         // Draw the bounding box
-        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(ISpriteBatcher spriteBatcher) 
-            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatcher.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f))
-                .IgnoreFailure();
+        protected Either<IFailure, Unit> DrawGameObjectBoundingBox(Option<InfrastructureMediator> infrastructure) 
+            => from infra in infrastructure.ToEither()
+               from enabled in (from result in MaybeTrue(()=>Diagnostics.DrawGameObjectBounds).ToEither()
+                                from draw in infra.DrawRectangle(_boundingBox.ToRectangle(), Color.Lime, 1.5f)
+                                select Nothing).IgnoreFailure()
+               select Success;
 
         // Draw the bounding sphere
-        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(ISpriteBatcher spriteBatcher)
-            => EnsureIf(Diagnostics.DrawGameObjectBounds, () => spriteBatcher.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua))
-                .IgnoreFailure();
+        protected Either<IFailure, Unit> DrawGameObjectBoundingSphere(Option<InfrastructureMediator> infrastructure)
+            => from infra in infrastructure.ToEither()
+               from enabled in ( from result in MaybeTrue(()=>Diagnostics.DrawGameObjectBounds)
+                                .ToEither()
+                                  from draw in infra.DrawCircle(_centre, BoundingSphere.Radius, 8, Color.Aqua)
+                                  select Nothing).IgnoreFailure()
+               select Success;
 
         // Draw all the diagnostics together
-        protected Either<IFailure, Unit> DrawObjectDiagnostics(ISpriteBatcher spriteBatcher) =>
-            DrawCentrePoint(spriteBatcher)
-                .Bind(unit => DrawMaxPoint(spriteBatcher))
-                .Bind(unit => DrawGameObjectBoundingBox(spriteBatcher))
-                .Bind(unit=> DrawGameObjectBoundingSphere(spriteBatcher));
+        protected Either<IFailure, Unit> DrawObjectDiagnostics(Option<InfrastructureMediator> infrastructure)
+        {
+            return from success in DrawCentrePoint(infrastructure)
+                    from draw1 in DrawMaxPoint(infrastructure)
+                    from draw2 in DrawGameObjectBoundingBox(infrastructure)
+                    from draw3 in DrawGameObjectBoundingSphere(infrastructure)
+                    select Nothing;
+        }
 
         // All game objects can ask to draw some text over it if it wants
         // dependency on Mazer for game font ok.
-        public virtual Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher) =>
-            DoIfReturn(!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText, () => DrawText(spriteBatcher))
-                .Bind(unit => DrawObjectDiagnostics(spriteBatcher))
-                .IgnoreFailure();
-
-        private Either<IFailure, Unit> DrawText(ISpriteBatcher spriteBatch) => Ensure(() =>
+        public virtual Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure)
         {
-            spriteBatch.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White);
-            spriteBatch.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White);
-        });
+            return from success in (from result in MaybeTrue(()=>!IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText).ToEither()
+                                    from draw1 in DrawText(infrastructure)
+                                        .MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawText)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
+                                    from draw2 in DrawObjectDiagnostics(infrastructure)
+                                            .MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawObjectDiagnostics)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
+                                    select Nothing).IgnoreFailure()
+                    select Success;
+        }
+
+        private Either<IFailure, Unit> DrawText(Option<InfrastructureMediator> infrastructure) =>          
+                   from infra in infrastructure.ToEither()
+                   from draw1 in infra.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White)
+                   from draw2 in infra.DrawString(Mazer.GetGameFont(), InfoText, new Vector2(X - 10, Y - 10), Color.White)
+                   from draw3 in infra.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White)
+                   select Nothing;
 
         #endregion
 

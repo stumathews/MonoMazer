@@ -30,8 +30,7 @@ namespace MazerPlatformer
 
     public static class MazerStatics
     {
-        public static Either<IFailure, Unit> UpdateUi(GameTime gameTime, IGameUserInterface userInterface) 
-            => Statics.Ensure(() => userInterface.Update(gameTime));
+        
 
         public static Either<IFailure, ICommandManager> UpdateCommands(Either<IFailure, ICommandManager> gameCommands, GameTime time)
         {
@@ -46,20 +45,12 @@ namespace MazerPlatformer
         }
 
 
-        public static Either<IFailure, ISpriteBatcher> BeginSpriteBatch(ISpriteBatcher spriteBatcher) 
-            => from result in Statics.Ensure(() => spriteBatcher.Begin())
-               select spriteBatcher;
+        
 
         public static Either<IFailure, Unit> PlayMenuMusic(IMusicPlayer player, Song song) => Statics.Ensure(()
             => player.Play(song));
 
-        public static Either<IFailure, Unit> ClearGraphicsDevice(Mazer.GameStates currentGameState, IGameGraphicsDevice graphicsDevice) =>
-            Statics.Ensure(() =>
-            {
-                graphicsDevice.Clear(IsPlayingGame(currentGameState)
-                    ? Color.CornflowerBlue
-                    : Color.Silver);
-            });
+        
 
         public static bool IsPlayingGame(Mazer.GameStates currentGameState) 
             => currentGameState == Mazer.GameStates.Playing;
@@ -67,38 +58,22 @@ namespace MazerPlatformer
         public static bool IsStateEntered(State.StateChangeReason reason) 
             => reason == State.StateChangeReason.Enter;
 
-        public static Either<IFailure, Unit> UpdateStateMachine(GameTime time, IFSM stateMachine) => Statics.Ensure(() => stateMachine.Update(time));
+       
 
-        public static Either<IFailure, Unit> DrawGameWorld(ISpriteBatcher spriteBatch, Either<IFailure, IGameWorld> gameWorld) => Statics.EnsuringBind(() =>
-            gameWorld.Bind(world => world.Draw(spriteBatch)));
-
-        public static Either<IFailure, Unit> DrawPlayerStatistics(ISpriteBatcher spriteBatcher, IGameSpriteFont font, IGameGraphicsDevice graphicsDevice, int currentLevel, int playerHealth, int playerPoints) => Statics.Ensure(() =>
+        public static Either<IFailure, Unit> DrawPlayerStatistics(Option<InfrastructureMediator> infrastruture, IGameSpriteFont font, IGameGraphicsDevice graphicsDevice, int currentLevel, int playerHealth, int playerPoints) => Statics.EnsuringBind(() =>
         {
-            var leftSidePosition = graphicsDevice.Viewport.TitleSafeArea.X + 10;
-            spriteBatcher.DrawString(font, $"Level: {currentLevel}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
-            spriteBatcher.DrawString(font, $"Player Health: {playerHealth}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
-            spriteBatcher.DrawString(font, $"Player Points: {playerPoints}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White);
+            return from infra in infrastruture.ToEither()
+            let leftSidePosition = graphicsDevice.Viewport.TitleSafeArea.X + 10
+            from level in infra.DrawString(font, $"Level: {currentLevel}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y), Color.White)
+            from health in infra.DrawString(font, $"Player Health: {playerHealth}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White)
+            from points in infra.DrawString(font, $"Player Points: {playerPoints}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 60), Color.White)
+            select Statics.Success;
         });
 
         // See how we transform the input and return the output that was modified or in 
-        public static Either<IFailure, ISpriteBatcher> EndSpriteBatch(ISpriteBatcher spriteBatcher) =>
-            Statics.Ensure(spriteBatcher.End)
-            .Map(unit => spriteBatcher);
+        
 
-        public static Either<IFailure, Unit> PrintGameStatistics(ISpriteBatcher spriteBatcher, GameTime time, IGameSpriteFont font, IGameGraphicsDevice graphicsDevice, int numGameObjects, int numGameCollisionsEvents, int numCollisionsWithPlayerAndNpCs, Character.CharacterStates characterState, Character.CharacterDirection characterDirection, Character.CharacterDirection characterCollisionDirection, Mazer.GameStates currentGameState) 
-            => !IsPlayingGame(currentGameState) || !Diagnostics.ShowPlayerStats
-            ? ShortCircuitFailure.Create("Not need to print game statistics").ToEitherFailure<Unit>()
-            : Statics.Ensure(()=>
-            {
-                var leftSidePosition = graphicsDevice.Viewport.TitleSafeArea.X + 10;
-                spriteBatcher.DrawString(font, $"Game Object Count: {numGameObjects}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 90), Color.White);
-                spriteBatcher.DrawString(font, $"Collision Events: {numGameCollisionsEvents}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 120), Color.White);
-                spriteBatcher.DrawString(font, $"NPC Collisions: {numCollisionsWithPlayerAndNpCs}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 150), Color.White);
-                spriteBatcher.DrawString(font, $"Frame rate(ms): {time.ElapsedGameTime.TotalMilliseconds}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 180), Color.White);
-                spriteBatcher.DrawString(font, $"Player State: {characterState}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 210), Color.White);
-                spriteBatcher.DrawString(font, $"Player Direction: {characterDirection}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 240), Color.White);
-                spriteBatcher.DrawString(font, $"Player Coll Direction: {characterCollisionDirection}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 270), Color.White);
-            });
+        
 
         public static Either<IFailure, Unit> ResetPlayerStatistics(Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups, Either<IFailure, IGameWorld> theGameWorld) =>
             from playerHealth in (Either<IFailure, int>) setPlayerHealth()

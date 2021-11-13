@@ -28,7 +28,7 @@ namespace MazerPlatformer
         /// Called each frame to draw itself
         /// </summary>
         /// <param name="spriteBatch"></param>
-        Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher);
+        Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructureMediator);
 
         /// <summary>
         /// Called each frame to update itself

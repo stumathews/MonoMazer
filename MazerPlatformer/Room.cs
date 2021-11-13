@@ -100,12 +100,14 @@ namespace MazerPlatformer
         }
 
         // Draw pipeline for drawing a Room (all drawing operations must succeed - benefit)
-        public override Either<IFailure, Unit> Draw(ISpriteBatcher spriteBatcher) =>
-            base.Draw(spriteBatcher)
-            .Bind( unit => DrawSide(Side.Top, WallProperties, RectangleDetail, spriteBatcher, HasSides))
-            .Bind( unit => DrawSide(Side.Right, WallProperties, RectangleDetail, spriteBatcher, HasSides))
-            .Bind( unit => DrawSide(Side.Bottom, WallProperties, RectangleDetail, spriteBatcher, HasSides))
-            .Bind( unit => DrawSide(Side.Left, WallProperties, RectangleDetail, spriteBatcher, HasSides));
+        public override Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure) =>
+            from infra in infrastructure.ToEither()
+            from draw in base.Draw(infra)
+            from top in DrawSide(Side.Top, WallProperties, RectangleDetail, infra, HasSides)
+            from right in DrawSide(Side.Right, WallProperties, RectangleDetail, infra, HasSides)
+            from bottom in DrawSide(Side.Bottom, WallProperties, RectangleDetail, infra, HasSides)
+            from left in DrawSide(Side.Left, WallProperties, RectangleDetail, infra, HasSides)
+            select Success;
 
         // Rooms only consider collisions that occur with any of their walls - not rooms bounding box, hence overriding default behavior
         public override Either<IFailure, bool> IsCollidingWith(GameObject otherObject) => EnsureWithReturn(() =>
