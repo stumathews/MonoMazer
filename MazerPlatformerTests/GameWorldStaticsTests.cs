@@ -190,25 +190,25 @@ namespace MazerPlatformer.Tests
         }
 
 
-        [TestMethod()]
-        public void NotifyIfLevelClearedWorksWhenNoPickupsRemain()
-        {
-            bool wasInvoked = false;
-            void levelCleared(Level l) => wasInvoked = true;
-            BasicLevelObject.NumPickups = 0;
-            NotifyIfLevelCleared(levelCleared, BasicLevelObject);
-            Assert.IsTrue(wasInvoked, "levelCleared delegate was not invoked");
-        }
+        //[TestMethod()]
+        //public void NotifyIfLevelClearedWorksWhenNoPickupsRemain()
+        //{
+        //    bool wasInvoked = false;
+        //    void levelCleared(Level l) => wasInvoked = true;
+        //    BasicLevelObject.NumPickups = 0;
+        //    NotifyIfLevelCleared(levelCleared, BasicLevelObject);
+        //    Assert.IsTrue(wasInvoked, "levelCleared delegate was not invoked");
+        //}
 
-        [TestMethod()]
-        public void NotifyIfLevelClearedWorksWhenPickupsRemain()
-        {
-            bool wasInvoked = false;
-            void levelCleared(Level l) => wasInvoked = true;
-            BasicLevelObject.NumPickups = 1;
-            NotifyIfLevelCleared(levelCleared, BasicLevelObject);
-            Assert.IsFalse(wasInvoked, "levelCleared delegate was incorrectly invoked");
-        }
+        //[TestMethod()]
+        //public void NotifyIfLevelClearedWorksWhenPickupsRemain()
+        //{
+        //    bool wasInvoked = false;
+        //    void levelCleared(Level l) => wasInvoked = true;
+        //    BasicLevelObject.NumPickups = 1;
+        //    NotifyIfLevelCleared(levelCleared, BasicLevelObject);
+        //    Assert.IsFalse(wasInvoked, "levelCleared delegate was incorrectly invoked");
+        //}
 
         [TestMethod()]
         public void IsLevelClearedTestForEmptyLevel()
@@ -224,28 +224,28 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(IsLevelCleared(BasicLevelObject).IsNone, "Expected an non-empty level not to be clear");
         }
 
-        [TestMethod()]
-        public void NotifyObjectAddedOrRemovedTest()
-        {
+        //[TestMethod()]
+        //public void NotifyObjectAddedOrRemovedTest()
+        //{
 
-            Dictionary<string, GameObject> gameObjects = new Dictionary<string, GameObject>
-            {
-                { "player1", Player1 },
-                { "player2",  Npc1 },
-                { "player3", Npc2 }
-            };
+        //    Dictionary<string, GameObject> gameObjects = new Dictionary<string, GameObject>
+        //    {
+        //        { "player1", Player1 },
+        //        { "player2",  Npc1 },
+        //        { "player3", Npc2 }
+        //    };
 
-            bool wasInvoked = false;
+        //    bool wasInvoked = false;
 
-            Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount)
-            {
-                wasInvoked = true;
-                return Statics.Nothing.ToEither();
-            }
+        //    Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount)
+        //    {
+        //        wasInvoked = true;
+        //        return Statics.Nothing.ToEither();
+        //    }
 
-            NotifyObjectAddedOrRemoved(Player1, gameObjects, GameObjectAddedOrRemoved);
-            Assert.IsTrue(wasInvoked, "GameObjectAddedOrRemoved was not invoked");
-        }
+        //    NotifyObjectAddedOrRemoved(Player1, gameObjects, GameObjectAddedOrRemoved);
+        //    Assert.IsTrue(wasInvoked, "GameObjectAddedOrRemoved was not invoked");
+        //}
 
         [TestMethod()]
         public void RemoveIfLevelPickupTest()
@@ -398,26 +398,26 @@ namespace MazerPlatformer.Tests
             Assert.IsFalse(GameObjects.ContainsKey(Player1.Id));
         }
 
-        [TestMethod()]
-        public void AddToGameObjectsTest()
-        {
-            bool wasCalled = false;
-            bool wasRemoved = false;
+        //[TestMethod()]
+        //public void AddToGameObjectsTest()
+        //{
+        //    bool wasCalled = false;
+        //    bool wasRemoved = false;
 
-            Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) => Ensure(() =>
-            {
-                wasCalled = true;
-                wasRemoved = isRemoved;
-            });
+        //    Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) => Ensure(() =>
+        //    {
+        //        wasCalled = true;
+        //        wasRemoved = isRemoved;
+        //    });
 
-            var npc = CharacterBuilder.CreateNpc(Rooms[0], "dummy").ThrowIfFailed();
-            npc.Id = "hello";
+        //    var npc = CharacterBuilder.CreateNpc(Rooms[0], "dummy").ThrowIfFailed();
+        //    npc.Id = "hello";
 
 
-            AddToGameObjects(GameObjects, npc, GameObjectAddedOrRemoved);
-            Assert.IsTrue(wasCalled);
-            Assert.IsFalse(wasRemoved);
-        }
+        //    AddToGameObjects(GameObjects, npc, GameObjectAddedOrRemoved);
+        //    Assert.IsTrue(wasCalled);
+        //    Assert.IsFalse(wasRemoved);
+        //}
 
         [TestMethod()]
         public void StartRemoveWorldTimerTest()
@@ -448,37 +448,37 @@ namespace MazerPlatformer.Tests
             Assert.IsTrue(level.Cols == expectedRows);
         }
 
-        [TestMethod()]
-        public void AddToGameWorldTest()
-        {
-            Dictionary<string, GameObject> gameWorldObjects = new Dictionary<string, GameObject>
-            {
-                {  Pickup.Id, Pickup }
-            };
+        //[TestMethod()]
+        //public void AddToGameWorldTest()
+        //{
+        //    Dictionary<string, GameObject> gameWorldObjects = new Dictionary<string, GameObject>
+        //    {
+        //        {  Pickup.Id, Pickup }
+        //    };
 
-            Dictionary<string, GameObject> levelGameObjects = new Dictionary<string, GameObject>
-            {
-                { Player1.Id, Player1}, { Npc1.Id, Npc1 }
-            };
+        //    Dictionary<string, GameObject> levelGameObjects = new Dictionary<string, GameObject>
+        //    {
+        //        { Player1.Id, Player1}, { Npc1.Id, Npc1 }
+        //    };
 
-            var wasCalled = new List<string>();
-            var wasRemoved = new Dictionary<string, bool>();
+        //    var wasCalled = new List<string>();
+        //    var wasRemoved = new Dictionary<string, bool>();
 
-            Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) => Ensure(() =>
-             {
-                 wasCalled.Add(gameObject.ThrowIfNone().Id);
-                 wasRemoved.Add(gameObject.ThrowIfNone().Id, isRemoved);
-             });
+        //    Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount) => Ensure(() =>
+        //     {
+        //         wasCalled.Add(gameObject.ThrowIfNone().Id);
+        //         wasRemoved.Add(gameObject.ThrowIfNone().Id, isRemoved);
+        //     });
 
-            AddToGameWorld(levelGameObjects, gameWorldObjects, GameObjectAddedOrRemoved);
+        //    AddToGameWorld(levelGameObjects, gameWorldObjects, GameObjectAddedOrRemoved);
 
-            foreach (var obj in levelGameObjects)
-            {
-                var id = obj.Key;
-                Assert.IsTrue(wasCalled.Contains(id));
-                Assert.IsTrue(wasRemoved[id] == false);
-            }
-        }
+        //    foreach (var obj in levelGameObjects)
+        //    {
+        //        var id = obj.Key;
+        //        Assert.IsTrue(wasCalled.Contains(id));
+        //        Assert.IsTrue(wasRemoved[id] == false);
+        //    }
+        //}
 
         [TestMethod()]
         public void ValidateTest()

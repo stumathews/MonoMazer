@@ -263,15 +263,15 @@ namespace MazerPlatformer
 
         private IGameWorld SubscribeToGameWorldEvents(IGameWorld theWorld)
         {
-            theWorld.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
-            theWorld.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
-            theWorld.OnPlayerDirectionChanged += direction => Ensure(() => _characterDirection = direction);
-            theWorld.OnPlayerCollisionDirectionChanged += direction => Ensure(() => _characterCollisionDirection = direction);
-            theWorld.OnPlayerComponentChanged += OnPlayerComponentChanged;
-            theWorld.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
-            theWorld.OnLoadLevel += OnGameWorldOnOnLoadLevel;
-            theWorld.OnLevelCleared += level => ProgressToLevel(++_currentLevel, _playerHealth, _playerPoints).ThrowIfFailed();
-            theWorld.OnPlayerDied += OnGameWorldOnOnPlayerDied;
+            theWorld.EventMediator.OnGameWorldCollision += GameWorld_OnGameWorldCollision;
+            theWorld.EventMediator.OnPlayerStateChanged += state => Ensure(() => _characterState = state);
+            theWorld.EventMediator.OnPlayerDirectionChanged += direction => Ensure(() => _characterDirection = direction);
+            theWorld.EventMediator.OnPlayerCollisionDirectionChanged += direction => Ensure(() => _characterCollisionDirection = direction);
+            theWorld.EventMediator.OnPlayerComponentChanged += OnPlayerComponentChanged;
+            theWorld.EventMediator.OnGameObjectAddedOrRemoved += OnGameObjectAddedOrRemoved;
+            theWorld.EventMediator.OnLoadLevel += OnGameWorldOnOnLoadLevel;
+            theWorld.EventMediator.OnLevelCleared += level => ProgressToLevel(++_currentLevel, _playerHealth, _playerPoints).ThrowIfFailed();
+            theWorld.EventMediator.OnPlayerDied += OnGameWorldOnOnPlayerDied;
             return theWorld;
         }
 

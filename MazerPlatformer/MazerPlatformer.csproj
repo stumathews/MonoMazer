@@ -65,6 +65,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="EventMediator.cs" />
     <Compile Include="Failures\AggregatePipelineFailure.cs" />
     <Compile Include="Failures\AssetLoadFailure.cs" />
     <Compile Include="Character.cs" />
@@ -111,7 +112,6 @@
     <Compile Include="PerFrame.cs" />
     <Compile Include="NPC.cs" />
     <Compile Include="Player.cs" />
-    <Compile Include="PlayerMediator.cs" />
     <Compile Include="PlayingGameState.cs" />
     <Compile Include="Primatives2D.cs" />
     <Compile Include="Program.cs" />

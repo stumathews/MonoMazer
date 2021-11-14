@@ -29,12 +29,6 @@ using GameLibFramework.Drawing;
 namespace MazerPlatformer
 {
 
-    public class LevelMediator
-    {
-
-    }
-
-
     /// <summary>
     /// Game world is contains the game elements such as characters, level objects etc that can be updated/drawn each frame
     /// </summary>
@@ -49,20 +43,10 @@ namespace MazerPlatformer
 
         public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
-        private static readonly Random Random = new Random();
-        private readonly LevelMediator LevelFunctionality = new LevelMediator();
-        private readonly PlayerMediator playerMediator = new PlayerMediator();
+        private static readonly Random Random = new Random();        
 
         /* Interface to the Outside world*/
-        public event CollisionArgs OnGameWorldCollision;
-        public event Character.StateChanged OnPlayerStateChanged;
-        public event Character.DirectionChanged OnPlayerDirectionChanged;
-        public event Character.CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
-        public event GameObjectComponentChanged OnPlayerComponentChanged;
-        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public event Level.LevelLoadInfo OnLoadLevel;
-        public event Player.DeathInfo OnPlayerDied;
-        public event LevelClearedInfo OnLevelCleared;
+        public EventMediator EventMediator {get;set;} = new EventMediator();   
 
         public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
@@ -111,7 +95,7 @@ namespace MazerPlatformer
             from newLevel in CreateLevel(Rows, Cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad)
             from gameWorldLevel in (Either<IFailure, Level>)(_level = newLevel) //set the game world's level
             from levelObjects in gameWorldLevel.Load(ContentManager, overridePlayerHealth, overridePlayerScore)
-            from added in AddToGameWorld(levelObjects, GameObjects, OnGameObjectAddedOrRemoved)
+            from added in AddToGameWorld(levelObjects, GameObjects, EventMediator)
             from levelRooms in newLevel.GetRooms()
             from setGameWorldRooms in (Either<IFailure,List<Room>>)(_rooms = levelRooms) // set te game world's rooms
             from startedTimer in StartRemoveWorldTimer(_removeWallTimer)
@@ -165,10 +149,10 @@ namespace MazerPlatformer
                 gameObject.Value.Components.Add(new Component(Component.ComponentType.GameWorld, this));
             }
 
-            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => OnPlayerStateChanged?.Invoke(state));
-            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => OnPlayerDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction)  => Ensure(() => OnPlayerCollisionDirectionChanged?.Invoke(direction));
-            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue));
+            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => EventMediator.RaiseOnPlayerStateChanged(state));
+            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => EventMediator.RaiseOnPlayerDirectionChanged(direction));
+            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction)  => Ensure(() => EventMediator.RaiseOnPlayerCollisionDirectionChanged(direction));
+            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => EventMediator.RaiseOnPlayerComponentChanged(thisObject, name, type, oldValue, newValue));
             Either<IFailure, Unit> PlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
         });
 
@@ -218,7 +202,7 @@ namespace MazerPlatformer
         {
             _level.PlayLoseSound();
             _playerDied = true;
-            OnPlayerDied?.Invoke();
+            EventMediator.RaiseOnPlayerDied();
         });
 
 
@@ -295,7 +279,7 @@ namespace MazerPlatformer
             Rows = _level.Rows;
             _roomWidth = _level.RoomWidth;
             _roomHeight = _level.RoomHeight;
-            OnLoadLevel?.Invoke(details); // We wont worry if our subscribers had a problem with the details we have them so no .ThrowIfFailed() but we could do if we wanted to reverse this logic!
+            EventMediator.RaiseOnLoadLevel(details); // We wont worry if our subscribers had a problem with the details we have them so no .ThrowIfFailed() but we could do if we wanted to reverse this logic!
         });
 
         public Either<IFailure, Unit> StartOrResumeLevelMusic() 
@@ -306,10 +290,10 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> RemoveGameObject(string id, Level level)
         =>  from gameObject in GetGameObject(GameObjects, id)
-            from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, GameObjects, OnGameObjectAddedOrRemoved)
+            from notifyObjectAddedOrRemoved in NotifyObjectAddedOrRemoved(gameObject, GameObjects, EventMediator)
             from isLevelPickup in IsLevelPickup(gameObject, level).IfSome(unit => RemoveIfLevelPickup(gameObject, level)).ToEither()
             from removePickup in RemoveIfLevelPickup(gameObject, level)
-            from isLevelCleared in IsLevelCleared(level).IfSome(unit => NotifyIfLevelCleared(OnLevelCleared, level)).ToEither()
+            from isLevelCleared in IsLevelCleared(level).IfSome(unit => NotifyIfLevelCleared(EventMediator, level)).ToEither()
             from deactivateObjects in DeactivateGameObject(gameObject,GameObjects)
             select Nothing;
 
@@ -389,7 +373,7 @@ namespace MazerPlatformer
                 select Nothing;           
             
 
-            Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() => OnGameWorldCollision?.Invoke(obj1, obj2));
+            Either<IFailure, Unit> RaiseOnGameWorldCollisionEvent() => Ensure(() => EventMediator.RaiseOnGameWorldCollision(obj1, obj2));
 
             // Make a celebratory sound on getting a pickup!
             Either < IFailure, Unit> SoundPlayerCollision(GameObject go1, GameObject go2) => Ensure(() 

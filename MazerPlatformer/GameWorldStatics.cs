@@ -27,22 +27,22 @@ namespace MazerPlatformer
 {
     public class GameWorldStatics
     {
-        public static Either<IFailure, Unit> NotifyIfLevelCleared(GameWorld.LevelClearedInfo levelClearedFunc, Level level) => Ensure(() =>
+        public static Either<IFailure, Unit> NotifyIfLevelCleared(EventMediator events, Level level) => Ensure(() =>
         {
             // Remove number of known pickups...this is an indicator of level clearance
             MaybeTrue(()=> level.NumPickups == 0)
-                .Iter(unit => Ensure(()=>levelClearedFunc?.Invoke(level)));
+                .Iter(unit => Ensure(()=> events.RaiseLevelCleared(level)));
 
         });
 
         public static Option<Unit> IsLevelCleared(Level level)
             => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
 
-        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, GameWorld.GameObjectAddedOrRemoved func) => Ensure(() 
+        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, EventMediator events) => Ensure(() 
             =>
         {
             // We want subscribers to inspect the object before we dispose of it below
-            func?.Invoke(obj, isRemoved: true, runningTotalCount: gameObjects.Count);
+            events.RaiseGameObjectAddedOrRemovedEvent(obj, isRemoved: true, runningTotalCount: gameObjects.Count);
         });
 
         public static Either<IFailure, Level> RemoveIfLevelPickup(GameObject obj, Level level) => EnsureWithReturn(() =>
@@ -86,10 +86,10 @@ namespace MazerPlatformer
             obj.Dispose();
         });
 
-        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, GameObject gameObject, GameWorld.GameObjectAddedOrRemoved gameObjectAddedOrRemovedEvent) => Ensure(() =>
+        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, GameObject gameObject, EventMediator events) => Ensure(() =>
         {
             gameObjects.Add(gameObject.Id, gameObject);
-            gameObjectAddedOrRemovedEvent?.Invoke(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
+            events.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
         });
 
         public static Either<IFailure, ISimpleGameTimer> StartRemoveWorldTimer(ISimpleGameTimer timer) => EnsureWithReturn(() =>
@@ -105,9 +105,9 @@ namespace MazerPlatformer
             return level;
         });
 
-        public static Either<IFailure, Unit> AddToGameWorld(Dictionary<string, GameObject> levelGameObjects, Dictionary<string, GameObject> gameWorldObjects, GameWorld.GameObjectAddedOrRemoved gameObjectAddedOrRemovedEvent)
+        public static Either<IFailure, Unit> AddToGameWorld(Dictionary<string, GameObject> levelGameObjects, Dictionary<string, GameObject> gameWorldObjects, EventMediator events)
             => levelGameObjects
-                .Map(levelGameObject => AddToGameObjects(gameWorldObjects, levelGameObject.Value, gameObjectAddedOrRemovedEvent))
+                .Map(levelGameObject => AddToGameObjects(gameWorldObjects, levelGameObject.Value, events))
                 .AggregateUnitFailures();
 
         /// <summary>
