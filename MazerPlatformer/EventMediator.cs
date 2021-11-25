@@ -48,6 +48,7 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
 
+
         public delegate void DisposingInfo(GameObject theObject);
 
         internal void RaiseOnPlayerStateChanged(CharacterStates state)

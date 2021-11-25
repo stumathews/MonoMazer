@@ -41,10 +41,8 @@ namespace MazerPlatformer
         private Either<IFailure, GameContentManager> _gameContentManager = UninitializedFailure.Create<GameContentManager>(nameof(_gameContentManager));        
         private Either<IFailure, IGameGraphicsDevice> _gameGraphicsDevice = UninitializedFailure.Create<IGameGraphicsDevice>(nameof(_gameGraphicsDevice));
 
-        public Either<IFailure, Unit> DrawString(IGameSpriteFont spriteFont, string text, Vector2 position, Color color)
-        {
-            return _spriteBatcher.Bind(sb => Ensure(() => sb.DrawString(spriteFont, text ?? string.Empty, position, color), $"Could not Draw string in {nameof(DrawString)}"));
-        }
+        public Either<IFailure, Unit> DrawString(IGameSpriteFont spriteFont, string text, Vector2 position, Color color) 
+            => _spriteBatcher.Bind(sb => Ensure(() => sb.DrawString(spriteFont, text ?? string.Empty, position, color), $"Could not Draw string in {nameof(DrawString)}"));
 
         public void Begin()
         {
@@ -162,11 +160,11 @@ namespace MazerPlatformer
             return new InfrastructureMediator();
         }
 
-        public Either<IFailure, SpriteBatch> GetSpriteBatch() => _spriteBatch.ToEither();
+        public Either<IFailure, SpriteBatch> GetSpriteBatch() => _spriteBatch.ToEither().MapLeft( o => UninitializedFailure.Create("No Sprite Batch"));
 
         public Either<IFailure, ISpriteBatcher> GetSpriteBatcher() => _spriteBatcher;
 
-        public Either<IFailure, Unit> CreateInfrastructure(GraphicsDevice graphicsDevice, Microsoft.Xna.Framework.Content.ContentManager content, int defaultNumRows, int defaultNumCols, Mazer game) => Ensure(() =>
+        public Either<IFailure, Unit> CreateInfrastructure(GraphicsDevice graphicsDevice, Microsoft.Xna.Framework.Content.ContentManager content, Mazer game) => Ensure(() =>
         {
 
             _graphicsDevice = graphicsDevice;
@@ -184,15 +182,21 @@ namespace MazerPlatformer
             _gameContentManager = CreateContentManager(content);            
             _gameStateMachine = new FSM(this);
             _gameMediator.SetCommandManager(new CommandManager());
-            _gameMediator.SetGameWorld(from gameContentManager in _gameContentManager
-                         from spriteBatcher in _spriteBatcher
-                         from gameWorld in GameWorld.Create(gameContentManager, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols)
-                         select gameWorld);
+            //_gameMediator.SetGameWorld(from gameContentManager in _gameContentManager
+            //             from spriteBatcher in _spriteBatcher
+            //             from gameWorld in GameWorld.Create(gameContentManager, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols)
+            //             select gameWorld);
 
             content.RootDirectory = "Content";
             
             
         }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
+
+        public Either<IFailure, IGameWorld> CreateGameWorld(int defaultNumRows, int defaultNumCols)
+            => from gameContentManager in _gameContentManager
+                         from spriteBatcher in _spriteBatcher
+                         from gameWorld in GameWorld.Create(gameContentManager, _graphicsDevice.Viewport.Width, _graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols)
+                         select gameWorld;
 
         public Either<IFailure, Unit> Initialize(Option<UiMediator> uiMediator) => Ensure(() =>
         {

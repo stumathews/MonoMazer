@@ -387,7 +387,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void GetGameObjectTest()
         {
-            Assert.IsTrue(GetGameObject(GameObjects, Player1.Id).ThrowIfFailed().Id == Player1.Id);
+            Assert.IsTrue(GetGameObjectForId(GameObjects, Player1.Id).ThrowIfFailed().Id == Player1.Id);
         }
 
         [TestMethod()]

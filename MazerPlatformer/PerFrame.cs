@@ -12,10 +12,8 @@
 
 //-----------------------------------------------------------------------
 
-using GameLibFramework.Drawing;
 using LanguageExt;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace MazerPlatformer
 {

@@ -27,15 +27,13 @@ using GameLibFramework.Drawing;
 
 namespace MazerPlatformer
 {
-    public class Mazer : Game
+    public partial class Mazer : Game
     {
         public static IGameSpriteFont GetGameFont() => _font;
         private static IGameSpriteFont _font;
-        
-        public Either<IFailure, IGameWorld> _gameWorld = UninitializedFailure.Create<IGameWorld>(nameof(_gameWorld));        
-        public Either<IFailure, ICommandManager> _gameCommands = UninitializedFailure.Create<ICommandManager>(nameof(_gameCommands));
 
-        public enum GameStates { Paused, Playing }
+        public Either<IFailure, IGameWorld> _gameWorld = UninitializedFailure.Create<IGameWorld>(nameof(_gameWorld));
+        public Either<IFailure, ICommandManager> _gameCommands = UninitializedFailure.Create<ICommandManager>(nameof(_gameCommands));
         public GameStates _currentGameState = GameStates.Paused;
 
         private const int DefaultNumCols = 10;
@@ -47,49 +45,57 @@ namespace MazerPlatformer
         public int _playerPoints = 0;
 
         private int _numGameCollisionsEvents;
-        private int _numCollisionsWithPlayerAndNpCs;         
+        private int _numCollisionsWithPlayerAndNpCs;
 
         private CharacterStates _characterState;
         private CharacterDirection _characterDirection;
         private CharacterDirection _characterCollisionDirection;
         private int _numGameObjects;
-                
-        private Either<IFailure, InfrastructureMediator> infrastructureMediator = UninitializedFailure.Create<InfrastructureMediator>(nameof(infrastructureMediator)); 
-        private Either<IFailure, GameMediator> gameMediator  = UninitializedFailure.Create<GameMediator>(nameof(gameMediator)); 
-        private Either<IFailure, UiMediator> uiMediator = UninitializedFailure.Create<UiMediator>(nameof(uiMediator)); 
+
+        private Either<IFailure, InfrastructureMediator> infrastructureMediator = UninitializedFailure.Create<InfrastructureMediator>(nameof(infrastructureMediator));
+        private Either<IFailure, GameMediator> gameMediator = UninitializedFailure.Create<GameMediator>(nameof(gameMediator));
+        private Either<IFailure, UiMediator> uiMediator = UninitializedFailure.Create<UiMediator>(nameof(uiMediator));
 
         private bool _playerDied = false; // eventually this will be useful and used.
 
-        public Mazer() => (from graphicsDevice in InitializeGraphicsDevice()
-                           from infrastructureMediator in InfrastructureMediator.Create()
-                           from setImResult in Ensure(() => this.infrastructureMediator = infrastructureMediator)
-                           from success in infrastructureMediator.CreateInfrastructure(GraphicsDevice, Content, DefaultNumRows, DefaultNumCols, this)
-                           from gameMediator in GameMediator.Create(this)
-                           from setGameMediator in Ensure(() => this.gameMediator = gameMediator)
-                           from uiMediator in UiMediator.Create(gameMediator, infrastructureMediator)
-                           from setUiMediator in Ensure(() => this.uiMediator = uiMediator)
-                           from initResult in infrastructureMediator.Initialize(uiMediator)
-                           select Nothing
-             ).ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception from the get-go
+        public Mazer()
+            => InitializeGraphicsDevice()
+                .Bind(graphics => CreateAndSetInfrastructureMediator()
+                                    .Bind(im => CreateInfrastructure(im))
+                                    .Bind(im => CreateAndSetGameWorld(im)))
+                                    .Bind(im => CreateAndSetGameCommands(im))
+                .Bind(im => CreateAndSetGameMediator(this)
+                             .Bind(gm => CreateAndSetUiMediator(gm, im)))
+                .ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception if there are any
 
-        /// <summary>
-        /// LoadContent will be called once per game and is the place to load
-        /// all of your content.
-        /// </summary>
-        protected override void LoadContent() => (from infrastructure in infrastructureMediator
-                                                  from setInfrastructureResult in Ensure(()=> infrastructureMediator = infrastructure)
-                                                  from font in infrastructure.TryLoad<SpriteFont>("Sprites/gameFont")
-                                                  from setFontResult in SetGameFont(font)
-                                                  from song in infrastructure.TryLoad<Song>("Music/bgm_menu")
-                                                  from setMusicResult in infrastructure.SetMenuMusic(song)
-                                                  from gameWorld in LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints)
-                                                  select Nothing).ThrowIfFailed();
-
-        Either<IFailure, IGameSpriteFont> SetGameFont(SpriteFont font) => EnsureWithReturn(()=>
+        private Either<IFailure, InfrastructureMediator> CreateInfrastructure(InfrastructureMediator im)
         {
-            _font = new GameSpriteFont(font);
-            return _font;
-        });
+            return im.CreateInfrastructure(GraphicsDevice, Content, this).Map(o => im);
+        }
+
+        private Either<IFailure, InfrastructureMediator> CreateAndSetGameCommands(InfrastructureMediator im)
+        {
+            _gameCommands = new CommandManager();
+            return im;
+        }
+
+        private Either<IFailure, InfrastructureMediator> CreateAndSetInfrastructureMediator()
+            => InfrastructureMediator.Create()
+                .Bind(infrastructureMediator => this.infrastructureMediator = infrastructureMediator);
+        private Either<IFailure, GameMediator> CreateAndSetGameMediator(Mazer mazer)
+            => GameMediator.Create(mazer)
+                .Bind(mediator => gameMediator = mediator);
+
+        private Either<IFailure, UiMediator> CreateAndSetUiMediator(GameMediator gm, InfrastructureMediator im)
+            => UiMediator.Create(gm, im)
+                .Bind(ui => uiMediator = ui);
+
+        private Either<IFailure, InfrastructureMediator> CreateAndSetGameWorld(InfrastructureMediator im)
+        {
+            _gameWorld = im.CreateGameWorld(DefaultNumRows, DefaultNumCols);
+            return im;
+        }
+
 
         /// <summary>
         /// Allows the game to perform any initialization it needs to before starting to run.
@@ -97,14 +103,40 @@ namespace MazerPlatformer
         /// related content.  Calling base.Initialize will enumerate through any components
         /// and initialize them as well.
         /// </summary>
-        protected override void Initialize() => (from intResult in Ensure(() => base.Initialize())
-                                                 from im in infrastructureMediator
-                                                 from ui in uiMediator
-                                                 from initResult in ui.InitializeUi(Content)
-                                                 from initGameStateResult in im.InitializeGameStateMachine()
-                                                 from initGameResult in InitializeGameWorld(_gameWorld, _gameCommands)
-                                                 select Nothing)
-                           .ThrowIfFailed();
+        protected override void Initialize()
+            => Ensure(() => base.Initialize())
+                .Bind(unit => uiMediator
+                                .Map(ui => InitializeUI(ui, Content))
+                .Bind(ui => infrastructureMediator
+                           .Map(im => InitialiseInfrastructureMediator(im, ui))
+                           .Map(im => InitializeGameStateMachine(im))
+                           .Map(im => InitializeGameWorld(_gameWorld, _gameCommands)))
+                .ThrowIfFailed());
+
+        /// <summary>
+        /// LoadContent will be called once per game and is the place to load
+        /// all of your content.
+        /// </summary>
+        protected override void LoadContent()
+            => infrastructureMediator
+                .Map(im => LoadAndSetFontAndGetInfra(im))
+                .Map(im => TryLoadAndSetMusic(im))
+                .Map(song => LoadGameWorldContent(_gameWorld, _currentLevel, _playerHealth, _playerPoints))
+                .ThrowIfFailed();
+
+        private InfrastructureMediator LoadAndSetFontAndGetInfra(InfrastructureMediator im)
+        {
+            TryLoadAndSetFont(im);
+            return im;
+        }
+
+        public Either<IFailure, SpriteFont> TryLoadAndSetFont(InfrastructureMediator im)
+            => im.TryLoad<SpriteFont>("Sprites/gameFont")
+                .Map(font =>
+                {
+                    _font = new GameSpriteFont(font);
+                    return font;
+                });
 
         /// <summary>
         /// UnloadContent will be called once per game and is the place to unload
@@ -121,19 +153,26 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
-            => Ensure(() => base.Update(gameTime))// Execute the update pipeline
-                .Bind(unit => uiMediator)
-                .Bind(ui => ui.UpdateUi(gameTime))
-                .Bind(unit => SetGameCommands(_gameCommands, gameTime))
-                .Bind(unit => infrastructureMediator)
-                .Bind(im => im.UpdateStateMachine(gameTime)) // NB: game world is updated by PlayingGameState
-                .ThrowIfFailed();        
+            => Ensure(() => base.Update(gameTime))
+                .Bind(success => UpdateUiMediator(gameTime))
+                .Bind(success => UpdateGameCommands(gameTime))
+                .Bind(success => UpdateGameStateMachine(gameTime)) // NB: game world is updated by PlayingGameState
+                .ThrowIfFailed();
 
-        Either<IFailure, ICommandManager> SetGameCommands(Either<IFailure, ICommandManager> gameCommands, GameTime gameTime) => EnsuringBind(()=>
-        {
-            _gameCommands = UpdateCommands(gameCommands, gameTime);
-            return _gameCommands;
-        });
+        private Either<IFailure, Unit> UpdateGameStateMachine(GameTime gameTime)
+            => infrastructureMediator
+                .Bind(im => im.UpdateStateMachine(gameTime));
+
+        private Either<IFailure, Unit> UpdateUiMediator(GameTime gameTime)
+            => uiMediator
+                .Bind(ui => ui.UpdateUi(gameTime));
+
+        Either<IFailure, ICommandManager> UpdateGameCommands(GameTime gameTime)
+            => _gameCommands.Bind(commands =>
+            {
+                commands.Update(gameTime);
+                return _gameCommands;
+            });
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -180,14 +219,14 @@ namespace MazerPlatformer
             return (IGameGraphicsDevice)new GameGraphicsDevice(GraphicsDevice);
         }, ExternalLibraryFailure.Create("Failed to initialize the graphics subsystem"));
 
-       
 
-        private Either<IFailure, IGameWorld> InitializeGameWorld(Either<IFailure, IGameWorld> gameWorld, Either<IFailure, ICommandManager> gameCommands) 
+
+        private Either<IFailure, IGameWorld> InitializeGameWorld(Either<IFailure, IGameWorld> gameWorld, Either<IFailure, ICommandManager> gameCommands)
             => from world in gameWorld
                from initialized in world.Initialize()
                from commands in gameCommands.Bind(commands => SetupGameCommands(commands))
                from finalWorld in ConnectToGameWorld(world)
-                select finalWorld;
+               select finalWorld;
 
         private Either<IFailure, ICommandManager> SetupGameCommands(ICommandManager gameCommands) => EnsureWithReturn(gameCommands, (commands) =>
         {
@@ -221,17 +260,17 @@ namespace MazerPlatformer
 
         // UI functions
 
-       
+
 
         // Utility functions
 
-        private Either<IFailure, int> ReadPlayerHealth(Component healthComponent) 
+        private Either<IFailure, int> ReadPlayerHealth(Component healthComponent)
             => TryCastToT<int>(healthComponent.Value)
                 .Bind(value => EnsureWithReturn(() => SetPlayerHealthScalar(value)));
 
         private Either<IFailure, int> ReadPlayerPoints(Component pointsComponent)
             => TryCastToT<int>(pointsComponent.Value)
-                .Bind(value => EnsureWithReturn(()=>SetPlayerPointsScalar(value)));
+                .Bind(value => EnsureWithReturn(() => SetPlayerPointsScalar(value)));
 
         private Either<IFailure, Unit> ProgressToLevel(int level, int playerHealth, int playerPoints) => from ui in uiMediator
                                                                                                          from result in StartLevel(level, _gameWorld, ui.SetMenuPanelNotVisibleFn, SetGameToPlayingState, ResetPlayerHealth, ResetPlayerPoints, ResetPlayerPickups, SetPlayerDied, isFreshStart: false, playerHealth, playerPoints)
@@ -275,36 +314,36 @@ namespace MazerPlatformer
             return theWorld;
         }
 
-        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
+        internal Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs)
             => _gameWorld
-                .Bind(world =>  world.OnKeyUp(sender, keyboardEventArgs));
+                .Bind(world => world.OnKeyUp(sender, keyboardEventArgs));
 
         private Either<IFailure, Unit> OnEscapeKeyReleased() =>
             IsPlayingGame(_currentGameState)
                 ? PauseGame()
                 : ResumeGame(_gameWorld);
 
-        private Either<IFailure, Unit> PauseGame() => EnsuringBind(()=>
+        private Either<IFailure, Unit> PauseGame() => EnsuringBind(() =>
         {
             _currentGameState = GameStates.Paused;
             return from ui in uiMediator
-                    from showResult in ui.ShowMenu()
-                    select showResult;
+                   from showResult in ui.ShowMenu()
+                   select showResult;
         });
 
-        
+
 
         private Either<IFailure, Unit> OnGameWorldOnOnPlayerDied() =>
-            Ensure(()=> _playerDied = true)
-            .Bind( o=> uiMediator)
-            .Bind(ui  => ui.ShowGameOverScreen()) // We don't have a game over state, as we use the pause state and then show a game over screen
-            .Bind(unit => Ensure(()=> _currentGameState = GameStates.Paused));
+            Ensure(() => _playerDied = true)
+            .Bind(o => uiMediator)
+            .Bind(ui => ui.ShowGameOverScreen()) // We don't have a game over state, as we use the pause state and then show a game over screen
+            .Bind(unit => Ensure(() => _currentGameState = GameStates.Paused));
 
-        
 
-        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount) 
-            => gameObject.Match(Some: (validGameObject) => 
-                                                MaybeTrue(() => validGameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
+
+        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount)
+            => gameObject.Match(Some: (validGameObject) =>
+                                                WhenTrue(() => validGameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
                                                 .Iter(unit => _playerPickups++)
                                                 .ToEither(),
                                 None: () => NotFound.Create("Game Object was invalid")
@@ -323,7 +362,7 @@ namespace MazerPlatformer
                                 .Map(ReadPlayerHealth))
             .Map(health => Nothing);
 
-        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/) 
+        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/)
             => object1.ToEither(NotFound.Create("Game Object was invalid or not found"))
                 .Bind(gameObject => IncrementCollisionStats(gameObject, () => _numCollisionsWithPlayerAndNpCs++, () => _numGameCollisionsEvents++));
 

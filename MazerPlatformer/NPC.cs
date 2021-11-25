@@ -60,6 +60,9 @@ namespace MazerPlatformer
                 .Map(NudgePlayerOutOfCollision)
                 .ToEither(NotFound.Create("Game object was not found or null")));
 
-        private Unit NudgePlayerOutOfCollision(GameObject o) => o.IsPlayer() ? Nothing : NudgeOutOfCollision().ThrowIfFailed();
+        private Unit NudgePlayerOutOfCollision(GameObject o) 
+            => o.IsPlayer() 
+            ? Nothing 
+            : NudgeOutOfCollision().ThrowIfFailed();
     }
 }

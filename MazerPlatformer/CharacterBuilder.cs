@@ -45,7 +45,7 @@ namespace MazerPlatformer
         public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName, int frameWidth = AnimationInfo.DefaultFrameWidth,
             int frameHeight = AnimationInfo.DefaultFrameHeight, int frameCount = AnimationInfo.DefaultFrameCount,
             Npc.NpcTypes type = Npc.NpcTypes.Enemy, int moveStep = 3) 
-            => MaybeTrue(() => type == Npc.NpcTypes.Pickup)
+            => WhenTrue(() => type == Npc.NpcTypes.Pickup)
                     .Match(Some: unit => MakeNpcInstance(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep),
                             None: () => MakeMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, type, moveStep));
 

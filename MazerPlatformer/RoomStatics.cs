@@ -180,37 +180,37 @@ namespace MazerPlatformer
 
             Either<IFailure, Room.Side> DrawTheSide(Room.Side desiredSide, Func<Room.Side, Either<IFailure, Room.Side>> strategy) => 
                     from infra in infrastructure.ToEither()
-                    from maybe in MaybeTrue(() => Diagnostics.DrawLines && HasSide(desiredSide, hasSides)).ToEither()
+                    from maybe in WhenTrue(() => Diagnostics.DrawLines && HasSide(desiredSide, hasSides)).ToEither()
                     
                     from theSide in strategy(desiredSide)
                     
-                    from square in ( from result in MaybeTrue(()=>Diagnostics.DrawSquareSideBounds).ToEither()
+                    from square in ( from result in WhenTrue(()=>Diagnostics.DrawSquareSideBounds).ToEither()
                                      from draw in Ensure(()=>infra.DrawRectangle(sideProperties[theSide].Bounds, Color.White, 2.5f))
                                      select Nothing
                                      ).IgnoreFailure()
-                    from bounds in (from result in MaybeTrue(()=>Diagnostics.DrawSquareBounds).ToEither()
+                    from bounds in (from result in WhenTrue(()=>Diagnostics.DrawSquareBounds).ToEither()
                                     from draw in Ensure(()=>infra.DrawRectangle(rectangle.Rectangle, Color.White, 2.5f))
                                     select Nothing).IgnoreFailure()
                     select theSide;
 
             Either<IFailure, Room.Side> topStrategy(Room.Side sde) =>
-                    MaybeTrue(() => sde == Room.Side.Top).ToEither()
-                    .Bind(unit => MaybeTrue(() => Diagnostics.DrawTop).ToEither())
+                    WhenTrue(() => sde == Room.Side.Top).ToEither()
+                    .Bind(unit => WhenTrue(() => Diagnostics.DrawTop).ToEither())
                     .Bind(unit => Ensure(() => DrawTopLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> bottomStrategy(Room.Side sde) =>
-                    MaybeTrue(() => sde == Room.Side.Bottom).ToEither()
-                    .Bind(unit => MaybeTrue(() => Diagnostics.DrawBottom).ToEither())
+                    WhenTrue(() => sde == Room.Side.Bottom).ToEither()
+                    .Bind(unit => WhenTrue(() => Diagnostics.DrawBottom).ToEither())
                     .Bind(unit => Ensure(() => DrawBottomLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> rightStrategy(Room.Side sde) =>
-                    MaybeTrue(() => sde == Room.Side.Right).ToEither()
-                    .Bind( unit => MaybeTrue(() => Diagnostics.DrawRight).ToEither())
+                    WhenTrue(() => sde == Room.Side.Right).ToEither()
+                    .Bind( unit => WhenTrue(() => Diagnostics.DrawRight).ToEither())
                     .Bind( unit => Ensure(() => DrawRightLine(sde)).Map(result => sde));
 
             Either<IFailure, Room.Side> leftStrategy(Room.Side sde) =>
-                    MaybeTrue(() => sde == Room.Side.Left).ToEither()
-                    .Bind( unit => MaybeTrue(() => Diagnostics.DrawLeft).ToEither())
+                    WhenTrue(() => sde == Room.Side.Left).ToEither()
+                    .Bind( unit => WhenTrue(() => Diagnostics.DrawLeft).ToEither())
                     .Bind( unit => Ensure(() => DrawLeftLine(sde)).Map(result => sde));
             
         });

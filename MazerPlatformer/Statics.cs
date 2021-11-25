@@ -53,7 +53,7 @@ namespace MazerPlatformer
                     .Map(found => (Npc.NpcTypes)found.Value == type)                     
                     .Match(Some: (o)=>o, None:()=>false);
 
-            return MaybeTrue(()=>!IsNpc(gameObject))
+            return WhenTrue(()=>!IsNpc(gameObject))
                     .Match(Some: (unit)=> false, None: ()=> IsComponentFound(gameObject));
         }
 
@@ -164,7 +164,7 @@ namespace MazerPlatformer
 
         public static Either<IFailure, bool> ShortCirtcutOnTrue(this Either<IFailure, bool> either) 
             => from boolean in either
-               from isTrue in MaybeTrue(() => boolean == true).ToEither()
+               from isTrue in WhenTrue(() => boolean == true).ToEither()
                             .Match(Left: (failure) => boolean.ToEither(),
                             Right: (unit) => ShortCircuitFailure.Create("Intentional Short circuit").ToEitherFailure<bool>())
                 select isTrue;
@@ -228,7 +228,7 @@ namespace MazerPlatformer
             => either.IfLeft(action);
 
         public static void IfFailedAnd<R>(this Either<IFailure, R> either, bool condition, Action<IFailure> action) => 
-                MaybeTrue(() => condition)
+                WhenTrue(() => condition)
                 .Iter((success) => either.IfFailed(action));
 
         public static Either<IFailure, T> TryCastToT<T>(object value) => EnsureWithReturn(()
@@ -247,7 +247,7 @@ namespace MazerPlatformer
             : Option<Unit>.None;
 
         [PureFunction]
-        public static Option<Unit> MaybeTrue(Func<bool> predicate)
+        public static Option<Unit> WhenTrue(Func<bool> predicate)
             => predicate() 
             ? Option<Unit>.Some(Unit.Default) 
             : Option<Unit>.None;
@@ -425,12 +425,12 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> IgnoreFailureOf<IFailure, R>(this Either<IFailure, R> either, Type failureType) 
             => either.Match(Right: (right) => Nothing.ToEither<IFailure, Unit>(),
-                            Left: (failure) => MaybeTrue(() => failure.GetType() == failureType).ToEither()
+                            Left: (failure) => WhenTrue(() => failure.GetType() == failureType).ToEither()
                                                 .Match(Right: (found) => found.ToEither<IFailure, Unit>(),
                                                         Left: (notFound) => failure.ToEitherFailure<IFailure, Unit>()));
 
         public static Either<IFailure, R> IgnoreFailureOfAs<IFailure, R>(this Either<IFailure, R> either, Type failureType, R OnFail) 
-            => either.BindLeft((failure) => MaybeTrue(() => failure.GetType() == failureType)
+            => either.BindLeft((failure) => WhenTrue(() => failure.GetType() == failureType)
                      .                      Match(Some: (unit) => OnFail.ToEither<IFailure, R>(), 
                                                   None: () => failure.ToEitherFailure<IFailure, R>()));
 
@@ -582,7 +582,7 @@ namespace MazerPlatformer
                        None: () => Nothing.ToEither());
 
         public static Either<IFailure, bool> when(bool match, Action then) 
-            => MaybeTrue(() => match)            
+            => WhenTrue(() => match)            
                 .ToEither()
                 .Bind(unit => Ensure(() => then()))
                 .BiMap<bool>(Right: (unit) => true, Left: (failure) => false);

@@ -422,8 +422,8 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void MaybeTrueTest()
         {
-            Assert.IsTrue(MaybeTrue(() => true).IsSome);
-            Assert.IsTrue(MaybeTrue(() => false).IsNone);
+            Assert.IsTrue(WhenTrue(() => true).IsSome);
+            Assert.IsTrue(WhenTrue(() => false).IsNone);
         }
 
         [TestMethod()]

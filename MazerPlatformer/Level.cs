@@ -104,6 +104,12 @@ namespace MazerPlatformer
             => index >= 0 && index <= ((Cols * Rows)-1)
                 ? _rooms[index] 
                 : Option<Room>.None;
+        public List<Option<Room>> GetAdjacentRoomsTo(Room room) 
+            => new Option<Room>[] {
+                    GetRoom(room.RoomAbove),
+                    GetRoom(room.RoomBelow),
+                    GetRoom(room.RoomLeft),
+                    GetRoom(room.RoomRight)}.ToList();
 
         public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
         public event LevelLoadInfo OnLoad;
@@ -159,10 +165,10 @@ namespace MazerPlatformer
             int GetRoomBelowIndex(int index) => index + Cols;
             int GetRoomLeftIndex(int index) => index - 1;
             int GetRoomRightIndex(int index) => index + 1;
-            Option<Unit> CanRemoveAbove(int index) => MaybeTrue(() => GetRoomAboveIndex(index) > 0);
-            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => MaybeTrue(() => GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
-            Option<Unit> CanRemoveLeft(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 >= 1);
-            Option<Unit> CanRemoveRight(int index, Room room) => MaybeTrue(() => GetThisColumn(room) - 1 <= Cols);
+            Option<Unit> CanRemoveAbove(int index) => WhenTrue(() => GetRoomAboveIndex(index) > 0);
+            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => WhenTrue(() => GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
+            Option<Unit> CanRemoveLeft(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 >= 1);
+            Option<Unit> CanRemoveRight(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 <= Cols);
 
             Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms) 
                 ? rooms[index].ToOption() 
@@ -171,8 +177,8 @@ namespace MazerPlatformer
             Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms)
                             => from side in canRemove
                                from room in GetRoom(index, allRooms)
-                               from hasSide1 in MaybeTrue(() => HasSide(side1, room.HasSides))
-                               from hasSide2 in MaybeTrue(() => HasSide(side2, room.HasSides))
+                               from hasSide1 in WhenTrue(() => HasSide(side1, room.HasSides))
+                               from hasSide2 in WhenTrue(() => HasSide(side2, room.HasSides))
                                select side1;
 
             void RemoveRandomSide(Room.Side side, int idx, Room currentRoom, List<Room> allRooms)
@@ -183,7 +189,7 @@ namespace MazerPlatformer
                 Option<Room> GetRoomRight(int index, List<Room> rooms) => GetRoom(GetRoomRightIndex(idx), allRooms);
 
                 Option<Room.Side> RemovedSide(int index, Room.Side sideToRemove, Room room, Room.Side whenSide, Action<int, Room, Room.Side> then)
-                => MaybeTrue(() => sideToRemove == whenSide)
+                => WhenTrue(() => sideToRemove == whenSide)
                     .Map((unit) =>
                     {
                         room.RemoveSide(sideToRemove);
@@ -229,7 +235,7 @@ namespace MazerPlatformer
                 => GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
 
             Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms) 
-                => MaybeTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
+                => WhenTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
 
             return mazeGrid
                 .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
@@ -268,7 +274,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
         {
-           return MaybeTrue(()=>Npcs != null && levelFile.Npcs.Count > 0).Match(
+           return WhenTrue(()=>Npcs != null && levelFile.Npcs.Count > 0).Match(
                 Some: (unit) => GenerateFromFile(new List<Npc>(), levelFile, npcBuilder, rooms, level), 
                 None: ()=> npcBuilder.GenerateDefaultNpcSet(rooms, new List<Npc>(), level));            
         });
@@ -319,7 +325,7 @@ namespace MazerPlatformer
             });
 
             Either<IFailure, Song> LoadLevelMusic() => EnsuringBind(()
-                => MaybeTrue(()=>!string.IsNullOrEmpty(LevelFile.Music)).ToEither()
+                => WhenTrue(()=>!string.IsNullOrEmpty(LevelFile.Music)).ToEither()
                     .Bind<Song>((unit)=>
                     {
                         _levelMusic = contentManager.Load<Song>(LevelFile.Music);
@@ -349,7 +355,7 @@ namespace MazerPlatformer
 
         private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
         {
-            return MaybeTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind(
+            return WhenTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind(
                 Right: (unit)=>
                 {
                     LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
@@ -418,10 +424,10 @@ namespace MazerPlatformer
 
         // Save the level information including NPcs and Player info
         public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, IFileSaver fileSaver, List<Npc> npcs) 
-            => MaybeTrue(() => shouldSave)
+            => WhenTrue(() => shouldSave)
                     .Match(Some: (unit) => unit.ToEither(),
                            None: () => ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
-                    .Bind((either) => MaybeTrue(() => npcs.Count == 0).Match(
+                    .Bind((either) => WhenTrue(() => npcs.Count == 0).Match(
                         Some: (unit) => Ensure(() => AddCurrentNPCsToLevelFile(npcs, levelFile).ThrowIfFailed()),
                         None: () => Nothing.ToEither())
                     .Bind((unit) => SaveLevelFile(player, levelFile, fileSaver, levelFileName)));

@@ -104,11 +104,6 @@ namespace MazerPlatformer
             game._gameWorld = gameWorld;
         }
 
-        //internal void SetGameStateMachine(FSM gameStateMachine)
-        //{
-        //    game._gameStateMachine = gameStateMachine; 
-        //}
-
         internal void SetCommandManager(CommandManager gameCommands)
         {
             game._gameCommands = gameCommands;
@@ -116,22 +111,6 @@ namespace MazerPlatformer
 
         internal static Either<IFailure, GameMediator> Create(Option<Mazer> game) 
             => game.Map(g => new GameMediator(g)).ToEither(InvalidDataFailure.Create("Game object not valid"));
-
-        //internal void SetPlayingState(PlayingGameState playingGameState)
-        //{
-        //    game._playingState = playingGameState;
-        //}
-
-        //internal void SetPauseState(PauseState pauseState)
-        //{
-        //    game._pauseState = pauseState;
-        //}
-
-        //internal State GetPauseState()
-        //{
-        //    return  game._pauseState;
-        //}
-
         internal Mazer.GameStates GetCurrentGameState()
         {
             return game._currentGameState;

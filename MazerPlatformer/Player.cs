@@ -50,7 +50,7 @@ namespace MazerPlatformer
         // I can draw myself!
         public override Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure) 
             => base.Draw(infrastructure)
-                .Bind(unit => MaybeTrue(() => Diagnostics.DrawPlayerRectangle))
+                .Bind(unit => WhenTrue(() => Diagnostics.DrawPlayerRectangle))
             .Bind( o => infrastructure)
                 .Iter((infra) => Ensure(() => infra.DrawRectangle(rect: new Rectangle(x: X, y: Y, width: Width, height: Height), color: Color.Gray)));
 

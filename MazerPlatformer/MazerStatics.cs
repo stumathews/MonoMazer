@@ -95,7 +95,7 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> IncrementCollisionStats(GameObject gameObject, Action increamentNumCollisionsWithPlayer, Action incrementGameCollisionEvents) => Statics.Ensure(() =>
         {
-            Statics.MaybeTrue(()=>gameObject.Type == GameObject.GameObjectType.Npc)
+            Statics.WhenTrue(()=>gameObject.Type == GameObject.GameObjectType.Npc)
             .Iter((success)=>increamentNumCollisionsWithPlayer());
 
             incrementGameCollisionEvents();
@@ -142,5 +142,34 @@ namespace MazerPlatformer
             => Statics.Ensure(setGameFont);
         public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic)
             => Statics.Ensure(setMenuMusic);
+
+        public static InfrastructureMediator InitializeGameStateMachine(InfrastructureMediator im)
+        {
+            im.InitializeGameStateMachine();
+            return im;
+        }
+
+        public static InfrastructureMediator InitialiseInfrastructureMediator(InfrastructureMediator im, UiMediator ui)
+        {
+            im.Initialize(ui);
+            return im;
+        }
+
+        public static UiMediator InitializeUI(UiMediator ui, Microsoft.Xna.Framework.Content.ContentManager content)
+        {
+            ui.InitializeUi(content);
+            return ui;
+        }
+
+        public static Either<IFailure, Song> TryLoadAndSetMusic(InfrastructureMediator im)
+        {
+            return im.TryLoad<Song>("Music/bgm_menu")
+                .Map(song => 
+                {
+                    im.SetMenuMusic(song);
+                    return song;
+                });
+        }
+
     }
 }

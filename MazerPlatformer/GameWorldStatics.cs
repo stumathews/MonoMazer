@@ -22,6 +22,8 @@ using static MazerPlatformer.GameObject;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.RoomStatics;
 using GameLibFramework.Drawing;
+using Microsoft.Xna.Framework;
+using GameLib.EventDriven;
 
 namespace MazerPlatformer
 {
@@ -30,7 +32,7 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> NotifyIfLevelCleared(EventMediator events, Level level) => Ensure(() =>
         {
             // Remove number of known pickups...this is an indicator of level clearance
-            MaybeTrue(()=> level.NumPickups == 0)
+            WhenTrue(()=> level.NumPickups == 0)
                 .Iter(unit => Ensure(()=> events.RaiseLevelCleared(level)));
 
         });
@@ -58,7 +60,7 @@ namespace MazerPlatformer
         }
 
         public static Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) =>
-                MaybeTrue(() => go1.Id == Level.Player.Id)
+                WhenTrue(() => go1.Id == Level.Player.Id)
                 .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
 
@@ -76,7 +78,7 @@ namespace MazerPlatformer
         public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
-        public static Either<IFailure, GameObject> GetGameObject(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(()
+        public static Either<IFailure, GameObject> GetGameObjectForId(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(()
             => gameObjects[id]).ThrowIfFailed();
 
         public static Either<IFailure, Unit> DeactivateGameObject(GameObject obj, Dictionary<string, GameObject> gameObjects) => Ensure(() =>
@@ -120,14 +122,14 @@ namespace MazerPlatformer
         /// <param name="cols"></param>
         /// <param name="spriteBatch"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> Validate(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols)
+        public static Either<IFailure, Unit> Validate(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols) => EnsuringBind(()=>
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();
             if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToEitherFailure<Unit>();
             if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToEitherFailure<Unit>();
             return Nothing;
-        }
+        });
 
         [PureFunction]
         public static (int greater, int smaller) SortBySize(int number1, int number2)
@@ -160,7 +162,7 @@ namespace MazerPlatformer
         /// <param name="sideCharacteristics"></param>
         /// <returns></returns>
         public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(()
-            => MaybeTrue(() => otherObject.Type == GameObject.GameObjectType.Player)
+            => WhenTrue(() => otherObject.Type == GameObject.GameObjectType.Player)
                 .Iter((success) => room.RemoveSide(side)));
 
         public static bool IsSameRow(GameObject go1, GameObject go2, int roomHeight)
@@ -193,7 +195,7 @@ namespace MazerPlatformer
         public static int ToRoomRowFast(GameObject o1, int roomHeight)
             => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)o1.Y / roomHeight);
 
-        public static bool OnSameRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
+        public static bool IsLineOfSightInRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
         {
             (int greater, int smaller) = GetMaxMinRange(GetObjCol(go2, roomWidth), GetObjCol(go1, roomWidth)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -211,7 +213,7 @@ namespace MazerPlatformer
         }
 
 
-        public static bool OnSameCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
+        public static bool IsLineOfSightInCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
         {
             var minMax = GetMaxMinRange(GetObjRow(go2, roomHeight), GetObjRow(go1, roomHeight)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -228,5 +230,39 @@ namespace MazerPlatformer
 
             return true;
         }
+
+        public static Either<IFailure, int> DetermineMyNewHealthOnCollision(GameObject me, GameObject opponent)
+            =>  from opponentHitPointsComponent in opponent.FindComponentByType(Component.ComponentType.HitPoints).ToEither(NotFound.Create("Could not find hit-point component"))
+                from healthComponent in me.FindComponentByType(Component.ComponentType.Health).ToEither(NotFound.Create("Could not find health component"))
+                from myHealth in TryCastToT<int>(healthComponent.Value)
+                from opponentHitPoints in TryCastToT<int>(opponentHitPointsComponent.Value)
+                select myHealth - opponentHitPoints;
+
+        public static Either<IFailure, int> DetermineNewLevelPointsOnCollision(GameObject me, GameObject pickup)
+            => from pickupsPointsComponent in pickup.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
+                from myPointsComponent in me.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
+                from myPoints in TryCastToT<int>(myPointsComponent.Value)
+                from pickupsPoints in TryCastToT<int>(pickupsPointsComponent.Value)
+                select myPoints + pickupsPoints;
+
+        
+
+        /// <summary>
+        /// Inform the Game world that the up button was pressed, make the player idle
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="keyboardEventArgs"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
+            => Level.Player.SetAsIdle();
+
+        /// <summary>
+        /// Change the players position based on current facing direction
+        /// </summary>
+        /// <param name="direction"></param>
+        /// <param name="dt"></param>
+        /// <returns></returns>
+        public static Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
+            => Level.Player.MoveInDirection(direction, dt);
     }
 }

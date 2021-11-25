@@ -26,7 +26,7 @@ namespace MazerPlatformer
         {
             
             Npc.InfoText = "D";
-            Npc.CanMove = false;
+            Npc.SetCanMove(false);
             Npc.SetAsIdle();
         }
 
