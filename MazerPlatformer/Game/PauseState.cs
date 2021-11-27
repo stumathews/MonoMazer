@@ -20,7 +20,6 @@ namespace MazerPlatformer
 {
     public class PauseState : State
     {
-        private readonly CommandManager _pauseCommands = new CommandManager();
 
         public PauseState() : base("Pause")
         {
@@ -30,8 +29,9 @@ namespace MazerPlatformer
         // relies on definition of external library
         public override void Update(object owner, GameTime gameTime)
         {
+            // Nothing happens while we are in the pause state....
+
             base.Update(owner, gameTime);
-            _pauseCommands.Update(gameTime);
         }
     }
 }

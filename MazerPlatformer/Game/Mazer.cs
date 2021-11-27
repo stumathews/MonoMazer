@@ -24,6 +24,7 @@ using static MazerPlatformer.Character;
 using static MazerPlatformer.MazerStatics;
 using static MazerPlatformer.Statics;
 using GameLibFramework.Drawing;
+using GameLibFramework.FSM;
 
 namespace MazerPlatformer
 {
@@ -35,6 +36,10 @@ namespace MazerPlatformer
         public Either<IFailure, IGameWorld> _gameWorld = UninitializedFailure.Create<IGameWorld>(nameof(_gameWorld));
         public Either<IFailure, ICommandManager> _gameCommands = UninitializedFailure.Create<ICommandManager>(nameof(_gameCommands));
         public GameStates _currentGameState = GameStates.Paused;
+        private Either<IFailure, FSM> _gameStateMachine = UninitializedFailure.Create<FSM>(nameof(_gameStateMachine));
+
+        private PauseState _pauseState;
+        private PlayingGameState _playingState;
 
         private const int DefaultNumCols = 10;
         private const int DefaultNumRows = 10;
@@ -56,27 +61,34 @@ namespace MazerPlatformer
         private Either<IFailure, GameMediator> gameMediator = UninitializedFailure.Create<GameMediator>(nameof(gameMediator));
         private Either<IFailure, UiMediator> uiMediator = UninitializedFailure.Create<UiMediator>(nameof(uiMediator));
 
+        private Either<IFailure, Unit> CreateAndSetGameStates() => Ensure(() =>
+        {
+            _playingState = new PlayingGameState(this);
+            _pauseState = new PauseState();
+            _gameStateMachine = new FSM(this);
+        });
+
         private bool _playerDied = false; // eventually this will be useful and used.
 
         public Mazer()
-            => InitializeGraphicsDevice()
+            => CreateAndSetGameStates()
+                .Bind(unit => InitializeGraphicsDevice())
                 .Bind(graphics => CreateAndSetInfrastructureMediator()
-                                    .Bind(im => CreateInfrastructure(im))
+                                    .Bind(im => CreateUnderlyingInfrastructure(im))
                                     .Bind(im => CreateAndSetGameWorld(im)))
                                     .Bind(im => CreateAndSetGameCommands(im))
                 .Bind(im => CreateAndSetGameMediator(this)
                              .Bind(gm => CreateAndSetUiMediator(gm, im)))
                 .ThrowIfFailed(); // initialization pipeline needs to have no errors, so throw a catastrophic exception if there are any
 
-        private Either<IFailure, InfrastructureMediator> CreateInfrastructure(InfrastructureMediator im)
-        {
-            return im.CreateInfrastructure(GraphicsDevice, Content, this).Map(o => im);
-        }
+        private Either<IFailure, InfrastructureMediator> CreateUnderlyingInfrastructure(InfrastructureMediator infrastructure)
+            => infrastructure.CreateInfrastructure(GraphicsDevice, Content, this)
+                .Map(o => infrastructure);
 
-        private Either<IFailure, InfrastructureMediator> CreateAndSetGameCommands(InfrastructureMediator im)
+        private Either<IFailure, InfrastructureMediator> CreateAndSetGameCommands(InfrastructureMediator infrastructure)
         {
             _gameCommands = new CommandManager();
-            return im;
+            return infrastructure;
         }
 
         private Either<IFailure, InfrastructureMediator> CreateAndSetInfrastructureMediator()
@@ -86,14 +98,14 @@ namespace MazerPlatformer
             => GameMediator.Create(mazer)
                 .Bind(mediator => gameMediator = mediator);
 
-        private Either<IFailure, UiMediator> CreateAndSetUiMediator(GameMediator gm, InfrastructureMediator im)
-            => UiMediator.Create(gm, im)
+        private Either<IFailure, UiMediator> CreateAndSetUiMediator(GameMediator game, InfrastructureMediator infrastructure)
+            => UiMediator.Create(game, infrastructure)
                 .Bind(ui => uiMediator = ui);
 
-        private Either<IFailure, InfrastructureMediator> CreateAndSetGameWorld(InfrastructureMediator im)
+        private Either<IFailure, InfrastructureMediator> CreateAndSetGameWorld(InfrastructureMediator infrastructure)
         {
-            _gameWorld = im.CreateGameWorld(DefaultNumRows, DefaultNumCols);
-            return im;
+            _gameWorld = infrastructure.CreateGameWorld(DefaultNumRows, DefaultNumCols);
+            return infrastructure;
         }
 
 
@@ -105,13 +117,26 @@ namespace MazerPlatformer
         /// </summary>
         protected override void Initialize()
             => Ensure(() => base.Initialize())
-                .Bind(unit => uiMediator
-                                .Map(ui => InitializeUI(ui, Content))
-                .Bind(ui => infrastructureMediator
-                           .Map(im => InitialiseInfrastructureMediator(im, ui))
-                           .Map(im => InitializeGameStateMachine(im))
+                .Bind(success => SubscribeToPauseStateChanges())
+                .Bind(success => InitializeUI()
+                .Bind(uiMediator => infrastructureMediator
+                           .Map(im => InitialiseInfrastructureMediator(im, uiMediator))
+                           .Map(im => InitializeGameStateMachine())
                            .Map(im => InitializeGameWorld(_gameWorld, _gameCommands)))
                 .ThrowIfFailed());
+
+        private Either<IFailure, UiMediator> InitializeUI() 
+            => uiMediator.Map(uiMediator => MazerStatics.InitializeUI(uiMediator, Content));
+
+        private Either<IFailure, Unit> SubscribeToPauseStateChanges() => Ensure(()
+            => _pauseState.OnStateChanged += (state, reason) => OnPauseStateChanged(state, reason, uiMediator.ToOption()));
+
+        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason changeStateReason, Option<UiMediator> uiMediator)
+           => IsStateEntered(changeStateReason)
+               ? infrastructureMediator.Bind(im => im.PlayPauseMusic())
+                   .Bind(unit => uiMediator.ToEither())
+                   .Bind(ui => ui.ShowMenu())
+               : Nothing;
 
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
@@ -161,7 +186,38 @@ namespace MazerPlatformer
 
         private Either<IFailure, Unit> UpdateGameStateMachine(GameTime gameTime)
             => infrastructureMediator
-                .Bind(im => im.UpdateStateMachine(gameTime));
+                .Bind(im => UpdateStateMachine(gameTime));
+
+        public Either<IFailure, Unit> UpdateStateMachine(GameTime time) => from stateMachine in _gameStateMachine
+                                                                           from result in Ensure(() => stateMachine.Update(time))
+                                                                           select Nothing;
+
+
+        public Either<IFailure, Unit> InitializeGameStateMachine() => Ensure(() =>
+        {
+            _gameStateMachine.Iter(o => o.AddState(_pauseState));
+            _gameStateMachine.Iter(o => o.AddState(_playingState));
+
+            var transitions = new[]
+            {
+                new Transition(_pauseState, () => _currentGameState == GameStates.Paused),
+                new Transition(_playingState, () => _currentGameState == GameStates.Playing)
+            };
+
+            // Allow each state to go into any other state, except itself. (Paused -> playing and Playing -> Paused)
+            foreach (var state in new State[] { _pauseState, _playingState })
+            {
+                state.Initialize();
+                foreach (var transition in transitions)
+                {
+                    if (state.Name != transition.NextState.Name) // except itself
+                        state.AddTransition(transition);
+                }
+            }
+
+            // Ready the state machine and put it into the default state of 'pause' state            
+            _gameStateMachine.Iter(o => o.Initialise(_pauseState.Name));
+        });
 
         private Either<IFailure, Unit> UpdateUiMediator(GameTime gameTime)
             => uiMediator

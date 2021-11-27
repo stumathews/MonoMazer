@@ -13,7 +13,6 @@
 //-----------------------------------------------------------------------
 
 using Microsoft.Xna.Framework;
-using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
@@ -21,7 +20,7 @@ namespace MazerPlatformer
     {
         public DecisionState(string name, Npc npc) : base(name, npc) {}
 
-        // relies on external library
+        // relies on external library, NpcState
         public override void Enter(object owner)
         {
             
@@ -30,7 +29,7 @@ namespace MazerPlatformer
             Npc.SetAsIdle();
         }
 
-        // relies on external library
+        // relies on external library, NpcState
         public override void Update(object owner, GameTime gameTime)
         {
            base.Update(owner, gameTime);

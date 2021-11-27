@@ -155,10 +155,11 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: ()
             => characters.Add(npc));
 
-        public static Either<IFailure, List<Npc>> GenerateFromFile(List<Npc> chars, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
+        public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
         {
             file.Npcs.Iter((levelNpc) =>
             {
+                // Make as many NPCs as there are defined in the Level File
                 Enumerable.Range(0, levelNpc.Count.Value).Iter((i) =>
                 {
                     npcBuilder.CreateNpc(GetRandomRoom(rooms, level), levelNpc.SpriteFile,
@@ -167,10 +168,10 @@ namespace MazerPlatformer
                                         levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
                                         levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
                         .Bind((npc) => AttachComponents(levelNpc, npc))
-                        .Bind((npc) => AddNpc(npc, chars));
+                        .Bind((npc) => AddNpc(npc, levelCharacters));
                 });
             });
-            return chars;
+            return levelCharacters;
         }
 
         public static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];

@@ -98,38 +98,60 @@ namespace MazerPlatformer
 
         public override Either<IFailure, Unit> Initialize()
             => base.Initialize()
-                .Bind(unit => RegisterEvents())
+                .Bind(unit => SubscribeToOwnEvents()) // Collisions are detected externally and so are state changes
                 .Bind(unit => SetInitialDirection())
                 .Bind(unit => InitializeAnimation());
 
         private Either<IFailure, Unit> InitializeAnimation() => Ensure(()
-            => Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth, AnimationInfo.FrameHeight, AnimationInfo.FrameCount, AnimationInfo.Color, AnimationInfo.Scale, AnimationInfo.Looping, AnimationInfo.FrameTime));
+            => Animation.Initialize(AnimationInfo.Texture, this.GetCentre(), AnimationInfo.FrameWidth,
+                                    AnimationInfo.FrameHeight, AnimationInfo.FrameCount, AnimationInfo.Color,
+                                    AnimationInfo.Scale, AnimationInfo.Looping, AnimationInfo.FrameTime));
 
         private Either<IFailure, Unit> SetInitialDirection() => Ensure(() =>
         {
             // We start of facing down
             CurrentDirection = CharacterDirection.Down;
-            Animation = new Animation(Animation.AnimationDirection.Down); // AnimationDirection is different to CharacterDirection
+            Animation = new Animation(Animation.AnimationDirection.Down); // NB: AnimationDirection is different to CharacterDirection
         });
 
         /// <summary>
         /// Subscribe to our own events and others (mostly GameObjects)
         /// </summary>
         /// <returns></returns>
-        private Either<IFailure, Unit> RegisterEvents() => Ensure(() =>
+        private Either<IFailure, Unit> SubscribeToOwnEvents() => Ensure(() =>
         {
             // We detect our down collisions
-            OnCollision += HandleCharacterCollision;
+            OnCollision += CollisionOccurred;
 
             // We detect our own State changes (specifically when set externally - Idle) and can act accordingly
             // Should we remove this functionality?
             OnStateChanged += OnMyStateChanged;
         });
 
+        /// <summary>
+        /// Update ourselves
+        /// </summary>
+        /// <param name="gameTime">delta time</param>
+        /// <returns>unit on success, failure otherwise</returns>
+        public override Either<IFailure, Unit> Update(GameTime gameTime)
+            => base.Update(gameTime) // Calculate common aspects of an object's update eg. bounding box, and objects state-machine etc
+            .Bind(unit => Ensure(() 
+                => Animation.Update(gameTime, (int)this.GetCentre().X, (int)this.GetCentre().Y), "Failed to update animation"));
+
+        /// <summary>
+        /// Draw the character
+        /// </summary>
+        /// <param name="infrastructure">the infrastructure</param>
+        /// <returns></returns>
+        public override Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure) => infrastructure.ToEither(InvalidDataFailure.Create("No infrastructure"))
+                       .Map(infra => DoInheritedDraw(infra)) // Draw info text over object
+                       .Bind(infra => infra.GetSpriteBatcher())
+                       .Bind(spriteBatcher => Ensure(() => Animation.Draw(spriteBatcher), "Animation Draw Failed")); // Draw ourselves
+
         public Either<IFailure, Unit> SetAsIdle()
             => SetCharacterState(CharacterStates.Idle);
 
-        private Either<IFailure, Unit> HandleCharacterCollision(Option<GameObject> object1, Option<GameObject> object2)
+        private Either<IFailure, Unit> CollisionOccurred(Option<GameObject> object1, Option<GameObject> object2)
             => SetCollisionDirection(CurrentDirection);
 
         /// <summary>
@@ -232,6 +254,12 @@ namespace MazerPlatformer
 
         private Action<Unit> SetAnimationToIdle() => (unit) => Animation.Idle = true;
 
+        /// <summary>
+        /// Sets our direction when the collision occured
+        /// <remarks>This can help determine which direction we are in</remarks>
+        /// </summary>
+        /// <param name="direction"></param>
+        /// <returns></returns>
         private Either<IFailure, Unit> SetCollisionDirection(CharacterDirection direction) => Ensure(() =>
         {
             // set
@@ -308,29 +336,14 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> ChangeDirection(CharacterDirection dir)
             => SetCharacterDirection(dir);
 
-        /// <summary>
-        /// Draw the character
-        /// </summary>
-        /// <param name="infrastructure">the infrastructure</param>
-        /// <returns></returns>
-        public override Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure) => infrastructure.ToEither(InvalidDataFailure.Create("No infrastructure"))
-                       .Map(infra => DoInheritedDraw(infra))
-                       .Bind(infra => infra.GetSpriteBatcher())
-                       .Bind(spriteBatcher => Ensure(() => Animation.Draw(spriteBatcher), "Animation Draw Failed"));
+        
 
         private InfrastructureMediator DoInheritedDraw(InfrastructureMediator infra)
         {
-            base.Draw(infra);
+            base.Draw(infra); // Draw info text over object
             return infra;
         }
 
-        /// <summary>
-        /// Update ourselves
-        /// </summary>
-        /// <param name="gameTime">delta time</param>
-        /// <returns>unit on success, failure otherwise</returns>
-        public override Either<IFailure, Unit> Update(GameTime gameTime)
-            => base.Update(gameTime)
-            .Bind(unit => Ensure(() => Animation.Update(gameTime, (int)this.GetCentre().X, (int)this.GetCentre().Y), "Failed to update animation"));
+        
     }
 }

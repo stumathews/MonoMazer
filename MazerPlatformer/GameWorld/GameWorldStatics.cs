@@ -53,10 +53,11 @@ namespace MazerPlatformer
             return level;
         });
 
-        public static void SetCollisionsOccuredEvents(GameObject go1, GameObject go2)
+        public static void NotifyBothObjectsHaveCollided(GameObject go1, GameObject go2)
         {
-            go2.CollisionOccuredWith(go1);
-            go1.CollisionOccuredWith(go2);
+            // Inform everyone who want to know when game object collison detected
+            go2.RaiseCollisionOccured(go1);
+            go1.RaiseCollisionOccured(go2);
         }
 
         public static Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) =>
@@ -64,14 +65,25 @@ namespace MazerPlatformer
                 .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
 
-        public static void NotifyIfColliding(GameObject gameObject1, GameObject gameObject2)
-        // We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)
+        /// <summary>
+        /// Check if two objects are colliding or not 
+        /// <remarks>We don't consider colliding into other objects of the same type as colliding (pickups, Npcs)</remarks>
+        /// </summary>
+        /// <param name="gameObject1"></param>
+        /// <param name="gameObject2"></param>
+        public static void IsCollision(GameObject gameObject1, GameObject gameObject2)        
         => (!IsSameType(gameObject1, gameObject2)).ToOption().ToEither()
-        .Bind((success) => gameObject2.IsCollidingWith(gameObject1))
-        .Bind((result) => result.ToOption().ToEither()).ToOption()
-        .BiIter(Some: (yes) => SetCollisionsOccuredEvents(gameObject1, gameObject2),
-                None: () => gameObject2.IsColliding = gameObject1.IsColliding = false);
+                    .MapLeft((failure)=>ShortCircuitFailure.Create($"Game Objects are the same, skipping: {failure}"))
+            .Bind((success) => gameObject2.IsCollidingWith(gameObject1))
+            .Bind((isColliding) => isColliding.ToOption().ToEither()
+                                    .MapLeft((failure) => ShortCircuitFailure.Create($"{gameObject1} not colliding with {gameObject1}: {failure}"))).ToOption()
+            .BiIter(Some: (yes) => NotifyBothObjectsHaveCollided(gameObject1, gameObject2),
+                    None: () => SetBothObjectsNotColliding(gameObject1, gameObject2));
 
+        private static void SetBothObjectsNotColliding(GameObject obj1, GameObject obj2)
+        {
+            obj2.IsColliding = obj1.IsColliding = false;
+        }
         public static bool IsSameType(GameObject gameObject1, GameObject gameObject2)
             => gameObject1.Type == gameObject2.Type;
 
@@ -102,7 +114,10 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, Level.LevelLoadInfo onLevelLoadFunc) => EnsureWithReturn(() =>
         {
+            // Create level
             var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random);
+
+            // Get Notifications when the level is loaded
             level.OnLoad += onLevelLoadFunc;
             return level;
         });
@@ -264,5 +279,12 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
             => Level.Player.MoveInDirection(direction, dt);
+
+        public static IEnumerable<GameObject> UpdateAllObjects(GameTime gameTime, List<GameObject> gameObjects) 
+            => gameObjects.Select((GameObject gameObject) =>
+                {
+                    gameObject.Update(gameTime);
+                    return gameObject;
+                });
     }
 }

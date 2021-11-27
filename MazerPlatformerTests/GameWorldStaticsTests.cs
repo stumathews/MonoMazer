@@ -275,7 +275,7 @@ namespace MazerPlatformer.Tests
                 return Statics.Nothing.ToEither();
             };
 
-            SetCollisionsOccuredEvents(Player1, Npc1);
+            NotifyBothObjectsHaveCollided(Player1, Npc1);
 
             Assert.IsTrue(gameObject1CollisionOccuredWithCalled);
             Assert.IsTrue(gameObject2CollisionOccuredWithCalled);
@@ -304,7 +304,7 @@ namespace MazerPlatformer.Tests
             {
                 gameObject2CollisionOccuredWithCalled = true;
             });
-            NotifyIfColliding(Npc1, Npc2);
+            IsCollision(Npc1, Npc2);
 
             Assert.IsFalse(gameObject1CollisionOccuredWithCalled);
             Assert.IsFalse(gameObject2CollisionOccuredWithCalled);
@@ -335,7 +335,7 @@ namespace MazerPlatformer.Tests
             Npc1.BoundingSphere.Radius = 1;
             Npc1.BoundingSphere.Center = new Microsoft.Xna.Framework.Vector3(0, 0, 0);
 
-            NotifyIfColliding(Player1, Npc1);
+            IsCollision(Player1, Npc1);
 
             Assert.IsTrue(playerCollisionOccuredWithCalled);
             Assert.IsTrue(npcCollisionOccuredWithCalled);
@@ -369,7 +369,7 @@ namespace MazerPlatformer.Tests
             Npc1.BoundingSphere.Radius = 1;
             Npc1.BoundingSphere.Center = new Microsoft.Xna.Framework.Vector3(0, 0, 0);
 
-            NotifyIfColliding(Player1, Npc1);
+            IsCollision(Player1, Npc1);
 
             Assert.IsFalse(playerCollisionOccuredWithCalled);
             Assert.IsFalse(npcCollisionOccuredWithCalled);

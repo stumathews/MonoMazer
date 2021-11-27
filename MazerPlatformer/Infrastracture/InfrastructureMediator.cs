@@ -13,7 +13,6 @@
 //-----------------------------------------------------------------------
 
 using GameLibFramework.EventDriven;
-using GameLibFramework.FSM;
 using Microsoft.Xna.Framework.Graphics;
 using LanguageExt;
 using Microsoft.Xna.Framework.Media;
@@ -21,19 +20,16 @@ using static MazerPlatformer.MazerStatics;
 using static MazerPlatformer.Statics;
 using Microsoft.Xna.Framework;
 using GameLibFramework.Drawing;
-using static MazerPlatformer.Mazer;
 
 namespace MazerPlatformer
 {
     public class InfrastructureMediator
     {
-        private Either<IFailure, IMusicPlayer> musicPlayer = new MusicPlayer();
+        private Either<IFailure, IMusicPlayer> musicPlayer = UninitializedFailure.Create<IMusicPlayer>(nameof(musicPlayer));
         private Either<IFailure, ISpriteBatcher> _spriteBatcher = UninitializedFailure.Create<ISpriteBatcher>(nameof(_spriteBatcher));
-        private Either<IFailure, FSM> _gameStateMachine = UninitializedFailure.Create<FSM>(nameof(_gameStateMachine));
         
-        private PauseState _pauseState;
         private Option<SpriteBatch> _spriteBatch;
-        private PlayingGameState _playingState;
+        
         private Song _menuMusic;
         private GameMediator _gameMediator;
         private GraphicsDevice _graphicsDevice;
@@ -44,14 +40,6 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> DrawString(IGameSpriteFont spriteFont, string text, Vector2 position, Color color) 
             => _spriteBatcher.Bind(sb => Ensure(() => sb.DrawString(spriteFont, text ?? string.Empty, position, color), $"Could not Draw string in {nameof(DrawString)}"));
 
-        public void Begin()
-        {
-
-        }
-        public void End()
-        {
-
-        }
         public Either<IFailure, Unit> DrawCircle(Vector2 center, float radius, int sides, Color color, float thickness)
         {
             return from sb in _spriteBatcher
@@ -104,10 +92,7 @@ namespace MazerPlatformer
                 from g in Ensure(()=> spriteBatcher.DrawString(font, $"Player Coll Direction: {characterCollisionDirection}", new Vector2(leftSidePosition, graphicsDevice.Viewport.TitleSafeArea.Y + 270), Color.White))
                 select Nothing;
 
-        public Either<IFailure, Unit> UpdateStateMachine(GameTime time) => from stateMachine in _gameStateMachine
-                                                                           from result in Ensure(() => stateMachine.Update(time))
-                                                                           select Nothing;
-
+       
         public Either<IFailure, Unit> DrawPlayerStatistics(IGameSpriteFont font) => Ensure(() =>
         {
             var t = from graphicsDevice in _gameGraphicsDevice
@@ -119,31 +104,7 @@ namespace MazerPlatformer
             select Nothing;
         });
 
-        public Either<IFailure, Unit> InitializeGameStateMachine() => Ensure(() =>
-        {
-            _gameStateMachine.Iter(o=> o.AddState(_pauseState));
-            _gameStateMachine.Iter(o=> o.AddState(_playingState));
-
-            var transitions = new[]
-            {
-                new Transition(_pauseState, () => _gameMediator.GetCurrentGameState() == GameStates.Paused),
-                new Transition(_playingState, () => _gameMediator.GetCurrentGameState() == GameStates.Playing)
-            };
-
-            // Allow each state to go into any other state, except itself. (Paused -> playing and Playing -> Paused)
-            foreach (var state in new State[] { _pauseState, _playingState })
-            {
-                state.Initialize();
-                foreach (var transition in transitions)
-                {
-                    if (state.Name != transition.NextState.Name) // except itself
-                        state.AddTransition(transition);
-                }
-            }
-
-            // Ready the state machine and put it into the default state of 'pause' state            
-            _gameStateMachine.Iter(o=>o.Initialise(_pauseState.Name));
-        });
+         
 
         public Either<IFailure, Unit> ClearGraphicsDevice(Mazer.GameStates currentGameState) =>
             Statics.Ensure(() =>
@@ -171,21 +132,14 @@ namespace MazerPlatformer
 
             _gameGraphicsDevice = new GameGraphicsDevice(graphicsDevice);
             _gameMediator = new GameMediator(game);
-            _playingState = new PlayingGameState(game);
-            _pauseState = new PauseState();
             
             _spriteBatch = new SpriteBatch(_graphicsDevice);
             _spriteBatcher = from spriteBatch in _spriteBatch.ToEither() 
                              let spritebatcher = new SpriteBatcher(spriteBatch)
                              select (ISpriteBatcher) spritebatcher;
             
-            _gameContentManager = CreateContentManager(content);            
-            _gameStateMachine = new FSM(this);
+            _gameContentManager = CreateContentManager(content); 
             _gameMediator.SetCommandManager(new CommandManager());
-            //_gameMediator.SetGameWorld(from gameContentManager in _gameContentManager
-            //             from spriteBatcher in _spriteBatcher
-            //             from gameWorld in GameWorld.Create(gameContentManager, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols)
-            //             select gameWorld);
 
             content.RootDirectory = "Content";
             
@@ -200,7 +154,8 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> Initialize(Option<UiMediator> uiMediator) => Ensure(() =>
         {
-            _pauseState.OnStateChanged += (state, reason) => OnPauseStateChanged(state, reason, uiMediator).ThrowIfFailed();
+         musicPlayer = new MusicPlayer();
+            
         });
 
         public Either<IFailure, Unit> DrawGameWorld() => EnsuringBind(() => from gameWorld in _gameMediator.GetGameWorld()
@@ -215,20 +170,18 @@ namespace MazerPlatformer
                                                                     from result in Ensure(spriteBatcher.End).Map(unit => spriteBatcher)
                                                                     select result;
 
-        private Either<IFailure, Unit> OnPauseStateChanged(State state, State.StateChangeReason reason, Option<UiMediator> uiMediator)
-            => IsStateEntered(reason)
-                ? musicPlayer.Bind(player => PlayMenuMusic(player, _menuMusic))
-                    .Bind(unit => uiMediator.ToEither())
-                    .Bind(ui => ui.ShowMenu())
-                : Nothing;
+       
 
         public Either<IFailure, GameContentManager> CreateContentManager(Microsoft.Xna.Framework.Content.ContentManager content) => EnsureWithReturn(() => new GameContentManager(content));
 
         public Either<IFailure, Song> SetMenuMusic(Song song) 
-            {
-            _menuMusic = song;
-            return _menuMusic;
-            }
-       
+        {
+        _menuMusic = song;
+        return _menuMusic;
+        }
+
+        public Either<IFailure, Unit> PlayPauseMusic() 
+            => musicPlayer.Bind(player => PlayMenuMusic(player, _menuMusic));
+
     }
 }

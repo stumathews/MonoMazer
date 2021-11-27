@@ -34,50 +34,8 @@ namespace MazerPlatformer
 
     // Consider serializing the specification of each type of NPC ie hit values, points etc..
 
-    public class Level
+    public partial class Level
     {
-        /* These classes represent the Level File contents that is used to define each level */
-        public class LevelDetails : LevelCharacterDetails
-        {
-            public int? Rows { get; set; }
-            public int? Cols { get; set; }
-            public string Sound1 { get; set; }
-            public string Sound2 { get; set; }
-            public string Sound3 { get; set; }
-            public string Music { get; set; }
-            public LevelPlayerDetails Player { get; set; }
-            public List<LevelNpcDetails> Npcs { get; private set; } = new List<LevelNpcDetails>();
-
-            public LevelDetails() { /* Needed for serialization */ }
-
-        }
-
-        public class LevelCharacterDetails
-        {
-            public int? SpriteWidth { get; set; }
-            public int? SpriteHeight { get; set; }
-            public int? SpriteFrameTime { get; set; }
-            public int? SpriteFrameCount { get; set; }
-            public int? MoveStep { get; set; }
-            public string SpriteFile { get; set; }
-            public List<Component> Components { get; set; }
-            public int? Count { get; set; }
-
-            public LevelCharacterDetails() {/* Needed for serialization */  }
-
-        }
-
-        public class LevelPlayerDetails : LevelCharacterDetails
-        {
-            public LevelPlayerDetails() { /* Needed for serialization */ }
-        }
-
-        public class LevelNpcDetails : LevelCharacterDetails
-        {
-            public Npc.NpcTypes NpcType { get; set; }
-
-            public LevelNpcDetails() { /* Needed for serialization */ }
-        }
 
 
         //public SpriteBatch SpriteBatch { get; }
@@ -235,7 +193,8 @@ namespace MazerPlatformer
                 => GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
 
             Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms) 
-                => WhenTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides)).Map(unit => RemoveRndSide(idx, room, allRooms));
+                => WhenTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides))
+                                    .Map(unit => RemoveRndSide(idx, room, allRooms));
 
             return mazeGrid
                 .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
@@ -274,9 +233,9 @@ namespace MazerPlatformer
         /// <returns></returns>
         public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
         {
-           return WhenTrue(()=>Npcs != null && levelFile.Npcs.Count > 0).Match(
-                Some: (unit) => GenerateFromFile(new List<Npc>(), levelFile, npcBuilder, rooms, level), 
-                None: ()=> npcBuilder.GenerateDefaultNpcSet(rooms, new List<Npc>(), level));            
+           return WhenTrue(()=>Npcs != null && levelFile.Npcs.Count > 0)
+            .Match(Some: (unit) => GenerateNPCsFromLevelFile(levelCharacters: new List<Npc>(), levelFile, npcBuilder, rooms, level), 
+                   None: ()=> npcBuilder.CreateDefaultNpcSet(rooms, new List<Npc>(), level));            
         });
 
         
@@ -288,7 +247,7 @@ namespace MazerPlatformer
         public Either<IFailure, Dictionary<string, GameObject>> Load(IGameContentManager contentManager, int? playerHealth = null, int? playerScore = null)
         {
             var loadPipeline =
-                from levelFile in GetLevelFile(playerHealth, playerScore)
+                from levelFile in LoadLevelFile(playerHealth, playerScore)
                 from setLevelFile in SetLevelFile(levelFile)
                 from levelMusic in LoadLevelMusic()
                 from soundEffectsLoaded in LoadSoundEffects()
@@ -353,10 +312,10 @@ namespace MazerPlatformer
             });
         }
 
-        private Either<IFailure, LevelDetails> GetLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
+        private Either<IFailure, LevelDetails> LoadLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
         {
             return WhenTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind(
-                Right: (unit)=>
+                Right: (levelFileExists)=>
                 {
                     LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
 
@@ -375,9 +334,13 @@ namespace MazerPlatformer
 
                     return LevelFile;
                 }, 
-                Left:(failure)=>MakeNewLevelDetails());
+                Left:(levelFileDoesNotExist)=>MakeNewLevelDetails());
         });
 
+        /// <summary>
+        /// Make a plain default level
+        /// </summary>
+        /// <returns></returns>
         private Either<IFailure, LevelDetails> MakeNewLevelDetails()
         {
             return new LevelDetails

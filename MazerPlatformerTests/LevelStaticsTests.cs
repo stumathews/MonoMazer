@@ -234,7 +234,7 @@ namespace MazerPlatformer.Tests
         {
             List<Npc> chars = new List<Npc>();
             AddNpcDetailsToLevelFile(GameWorldStaticTests.LevelDetails, GameWorldStaticTests.LevelNpcDetails);
-            GenerateFromFile(chars, GameWorldStaticTests.LevelDetails, GameWorldStaticTests.CharacterBuilder, GameWorldStaticTests.Rooms, GameWorldStaticTests.BasicLevelObject);
+            GenerateNPCsFromLevelFile(chars, GameWorldStaticTests.LevelDetails, GameWorldStaticTests.CharacterBuilder, GameWorldStaticTests.Rooms, GameWorldStaticTests.BasicLevelObject);
             Assert.IsTrue(chars.Count == 2);
         
         }

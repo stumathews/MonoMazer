@@ -161,6 +161,21 @@ namespace MazerPlatformer
             Components = components ?? new List<Component>();
         }
 
+        /// <summary>
+        /// All game objects can have their associated State machine initialised with their specific states
+        /// </summary>
+        /// <returns></returns>
+        public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
+        {
+            // Add all the game object's configured states to statemachine       
+            States.ForEach(state => StateMachine.AddState(state));
+
+            // We enter the default state whatever that is     
+            StateMachine.Initialise(States.Any()
+                ? States.FirstOrDefault(s => s.Name == "default")?.Name ?? States.First()?.Name
+                : null);
+        });
+
 
         /// <summary>
         /// Get the centre of the game object
@@ -193,9 +208,12 @@ namespace MazerPlatformer
         /// <param name="gameTime"></param>
         /// <returns></returns>
         public virtual Either<IFailure, Unit> Update(GameTime gameTime) =>
-            WhenTrue(() => Active).ToEither(ShortCircuitFailure.Create("Game Object not Active"))
+            WhenTrue(() => Active)
+                        .ToEither(ShortCircuitFailure.Create("Game Object not Active"))
             .Bind(_ => CalculateBoundingBox(X, Y))
-            .Bind(_ => Ensure(() => StateMachine.Update(gameTime)));
+                        .MapLeft((failure) =>UnexpectedFailure.Create($"Bounding box calculation failed: {failure}"))
+            .Bind(_ => Ensure(() => StateMachine.Update(gameTime))
+                        .MapLeft((failure)=>UnexpectedFailure.Create($"Could not update state machine: {failure}")));
 
 
         /// <summary>
@@ -204,9 +222,11 @@ namespace MazerPlatformer
         /// <param name="otherObject">The other object that potentially is colliding with this object</param>
         /// <returns>true if coliding, false if not, failure otherwise</returns>
         public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject)
-            => WhenTrue(() => otherObject == null || otherObject.Id == Id).ToEither(ShortCircuitFailure.Create("Cant collide with null or myself"))
+            => WhenTrue(() => otherObject == null || otherObject.Id == Id)
+                    .ToEither(ShortCircuitFailure.Create("Cant collide with null or myself"))
                 .BiBind(Right: (unit) => false.ToEither(), 
-                        Left: (failure) => SetObjectsAreColliding(otherObject));
+                        Left: (failure) => SetObjectsAreColliding(otherObject).
+                                                MapLeft((failed)=>UnexpectedFailure.Create($"Failure while setting object collision status: {failed}")));
 
         private Either<IFailure, bool> SetObjectsAreColliding(GameObject otherObject)
         {
@@ -222,10 +242,13 @@ namespace MazerPlatformer
 
         // Not sure this is a good as it could be because the Game world is what calls this 
         // as its the game world is what checks for collisions
-        public virtual Either<IFailure, Unit> CollisionOccuredWith(GameObject otherObject) => Ensure(() =>
+        public virtual Either<IFailure, Unit> RaiseCollisionOccured(GameObject otherObject) => Ensure(() =>
         {
-            CollisionArgs GetCollisionHandler() => OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
+            // We are collidig now
             IsColliding = true;
+
+            // Tell our subscribers that we collided
+            CollisionArgs GetCollisionHandler() => OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
             GetCollisionHandler()?.Invoke(this, otherObject);
         });
 
@@ -348,10 +371,13 @@ namespace MazerPlatformer
         /// <param name="infrastructure"></param>
         /// <returns></returns>
         public virtual Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure) 
+            => DrawInfoText(infrastructure);
+
+        private Either<IFailure, Unit> DrawInfoText(Option<InfrastructureMediator> infrastructure) 
             => from success in (from _ in WhenTrue(() => !IsNullOrEmpty(InfoText) && Diagnostics.DrawObjectInfoText).ToEither(ShortCircuitFailure.Create("Conditions dont allow for drawing Info Text"))
-                                from __ in DrawText(infrastructure).MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawText)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
-                                from ___ in DrawObjectDiagnostics(infrastructure).MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawObjectDiagnostics)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
-                                select Nothing).IgnoreFailure()
+                from __ in DrawText(infrastructure).MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawText)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
+                from ___ in DrawObjectDiagnostics(infrastructure).MapLeft(f => UnexpectedFailure.Create($"Could not {nameof(DrawObjectDiagnostics)} in GameObject with id of '{Id}' Reason: {f.Reason}"))
+                select Nothing).IgnoreFailure()
                 select Success;
 
         /// <summary>
@@ -365,20 +391,7 @@ namespace MazerPlatformer
                    from drawOnBottom in infra.DrawString(Mazer.GetGameFont(), SubInfoText ?? string.Empty, new Vector2(X + 10, Y + Height), Color.White)
                    select Nothing;
 
-        #endregion
-
-        /// <summary>
-        /// Specific game objects need to initialize themselves
-        /// </summary>
-        /// <returns></returns>
-        public virtual Either<IFailure, Unit> Initialize() => Ensure(() =>
-        {
-            // We enter the default state whatever that is            
-            States.ForEach(state => StateMachine.AddState(state));
-            StateMachine.Initialise(States.Any()
-                ? States.FirstOrDefault(s => s.Name == "default")?.Name ?? States.First()?.Name
-                : null);
-        });
+        #endregion        
 
         protected virtual void Dispose(bool disposing) =>
             WhenTrue(() => disposing)

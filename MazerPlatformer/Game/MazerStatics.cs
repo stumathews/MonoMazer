@@ -143,12 +143,6 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic)
             => Statics.Ensure(setMenuMusic);
 
-        public static InfrastructureMediator InitializeGameStateMachine(InfrastructureMediator im)
-        {
-            im.InitializeGameStateMachine();
-            return im;
-        }
-
         public static InfrastructureMediator InitialiseInfrastructureMediator(InfrastructureMediator im, UiMediator ui)
         {
             im.Initialize(ui);
