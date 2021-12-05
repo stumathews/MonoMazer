@@ -31,7 +31,10 @@ namespace MazerPlatformer
 
         public void Update(GameTime gameTime)
         {
+            UserInterface.Active.OnClick += OnClick;
             UserInterface.Active.Update(gameTime);
         }
+
+        public event EventCallback OnClick;
     }
 }

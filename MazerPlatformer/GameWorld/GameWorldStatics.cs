@@ -93,13 +93,10 @@ namespace MazerPlatformer
             return timer;
         });
 
-        public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, Level.LevelLoadInfo onLevelLoadFunc, EventMediator eventMediator) => EnsureWithReturn(() =>
+        public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) => EnsureWithReturn(() =>
         {
             // Create level
             var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random, eventMediator);
-
-            // Get Notifications when the level is loaded
-            level.OnLoad += onLevelLoadFunc;
 
             return level;
         });
@@ -188,6 +185,12 @@ namespace MazerPlatformer
 
         public static int ToRoomColumnFast(GameObject gameObject1, int roomWidth)
             => roomWidth == 0 ? 0 : (int)Math.Ceiling((float)gameObject1.X / roomWidth);
+
+        public static int ToRoomColumnFast(float x, int roomWidth)
+            => roomWidth == 0 ? 0 : (int)Math.Ceiling(x / roomWidth);
+
+        public static int ToRoomRowFast(float y, int roomHeight)
+            => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)y / roomHeight);
 
         public static int ToRoomRowFast(GameObject o1, int roomHeight)
             => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)o1.Y / roomHeight);

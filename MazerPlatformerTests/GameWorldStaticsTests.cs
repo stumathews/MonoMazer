@@ -139,13 +139,13 @@ namespace MazerPlatformer.Tests
             GameContentManager = mockGameContentManager.Object;
             BasicLevelObject = new Level(10, 10, 10, 10, 1, new Random(), new EventMediator());
             BasicLevelObject.Load(GameContentManager);
-            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10);
-            Player1 = Level.MakePlayer(Rooms[0], LevelDetails, GameContentManager).ThrowIfFailed();
-            Npc1 = Npc.Create(1, 1, "Npc1", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc1AssetFile")).ThrowIfFailed();
+            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10, new EventMediator());
+            Player1 = Level.MakePlayer(Rooms[0], LevelDetails, GameContentManager, new EventMediator()).ThrowIfFailed();
+            Npc1 = Npc.Create(1, 1, "Npc1", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc1AssetFile"), new EventMediator()).ThrowIfFailed();
             Npc1.Components.Add(new Component(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy));
-            Npc2 = Npc.Create(1, 1, "Npc2", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc2AssetFile")).ThrowIfFailed();
+            Npc2 = Npc.Create(1, 1, "Npc2", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc2AssetFile"), new EventMediator()).ThrowIfFailed();
             Npc2.Components.Add(new Component(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup));
-            CharacterBuilder = new CharacterBuilder(GameContentManager, 0, 0);
+            CharacterBuilder = new CharacterBuilder(GameContentManager, 0, 0, new EventMediator());
             Pickup = CharacterBuilder.CreateNpc(Rooms[0], assetName: "dummyPickup", type: Npc.NpcTypes.Pickup).ThrowIfFailed();
             Pickup.AddComponent(Component.ComponentType.NpcType, Npc.NpcTypes.Pickup);
 
@@ -440,7 +440,7 @@ namespace MazerPlatformer.Tests
 
             var expectedRows = 10;
             var exepctedCols = 11;
-            var level = CreateLevel(expectedRows, exepctedCols, 1, 1, 1, new Random(), func, new EventMediator()).ThrowIfFailed();
+            var level = CreateLevel(expectedRows, exepctedCols, 1, 1, 1, new Random(), new EventMediator()).ThrowIfFailed();
             level.Load(GameContentManager);
 
             Assert.IsTrue(wasCalled);

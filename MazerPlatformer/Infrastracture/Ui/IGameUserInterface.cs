@@ -12,6 +12,7 @@
 
 //-----------------------------------------------------------------------
 
+using GeonBit.UI;
 using Microsoft.Xna.Framework;
 
 namespace MazerPlatformer
@@ -20,5 +21,6 @@ namespace MazerPlatformer
     {
         void Draw();
         void Update(GameTime gameTime);
+        event EventCallback OnClick;
     }
 }

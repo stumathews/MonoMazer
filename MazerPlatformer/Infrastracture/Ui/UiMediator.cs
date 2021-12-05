@@ -22,6 +22,7 @@ using static MazerPlatformer.Mazer;
 using GameLibFramework.Drawing;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using GeonBit.UI;
 
 namespace MazerPlatformer
 {
@@ -36,7 +37,7 @@ namespace MazerPlatformer
         public UiMediator(GameMediator gameMediator, SpriteBatch spriteBatch)
         {
             _gameMediator = gameMediator;
-            _gameUserInterface = new GameUserInterface(spriteBatch);
+            _gameUserInterface = new GameUserInterface(spriteBatch); 
         }
 
         public Either<IFailure, Unit> DrawUi() => _gameUserInterface.Bind( o => Ensure(()=>o.Draw()));

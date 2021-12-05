@@ -12,13 +12,17 @@
 
 //-----------------------------------------------------------------------
 
+using GeonBit.UI;
 using LanguageExt;
+using Newtonsoft.Json;
 using static MazerPlatformer.Character;
+using static MazerPlatformer.Room;
 
 namespace MazerPlatformer
 {
     public class EventMediator
     {
+        public event EventCallback OnUiClick;
         public event CollisionArgs OnGameWorldCollision;
         public event StateChanged OnPlayerStateChanged;
         public event DirectionChanged OnPlayerDirectionChanged;
@@ -28,7 +32,12 @@ namespace MazerPlatformer
         public event LevelLoadInfo OnLoadLevel;
         public event DeathInfo OnPlayerDied;
         public event LevelClearedInfo OnLevelCleared;
+        public event PlayerSpottedInfo OnPlayerSpotted;
+        public event WallInfo OnWallCollision;
 
+        
+        
+        public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
         public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
         public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount);
@@ -41,6 +50,12 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
         public delegate void DisposingInfo(GameObject theObject);
+
+        internal void RaiseOnUiClick(GeonBit.UI.Entities.Entity entity) 
+            => OnUiClick?.Invoke(entity);
+
+        internal void RaiseOnWallCollision(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics) 
+            => OnWallCollision?.Invoke(room, collidedWith, side, sideCharacteristics);
 
         internal void RaiseOnPlayerStateChanged(CharacterStates state) 
             => OnPlayerStateChanged?.Invoke(state);
@@ -67,5 +82,8 @@ namespace MazerPlatformer
             => OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved, runningTotalCount);
         internal void RaiseLevelCleared(Level level) 
             => OnLevelCleared?.Invoke(level);
+
+        internal void RaiseOnPlayerSpotted(Player player)
+            => OnPlayerSpotted?.Invoke(player);
     }
 }

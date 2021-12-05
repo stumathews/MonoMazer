@@ -69,11 +69,6 @@ namespace MazerPlatformer
                     GetRoom(room.RoomLeft),
                     GetRoom(room.RoomRight)}.ToList();
 
-        public event GameObjectAddedOrRemoved OnGameObjectAddedOrRemoved;
-        public event LevelLoadInfo OnLoad;
-        public delegate Either<IFailure, Unit> LevelLoadInfo(LevelDetails details);
-        public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
-
         // Main collection of game objects within the level
         public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
@@ -84,7 +79,7 @@ namespace MazerPlatformer
         public int ViewPortWidth { get; }
         public int ViewPortHeight { get; }
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
-        private readonly EventMediator eventMediator;
+        private readonly EventMediator _eventMediator;
 
         private object _lock = new object();
 
@@ -104,7 +99,7 @@ namespace MazerPlatformer
         public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) 
         {
             _random = random;
-            this.eventMediator = eventMediator;
+            _eventMediator = eventMediator;
             ViewPortWidth = viewPortWidth;
             ViewPortHeight = viewPortHeight;
             RoomWidth = viewPortWidth / cols;
@@ -118,7 +113,7 @@ namespace MazerPlatformer
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
         public Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false)
         {
-            var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight);
+            var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight, _eventMediator);
             int GetTotalRooms(List<Room> allRooms) => allRooms.Count;
             int GetNextIndex(int index) => index + 1;
             int GetThisColumn(Room r) => r.Col;
@@ -212,11 +207,11 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager) => EnsureWithReturn(()
+        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator) => EnsureWithReturn(()
         =>     (from assetFile in CreateAssetFile(levelFile)
                 from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
                 from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
-                from player in CreatePlayer(playerRoom, playerAnimation, levelFile)
+                from player in CreatePlayer(playerRoom, playerAnimation, levelFile, eventMediator)
                 from InitializedPlayer in InitializePlayer(levelFile, player)
                 from playerHealth in GetPlayerHealth(player)
                     .Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
@@ -253,10 +248,10 @@ namespace MazerPlatformer
                 from rooms in MakeLevelRooms().ToEither()
                 from setRooms in SetRooms(rooms)
                 from gameObjectsWithRooms in AddRoomsToGameObjects()
-                from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, contentManager)
+                from player in MakePlayer(playerRoom: _rooms[_random.Next(0, Rows * Cols)], levelFile, contentManager, _eventMediator)
                 from setPLayer in SetPlayer(player)
                 from gameObjectsWithPlayer in AddToLevelGameObjects(Player.Id, player)
-                from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(contentManager, Rows, Cols), this)
+                from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(contentManager, Rows, Cols, _eventMediator), this)
                 from setNPCs in SetNPCs(npcs)
                 from gameObjectsWithNpcs in AddNpcsToGameObjects(npcs)
                 from raise in RaiseOnLoad(levelFile)
@@ -269,7 +264,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetPlayer(Player player) => Ensure(() => { Player = player; });
             Either<IFailure, Unit> SetNPCs(List<Npc> npcs) => Ensure(() => { Npcs = npcs; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
-            Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
+            Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => _eventMediator.RaiseOnLoadLevel(file));
 
             List<Room> MakeLevelRooms() => MakeRooms(removeRandSides: Diagnostics.RandomSides).ThrowIfFailed();
 
@@ -305,7 +300,7 @@ namespace MazerPlatformer
             Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
             {
                 GameObjects.Add(id, gameObject);
-                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: GameObjects.Count());
+                _eventMediator.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: GameObjects.Count());
             });
         }
 

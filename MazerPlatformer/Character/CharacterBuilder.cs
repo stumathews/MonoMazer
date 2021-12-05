@@ -33,21 +33,24 @@ namespace MazerPlatformer
         public int Cols { get; }
 
         private readonly Random _random = new Random();
+        private readonly EventMediator _eventMediator;
+
         private IGameContentManager ContentManager { get; }
 
-        public CharacterBuilder(IGameContentManager contentManager, int rows, int cols)
+        public CharacterBuilder(IGameContentManager contentManager, int rows, int cols, EventMediator eventMediator)
         {
             ContentManager = contentManager;
             Rows = rows;
             Cols = cols;
+            _eventMediator = eventMediator;
         }
 
         public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName, int frameWidth = AnimationInfo.DefaultFrameWidth,
             int frameHeight = AnimationInfo.DefaultFrameHeight, int frameCount = AnimationInfo.DefaultFrameCount,
             Npc.NpcTypes type = Npc.NpcTypes.Enemy, int moveStep = 3) 
             => WhenTrue(() => type == Npc.NpcTypes.Pickup)
-                    .Match(Some: IsPickup => MakeNonMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep),
-                            None: (/*Non-Pickup*/) => MakeMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, type, moveStep));
+                    .Match(Some: IsPickup => MakeNonMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep, _eventMediator),
+                            None: (/*Non-Pickup*/) => MakeMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, type, moveStep, _eventMediator));
 
         /// <summary>
         /// All NPCs have the same kind of states they can be in
@@ -70,19 +73,19 @@ namespace MazerPlatformer
             return npc;
         });
 
-        private Either<IFailure, Npc> MakeMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, Npc.NpcTypes type, int moveStep)
-            => from npc in MakeNonMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep)
+        private Either<IFailure, Npc> MakeMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, Npc.NpcTypes type, int moveStep, EventMediator eventMediator)
+            => from npc in MakeNonMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep, eventMediator )
                from isNotPickup in WhenTrue(() => type != Npc.NpcTypes.Pickup).ToEither()
                         .MapLeft((failure)=>ShortCircuitFailure.Create("Cant make Mocing NPC from pickup"))
                from initializedNpc in InitializeNpcStates(npc)
                select initializedNpc;
 
-        private Either<IFailure, Npc> MakeNonMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, int moveStep) 
+        private Either<IFailure, Npc> MakeNonMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, int moveStep, EventMediator eventMediator) 
             => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(),
                           AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight,
                           GameObject.GameObjectType.Npc,
                           new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName,
-                                            frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount),
+                                            frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), eventMediator,
                           moveStep);
 
 

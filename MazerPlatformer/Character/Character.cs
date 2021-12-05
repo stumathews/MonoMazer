@@ -92,8 +92,8 @@ namespace MazerPlatformer
         /// <param name="height"></param>
         /// <param name="type"></param>
         /// <param name="moveStepIncrement"></param>
-        protected Character(int x, int y, string id, int width, int height, GameObjectType type, int moveStepIncrement = DefaultMoveStep) 
-            : base(x, y, id, width, height, type)
+        protected Character(int x, int y, string id, int width, int height, GameObjectType type, EventMediator eventMediator, int moveStepIncrement = DefaultMoveStep) 
+            : base(x, y, id, width, height, type, eventMediator)
             => _moveStep = moveStepIncrement;
 
         public override Either<IFailure, Unit> Initialize()

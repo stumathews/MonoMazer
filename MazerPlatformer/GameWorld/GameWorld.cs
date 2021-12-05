@@ -43,6 +43,12 @@ namespace MazerPlatformer
         private Level _level; // Current Level     
         private bool _unloading;
         private GameWorldBlackBoardController _AI;
+
+        internal Level GetLevel()
+        {
+            return _level;
+        }
+
         private GameWorldBlackBoard _blackBoard;
 
         //public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
@@ -72,7 +78,7 @@ namespace MazerPlatformer
         /// Load the Content of the game world ie levels and sounds etc
         /// </summary>
         public Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-            => CreateLevel(_rows, _cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad, EventMediator)
+            => CreateLevel(_rows, _cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, EventMediator)
                     .Bind(level => SetGameWorldLevel(level))
                     .Bind(level => level.Load(_contentManager, overridePlayerHealth, overridePlayerScore))
                     .Bind(levelObjects => AddToGameWorld(levelObjects, _level.GameObjects, EventMediator));
@@ -109,8 +115,13 @@ namespace MazerPlatformer
 
             SubscribeToPlayerEvents();
 
+            
+            EventMediator.OnLoadLevel += OnLevelLoad;
+
+
             // Let us know when a room registers a collision
-            _level.GetRooms().Iter(rooms => rooms.ForEach(r => r.OnWallCollision += OnRoomCollision));
+            //_level.GetRooms().Iter(rooms => rooms.ForEach(r => r.OnWallCollision += OnRoomCollision));
+            EventMediator.OnWallCollision += OnRoomCollision;
 
             // Setup the game AI
             _blackBoard = new GameWorldBlackBoard(_level, Level.Player);
@@ -149,7 +160,7 @@ namespace MazerPlatformer
             Level.Player.OnCollision += OnPlayerCollision;
 
             // Allow game world to respond to when the player has been spotted
-            Level.Player.OnPlayerSpotted += OnPlayerSpotted;
+            EventMediator.OnPlayerSpotted += OnPlayerSpotted;          
             
             
         }
@@ -307,6 +318,8 @@ namespace MazerPlatformer
 
         private int GetRoomNumber(GameObject go, int roomWidth, int roomHeight)
                 => ((GetRow(go, roomHeight) - 1) * _cols) + GetCol(go, roomWidth) - 1;
+        private int GetRoomNumber(float x, float y, int roomWidth, int roomHeight )
+            => ((ToRoomRowFast(y, roomHeight) - 1) * _cols) + ToRoomColumnFast(x, roomWidth) - 1;
 
         private Room GetCurrentRoomIn(GameObject go, int roomWidth, int roomHeight)
                 => GetRoom(GetRoomNumber(go, roomWidth, roomHeight)).ThrowIfNone(NotFound.Create($"Room not found at room number {GetRoomNumber(go, roomWidth, roomHeight)}"));
@@ -400,8 +413,6 @@ namespace MazerPlatformer
             _rows = _level.Rows;
             _roomWidth = _level.RoomWidth;
             _roomHeight = _level.RoomHeight;
-
-            EventMediator.RaiseOnLoadLevel(details);
         });
 
 

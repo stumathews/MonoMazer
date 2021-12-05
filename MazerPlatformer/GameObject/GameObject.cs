@@ -24,36 +24,12 @@ using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
-
-    public abstract class GameObjectDecorator : GameObject
-    {
-        protected GameObjectDecorator(int x, int y, string id, int width, int height, GameObjectType type) 
-            : base(x, y, id, width, height, type) { }
-
-        protected GameObjectDecorator(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components) 
-            : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
-        {
-        }
-    }
-
-    public class GameObjectWithX : GameObjectDecorator
-    {
-        public GameObjectWithX(int x, int y, string id, int width, int height, GameObjectType type) 
-            : base(x, y, id, width, height, type)
-        {
-        }
-
-        public GameObjectWithX(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components) 
-            : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
-        {
-        }
-    }
-
     /// <summary>
     /// An abstract class that any game element can inherit from in order to get frametime
     /// </summary>
     public abstract partial class GameObject : IDisposable, PerFrame, IGameObject
     {
+        protected EventMediator _eventMediator;
         /// <summary>
         /// Tracks if the game object is currently colliding
         /// </summary>
@@ -151,7 +127,7 @@ namespace MazerPlatformer
         public delegate void DisposingInfo(GameObject theObject);
 
         // Ctor
-        protected GameObject(int x, int y, string id, int width, int height, GameObjectType type)
+        protected GameObject(int x, int y, string id, int width, int height, GameObjectType type, EventMediator eventMediator)
         {
             X = x;
             Y = y;
@@ -161,11 +137,12 @@ namespace MazerPlatformer
             StateMachine = new FSM(this);
             Type = type;
             Active = true;
+            _eventMediator = eventMediator;
         }
 
         // Used only for JSON copying
         [JsonConstructor]
-        protected GameObject(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components)
+        protected GameObject(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, EventMediator eventMediator)
         {
             IsColliding = isColliding;
             StateMachine = stateMachine ?? new FSM(this);
@@ -184,6 +161,7 @@ namespace MazerPlatformer
             StateTransitions = stateTransitions ?? new List<Transition>();
             States = states ?? new List<State>();
             Components = components ?? new List<Component>();
+            _eventMediator = eventMediator ?? new EventMediator();
         }
 
         /// <summary>

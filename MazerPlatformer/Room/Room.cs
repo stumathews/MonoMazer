@@ -42,9 +42,6 @@ namespace MazerPlatformer
             true // Left
         };
 
-        public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
-        public event WallInfo OnWallCollision;
-
         public Dictionary<Side, SideCharacteristic> WallProperties = new Dictionary<Side, SideCharacteristic>();
 
         public RectDetails RectangleDetail { get; set; } // Contains definitions A,B,C,D for modeling a rectangle as a room
@@ -68,14 +65,14 @@ namespace MazerPlatformer
         /// <param name="height">Height of the room</param>
         /// <param name="roomNumber"></param>
         /// <remarks>Coordinates for X, Y start from top left corner of screen at 0,0</remarks>
-        public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col)
+        public static Either<IFailure, Room> Create(int x, int y, int width, int height, int roomNumber, int row, int col, EventMediator eventMediator)
             =>  IsValid(x, y, width, height, roomNumber, row, col)
-                .Bind(unit => EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col))
+                .Bind(unit => EnsureWithReturn(() => new Room(x, y, width, height, roomNumber, row, col, eventMediator))
                 .Bind(room => InitializeBounds(room)));                    
 
         // ctor
-        private Room(int x, int y, int width, int height, int roomNumber, int row, int col) 
-            : base(x:x, y: y, id: $"{row}x{col}", width: width, height: height, type: GameObjectType.Room)
+        private Room(int x, int y, int width, int height, int roomNumber, int row, int col, EventMediator eventMediator) 
+            : base(x:x, y: y, id: $"{row}x{col}", width: width, height: height, type: GameObjectType.Room, eventMediator)
         {
             RoomNumber = roomNumber;
             Col = col;
@@ -86,8 +83,8 @@ namespace MazerPlatformer
         }
 
         [JsonConstructor]
-        private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, int roomAbove, int roomBelow, int roomRight, int roomLeft, int roomNumber, int col, int row)
-            : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components)
+        private Room(bool isColliding, FSM stateMachine, GameObjectType type, BoundingBox boundingBox, BoundingSphere boundingSphere, Vector2 maxPoint, Vector2 centre, int x, int y, string id, int width, int height, string infoText, string subInfoText, bool active, List<Transition> stateTransitions, List<State> states, List<Component> components, RectDetails rectangleDetail, int roomAbove, int roomBelow, int roomRight, int roomLeft, int roomNumber, int col, int row, EventMediator eventMediator)
+            : base(isColliding, stateMachine, type, boundingBox, boundingSphere, maxPoint, centre, x, y, id, width, height, infoText, subInfoText, active, stateTransitions, states, components, eventMediator)
         {
             RectangleDetail = rectangleDetail;
             RoomAbove = roomAbove;
@@ -126,7 +123,8 @@ namespace MazerPlatformer
 
                 thisWallProperty.Color = Color.White;
                 collision = true;
-                OnWallCollision?.Invoke(this, otherObject, side, thisWallProperty);
+
+                _eventMediator.RaiseOnWallCollision(this, otherObject, side, thisWallProperty);
                 //RemoveSide(side);
             }
 

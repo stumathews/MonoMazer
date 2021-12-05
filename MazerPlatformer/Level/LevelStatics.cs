@@ -37,11 +37,11 @@ namespace MazerPlatformer
             frameHeight: l?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
             frameCount: l?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
 
-        public static Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level) => new Player(x: (int)player_room.GetCentre().X,
+        public static Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level, EventMediator eventMediator) => new Player(x: (int)player_room.GetCentre().X,
             y: (int)player_room.GetCentre().Y,
             width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
             height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
-            animationInfo: animation);
+            animationInfo: animation, eventMediator);
 
         public static Option<Component> AddPlayerPointsComponent(Player p)
         {

@@ -53,7 +53,7 @@ namespace MazerPlatformer
         /// <returns></returns>
         [PureFunction]
         public static Either<IFailure, Room> InitializeBounds(Room room)
-            => room.Copy()
+            => EnsureWithReturn(()=> room) //no room copy
         .EnsuringBind(roomCopy => AddWallCharacteristic(roomCopy, Room.Side.Top, new SideCharacteristic(Color.Black, TopBounds(room))))
         .EnsuringBind(addedTop => AddWallCharacteristic(addedTop, Room.Side.Right, new SideCharacteristic(Color.Black, RightBounds(room))))
         .EnsuringBind(addedRight => AddWallCharacteristic(addedRight, Room.Side.Bottom, new SideCharacteristic(Color.Black, BottomBounds(room))))
@@ -82,7 +82,7 @@ namespace MazerPlatformer
         public static bool AnyNegative(int x, int y, int width, int height) 
             => new[] {x, y, width, height}.Any(o => o < 0);
 
-        public static List<Room> CreateNewMazeGrid(int rows, int cols, int RoomWidth, int RoomHeight)
+        public static List<Room> CreateNewMazeGrid(int rows, int cols, int RoomWidth, int RoomHeight, EventMediator eventMediator)
         {
             var mazeGrid = new List<Room>();
 
@@ -91,7 +91,7 @@ namespace MazerPlatformer
                 for (var col = 0; col < cols; col++)
                 {
                     mazeGrid.Add(Room.Create(x: col * RoomWidth, y: row * RoomHeight, width: RoomWidth, height: RoomHeight,
-                        roomNumber: (row * cols) + col, row: row, col: col).ThrowIfFailed());
+                        roomNumber: (row * cols) + col, row: row, col: col, eventMediator).ThrowIfFailed());
                 }
             }
 
@@ -122,9 +122,7 @@ namespace MazerPlatformer
         {
             // copy characteristic, change it and then return the copy
             return
-                from sideCharacteristic in characteristic.Copy()
-                from roomCopy in room.Copy()
-                from result in AddSideCharacteristic(roomCopy, side, sideCharacteristic)
+                from result in AddSideCharacteristic(room, side, characteristic)
                 select result;
 
             // use copy and modify it and return copy to caller
@@ -217,7 +215,7 @@ namespace MazerPlatformer
 
         [PureFunction]
         public static Either<IFailure, Room> RemoveSide(Room theRoom, Room.Side side) 
-                => theRoom.Copy()
+                => EnsureWithReturn(()=>theRoom) // no copy
                         .EnsuringBind(room 
                             => Switcher(Cases()
                                         .AddCase(when(side == Room.Side.Top, then: () => room.HasSides[0] = false))
