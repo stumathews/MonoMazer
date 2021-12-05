@@ -116,12 +116,13 @@ namespace MazerPlatformer
         /// <param name="cols"></param>
         /// <param name="spriteBatch"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> Validate(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols) => EnsuringBind(()=>
+        public static Either<IFailure, Unit> Validate(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, EventMediator eventMediator) => EnsuringBind(()=>
         {
             // trivial validations
             if (contentManager == null) return NotFound.Create("Content Manager is null").ToEitherFailure<Unit>();
             if (viewPortHeight == 0 || viewPortWidth == 0) return InvalidDataFailure.Create("viewPorts are 0").ToEitherFailure<Unit>();
             if (rows == 0 || cols == 0) return InvalidDataFailure.Create("rows and columns invalid").ToEitherFailure<Unit>();
+            if (eventMediator == null) return InvalidDataFailure.Create("event mediator is invalid").ToEitherFailure<Unit>();
             return Nothing;
         });
 

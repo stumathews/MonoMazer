@@ -51,17 +51,15 @@ namespace MazerPlatformer
 
         private GameWorldBlackBoard _blackBoard;
 
-        //public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
-
         private static readonly Random Random = new Random();
         public EventMediator EventMediator { get; set; }
 
-        public static Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols)
-            => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols)
-               let newGameWorld = (IGameWorld)new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols)
+        public static Either<IFailure, IGameWorld> Create(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, EventMediator eventMediator)
+            => from validated in Validate(contentManager, viewPortWidth, viewPortHeight, rows, cols, eventMediator)
+               let newGameWorld = (IGameWorld)new GameWorld(contentManager, viewPortWidth, viewPortHeight, rows, cols, eventMediator)
                select newGameWorld;
 
-        private GameWorld(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols)
+        private GameWorld(IGameContentManager contentManager, int viewPortWidth, int viewPortHeight, int rows, int cols, EventMediator eventMediator)
         {
             _viewPortWidth = viewPortWidth;
             _viewPortHeight = viewPortHeight;
@@ -71,7 +69,7 @@ namespace MazerPlatformer
             _rows = rows;
             _cols = cols;
             _fileSaver = new FileSaver();
-            EventMediator = new EventMediator();
+            EventMediator = eventMediator;
         }
 
         /// <summary>
@@ -192,6 +190,7 @@ namespace MazerPlatformer
         {
             // Allow the game world to respond to game object collisions
             gameObject.OnCollision += new CollisionArgs(OnObjectCollision);
+             
 
             // Allow the game world to respond to game object component changes
             gameObject.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged;

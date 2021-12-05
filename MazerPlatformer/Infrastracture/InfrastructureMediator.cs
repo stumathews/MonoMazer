@@ -146,10 +146,10 @@ namespace MazerPlatformer
             
         }, ExternalLibraryFailure.Create("Failed to initialize Game infrastructure"));
 
-        public Either<IFailure, IGameWorld> CreateGameWorld(int defaultNumRows, int defaultNumCols)
+        public Either<IFailure, IGameWorld> CreateGameWorld(int defaultNumRows, int defaultNumCols, EventMediator eventMediator)
             => from gameContentManager in _gameContentManager
                          from spriteBatcher in _spriteBatcher
-                         from gameWorld in GameWorld.Create(gameContentManager, _graphicsDevice.Viewport.Width, _graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols)
+                         from gameWorld in GameWorld.Create(gameContentManager, _graphicsDevice.Viewport.Width, _graphicsDevice.Viewport.Height, defaultNumRows, defaultNumCols, eventMediator)
                          select gameWorld;
 
         public Either<IFailure, Unit> Initialize(Option<UiMediator> uiMediator) => Ensure(() =>

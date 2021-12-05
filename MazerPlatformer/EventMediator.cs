@@ -35,8 +35,22 @@ namespace MazerPlatformer
         public event PlayerSpottedInfo OnPlayerSpotted;
         public event WallInfo OnWallCollision;
 
-        
-        
+         /// <summary>
+        /// Raised when a component in in the game object changes
+        /// </summary>
+        public event GameObjectComponentChanged OnGameObjectComponentChanged;
+
+        /// <summary>
+        /// Raised when the game object collides with something
+        /// </summary>
+        public event CollisionArgs OnGameObjectCollision;
+
+        /// <summary>
+        /// Let me know that we are disposing
+        /// </summary>
+        public event DisposingInfo OnGameObjectDisposing;
+
+
         public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
         public delegate void LevelClearedInfo(Level level);
         public delegate void SongChanged(string filename);
@@ -50,6 +64,14 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
         public delegate void DisposingInfo(GameObject theObject);
+
+        internal void RaiseOnGameObjectDisposing(GameObject theObject)
+            => OnGameObjectDisposing?.Invoke(theObject);
+
+        internal void RaiseOnGameObjectCollision(Option<GameObject> thisObject, Option<GameObject> otherObject)
+            => OnGameObjectCollision?.Invoke(thisObject, otherObject);
+        internal void RaiseOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+            => OnGameObjectComponentChanged?.Invoke(thisObject, componentName, componentType, oldValue, newValue);
 
         internal void RaiseOnUiClick(GeonBit.UI.Entities.Entity entity) 
             => OnUiClick?.Invoke(entity);

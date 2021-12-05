@@ -39,7 +39,7 @@ namespace MazerPlatformer.Tests
 
         void ResetObjectStates()
         {
-            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10);
+            Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10, null);
         }
 
         [TestMethod()]
@@ -65,7 +65,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void InitializeBoundsTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             newRoom.WallProperties.Clear();
             var room = InitializeBounds(newRoom).ThrowIfFailed();
             room.WallProperties.ForAll(x => x.Value.Color == Color.Black);
@@ -75,7 +75,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void TopBoundsTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             var rect = TopBounds(newRoom);
             Assert.IsTrue(rect.X == newRoom.RectangleDetail.GetAx());
             Assert.IsTrue(rect.Y == newRoom.RectangleDetail.GetAy());
@@ -86,7 +86,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void BottomBoundsTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             var rect = BottomBounds(newRoom);
             Assert.IsTrue(rect.X == newRoom.RectangleDetail.GetDx());
             Assert.IsTrue(rect.Y == newRoom.RectangleDetail.GetDy());
@@ -97,7 +97,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void RightBoundsTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             var rect = RightBounds(newRoom);
             Assert.IsTrue(rect.X == newRoom.RectangleDetail.GetBx());
             Assert.IsTrue(rect.Y == newRoom.RectangleDetail.GetBy());
@@ -108,7 +108,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void LeftBoundsTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             var rect = LeftBounds(newRoom);
             Assert.IsTrue(rect.X == newRoom.RectangleDetail.GetAx());
             Assert.IsTrue(rect.Y == newRoom.RectangleDetail.GetAy());
@@ -133,14 +133,14 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void CreateNewMazeGridTest()
         {
-            var rooms = CreateNewMazeGrid(10, 10, 10, 10);
+            var rooms = CreateNewMazeGrid(10, 10, 10, 10, null);
             Assert.IsTrue(rooms.Count == 100);
         }
 
         [TestMethod()]
         public void AddWallCharacteristicTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             newRoom.WallProperties.Clear();
 
             newRoom = AddWallCharacteristic(newRoom, Room.Side.Top, new SideCharacteristic(Color.Blue, new Rectangle())).ThrowIfFailed();
@@ -176,10 +176,10 @@ namespace MazerPlatformer.Tests
             var bottomRectDetails = new RectDetails(bottomRect);
             var leftRectDetails = new RectDetails(leftRect);
 
-            DrawSide(Room.Side.Top, characteristics, topRectDetails, mst.SpriteBatcher, sides);
-            DrawSide(Room.Side.Right, characteristics, rightRectDetails, mst.SpriteBatcher, sides);
-            DrawSide(Room.Side.Bottom, characteristics, bottomRectDetails, mst.SpriteBatcher, sides);
-            DrawSide(Room.Side.Left, characteristics, leftRectDetails, mst.SpriteBatcher, sides);
+            DrawSide(Room.Side.Top, characteristics, topRectDetails, new InfrastructureMediator(), sides);
+            DrawSide(Room.Side.Right, characteristics, rightRectDetails, new InfrastructureMediator(), sides);
+            DrawSide(Room.Side.Bottom, characteristics, bottomRectDetails, new InfrastructureMediator(), sides);
+            DrawSide(Room.Side.Left, characteristics, leftRectDetails, new InfrastructureMediator(), sides);
             mst.MockSpriteBatcher.Verify(x => x.DrawLine(topRectDetails.GetAx(), topRectDetails.GetAy(), topRectDetails.GetBx(), topRectDetails.GetBy(), Color.Blue, Room.WallThickness), Times.Once);
             mst.MockSpriteBatcher.Verify(x => x.DrawLine(rightRectDetails.GetBx(), rightRectDetails.GetBy(), rightRectDetails.GetCx(), rightRectDetails.GetCy(), Color.Red, Room.WallThickness), Times.Never);
             mst.MockSpriteBatcher.Verify(x => x.DrawLine(bottomRectDetails.GetCx(), bottomRectDetails.GetCy(), bottomRectDetails.GetDx(), bottomRectDetails.GetDy(), Color.Green, Room.WallThickness), Times.Once);
@@ -189,7 +189,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void RemoveSideTest()
         {
-            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10).ThrowIfFailed();
+            var newRoom = Room.Create(10, 10, 10, 10, 10, 10, 10, null).ThrowIfFailed();
             newRoom.HasSides = new[] { true, false, true, false };
             Assert.IsFalse(HasSide(Room.Side.Top, RemoveSide(newRoom, Room.Side.Top).ThrowIfFailed().HasSides));
             Assert.IsFalse(HasSide(Room.Side.Right, RemoveSide(newRoom, Room.Side.Right).ThrowIfFailed().HasSides));

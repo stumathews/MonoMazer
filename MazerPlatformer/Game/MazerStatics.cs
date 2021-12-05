@@ -71,10 +71,6 @@ namespace MazerPlatformer
         });
 
         // See how we transform the input and return the output that was modified or in 
-        
-
-        
-
         public static Either<IFailure, Unit> ResetPlayerStatistics(Func<int> setPlayerHealth, Func<int> setPlayerPoints, Func<int> setPLayerPickups, Either<IFailure, IGameWorld> theGameWorld) =>
             from playerHealth in (Either<IFailure, int>) setPlayerHealth()
             from playerPoints in (Either<IFailure, int>) setPlayerPoints()
@@ -133,6 +129,14 @@ namespace MazerPlatformer
             .Bind(gameWorld => gameWorld.Initialize()) // We need to reinitialize things once we've reload content
             .Bind(unit => StartOrContinueLevel(isFreshStart, theGameWorld, setMenuPanelNotVisibleFunction, setGameToPlayingState,  setPlayerHealth, setPlayerPoints, setPLayerPickups));
 
+        /// <summary>
+        /// Loads game world content
+        /// </summary>
+        /// <param name="theGameWorld"></param>
+        /// <param name="currentLevel"></param>
+        /// <param name="playerHealth"></param>
+        /// <param name="playerPoints"></param>
+        /// <returns></returns>
         public static Either<IFailure, IGameWorld> LoadGameWorldContent(Either<IFailure, IGameWorld> theGameWorld, int currentLevel, int playerHealth = 100, int playerPoints = 0)
             => theGameWorld
             .Bind(world => world.LoadContent(levelNumber: currentLevel, playerHealth, playerPoints)
@@ -143,6 +147,12 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> SetMenuMusic(Action setMenuMusic)
             => Statics.Ensure(setMenuMusic);
 
+        /// <summary>
+        /// Sets up the Infrastructure mediator
+        /// </summary>
+        /// <param name="im">InfrastructureMediator</param>
+        /// <param name="ui">UiMediator</param>
+        /// <returns></returns>
         public static InfrastructureMediator InitialiseInfrastructureMediator(InfrastructureMediator im, UiMediator ui)
         {
             im.Initialize(ui);

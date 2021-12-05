@@ -146,7 +146,10 @@ namespace MazerPlatformer
                 CD = Bottom
                 AD = Left  
         */
-        public static Either<IFailure, Unit> DrawSide(Room.Side side, Dictionary<Room.Side, SideCharacteristic> sideProperties, RectDetails rectangle, Option<InfrastructureMediator> infrastructure, bool[] hasSides) => EnsuringBind(() =>
+        public static Either<IFailure, Unit> DrawSide(Room.Side side,
+                                                      Dictionary<Room.Side, SideCharacteristic> sideProperties,
+                                                      RectDetails rectangle,
+                                                      Option<InfrastructureMediator> infrastructure, bool[] hasSides) => EnsuringBind(() =>
         {
 
             return 
