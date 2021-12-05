@@ -33,6 +33,8 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
             base.Update(owner, gameTime);
+
+            // We transition to deciding state as soon as we enter colliding state
             Npc.NpcState = Npc.NpcStates.Deciding;
         }
     }

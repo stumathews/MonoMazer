@@ -15,6 +15,7 @@
 using LanguageExt;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.MovingStateStatics;
+using static MazerPlatformer.GameWorldStatics;
 
 namespace MazerPlatformer
 {
@@ -33,8 +34,16 @@ namespace MazerPlatformer
             bb.HasLineOfSight = HasLineOfSight(bb.IsInSameColAsPlayer, bb.IsInSameRowAsPlayer, bb.GameWorld, bb.Player,
                                                bb.Npc, bb.Row, bb.PlayerRow, bb.Col, bb.PlayerCol)
                                    .Match(Right: b => b, Left: (failure) => false);
+            bb.IsInSameRoomAsPlayer = IsInSameRoomAsPlayer(bb);
             return Success;
         }
+
+        private bool IsInSameRoomAsPlayer(MovingStateBlackBoard bb)
+            => GetRoomNumber(bb.Player, bb.GameWorld.GetRoomWidth(), bb.GameWorld.GetRoomHeight(), bb.GameWorld.GetLevel().Cols) 
+            == GetRoomNumber(bb.Npc, bb.GameWorld.GetRoomWidth(), bb.GameWorld.GetRoomHeight(), bb.GameWorld.GetLevel().Cols);
+
+        private int GetRoomNumber(GameObject go, int roomWidth, int roomHeight, int totalCols)
+                => ((GetRow(go, roomHeight) - 1) * totalCols) + GetCol(go, roomWidth) - 1;
 
         private static bool IsInSameColAsPlayer(MovingStateBlackBoard bb) 
             => bb.Col == bb.PlayerCol;

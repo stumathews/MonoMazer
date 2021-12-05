@@ -18,8 +18,19 @@ namespace MazerPlatformer
     {
         public enum NpcTypes
         {
+            /// <summary>
+            /// Unknown
+            /// </summary>
             Unknown,
+
+            /// <summary>
+            /// Pickup NPC
+            /// </summary>
             Pickup,
+
+            /// <summary>
+            /// Enemy NPC
+            /// </summary>
             Enemy
         };
     }

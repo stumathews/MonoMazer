@@ -18,8 +18,19 @@ namespace MazerPlatformer
     {
         public enum NpcStates
         {
+            /// <summary>
+            /// Moving
+            /// </summary>
             Moving,
+
+            /// <summary>
+            /// Deciding
+            /// </summary>
             Deciding,
+
+            /// <summary>
+            /// Colliding
+            /// </summary>
             Colliding
         };
     }

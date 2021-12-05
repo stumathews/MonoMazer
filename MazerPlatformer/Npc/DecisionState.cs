@@ -33,6 +33,8 @@ namespace MazerPlatformer
         public override void Update(object owner, GameTime gameTime)
         {
            base.Update(owner, gameTime);
+
+           // We momentarily stay in decision mode (100 milliseconds) before swapping our direction
            IsWithin(100, gameTime)
                 .ShortCirtcutOnTrue()
                 .Bind((boolean) => Npc.SwapDirection())

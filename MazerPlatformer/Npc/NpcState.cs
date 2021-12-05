@@ -24,6 +24,7 @@ namespace MazerPlatformer
         protected Npc Npc { get; set; }
         public NpcState(string name, Npc Npc) : base(name) => this.Npc = Npc;
 
+
         [PureFunction]
         protected Either<IFailure, bool> IsWithin(int milli, GameTime dt) => Statics.EnsureWithReturn(() =>
         {

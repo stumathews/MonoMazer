@@ -41,6 +41,8 @@ namespace MazerPlatformer
         public bool IsInSameRowAsPlayer { get; internal set; }
         public bool IsInSameColAsPlayer { get; internal set; }
 
+        public bool IsInSameRoomAsPlayer {get; internal set; }
+
         #endregion
 
         public Either<IFailure, Unit> Update(GameWorld gameWorld, Player player, Room npcRoom, int myRow, int myCol, int playerRow, int playerCol, GameTime gameTime, Npc npc)

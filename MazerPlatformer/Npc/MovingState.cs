@@ -59,25 +59,35 @@ namespace MazerPlatformer
                 from setNpcTextOk in SetNpcText(player, myRow, myCol, playerRow, playerCol)            
                 from updatedBlackboard in _knowledge.Update(gameWorld, player, npcRoom, myRow, myCol, playerRow, playerCol, gameTime, Npc)
                 from experts in _blackBoardControl.Update()
-            select CheckForCollision(player, myRow, myCol, playerRow, playerCol, gameTime);
+            select Move(player, myRow, myCol, playerRow, playerCol, gameTime);
 
             updatePipeline.ThrowIfFailed();            
         }
 
-        Either<IFailure, Unit> CheckForCollision(Player player, int myRow, int myCol, int playerRow, int playerCol, GameTime gameTime) => EnsuringBind(() =>
+        /// <summary>
+        /// Moving code
+        /// </summary>
+        /// <param name="player">The player</param>
+        /// <param name="myRow">The Npc Row</param>
+        /// <param name="myCol">The NPC column</param>
+        /// <param name="playerRow">The player Row</param>
+        /// <param name="playerCol">The Player column</param>
+        /// <param name="gameTime">current gametime</param>
+        /// <returns></returns>
+        Either<IFailure, Unit> Move(Player player, int myRow, int myCol, int playerRow, int playerCol, GameTime gameTime) => EnsuringBind(() =>
         {
-            // Our experts have already determined if the the NPC is colliding with Player and if there is clear line of 
+            // Our experts have already determined if the the NPC is colliding with Player and if there is clear line of sight
             var playerSeen = _knowledge.CollidingWithRoomAndPlayerSighted;
 
             // Change direction when the player is seen and there is line of sight between NPC and player
-            WhenTrue(()=> playerSeen)
-                .Map(seen => WhenTrue(()=> _knowledge.IsInSameColAsPlayer && playerSeen)
-                                .Iter(yes => Npc.ChangeDirection(myRow < playerRow ? Character.CharacterDirection.Down : Character.CharacterDirection.Up)))
-                .Map(unit => WhenTrue(()=> _knowledge.IsInSameRowAsPlayer && playerSeen)
-                                .Iter(yes => Npc.ChangeDirection(myCol < playerCol ? Character.CharacterDirection.Right : Character.CharacterDirection.Left)));
+            WhenTrue(()=> _knowledge.IsInSameColAsPlayer && playerSeen && !_knowledge.IsInSameRoomAsPlayer)
+                                .Iter(yes => Npc.ChangeDirection(myRow < playerRow ? Character.CharacterDirection.Down : Character.CharacterDirection.Up));
+            
+            WhenTrue(()=> _knowledge.IsInSameRowAsPlayer && playerSeen && !_knowledge.IsInSameRoomAsPlayer)
+                                .Iter(yes => Npc.ChangeDirection(myCol < playerCol ? Character.CharacterDirection.Right : Character.CharacterDirection.Left));
 
             // Player not seen: continue moving in your current direction
-            if (!playerSeen || !_spottedPlayerTimeout.IsTimedOut())
+            if (!_knowledge.IsPlayerSighted || !_spottedPlayerTimeout.IsTimedOut())
                 return Npc.MoveInDirection(Npc.CurrentDirection, gameTime);
 
             player.Seen();
