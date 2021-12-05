@@ -19,15 +19,8 @@ namespace MazerPlatformer
 {
     public class EventMediator
     {
-        //
         public event CollisionArgs OnGameWorldCollision;
         public event StateChanged OnPlayerStateChanged;
-
-        internal void RaiseLevelCleared(Level level)
-        {
-            OnLevelCleared?.Invoke(level);
-        }
-
         public event DirectionChanged OnPlayerDirectionChanged;
         public event CollisionDirectionChanged OnPlayerCollisionDirectionChanged;
         public event GameObjectComponentChanged OnPlayerComponentChanged;
@@ -47,49 +40,32 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> LevelLoadInfo(Level.LevelDetails details);
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
-
-
         public delegate void DisposingInfo(GameObject theObject);
 
-        internal void RaiseOnPlayerStateChanged(CharacterStates state)
-        {
-            OnPlayerStateChanged?.Invoke(state);
-        }
+        internal void RaiseOnPlayerStateChanged(CharacterStates state) 
+            => OnPlayerStateChanged?.Invoke(state);
 
-        internal void RaiseOnPlayerDirectionChanged(CharacterDirection direction)
-        {
-            OnPlayerDirectionChanged?.Invoke(direction);
-        }
+        internal void RaiseOnPlayerDirectionChanged(CharacterDirection direction) 
+            => OnPlayerDirectionChanged?.Invoke(direction);
 
-        internal void RaiseOnPlayerCollisionDirectionChanged(CharacterDirection direction)
-        {
-            OnPlayerCollisionDirectionChanged?.Invoke(direction);
-        }
+        internal void RaiseOnPlayerCollisionDirectionChanged(CharacterDirection direction) 
+            => OnPlayerCollisionDirectionChanged?.Invoke(direction);
 
-        internal void RaiseOnPlayerComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue)
-        {
-            OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
-        }
+        internal void RaiseOnPlayerComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) 
+            => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
 
-        internal void RaiseOnPlayerDied()
-        {
-            OnPlayerDied?.Invoke();
-        }
+        internal void RaiseOnPlayerDied() 
+            => OnPlayerDied?.Invoke();
 
-        internal void RaiseOnLoadLevel(Level.LevelDetails details)
-        {
-            OnLoadLevel?.Invoke(details);
-        }
+        internal void RaiseOnLoadLevel(Level.LevelDetails details) 
+            => OnLoadLevel?.Invoke(details);
 
-        internal void RaiseOnGameWorldCollision(Option<GameObject> obj1, Option<GameObject> obj2)
-        {
-            OnGameWorldCollision?.Invoke(obj1, obj2);
-        }
+        internal void RaiseOnGameWorldCollision(Option<GameObject> obj1, Option<GameObject> obj2) 
+            => OnGameWorldCollision?.Invoke(obj1, obj2);
 
-        internal void RaiseGameObjectAddedOrRemovedEvent(GameObject gameObject, bool isRemoved, int runningTotalCount)
-        {
-            OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved, runningTotalCount);
-        }
-        //
+        internal void RaiseGameObjectAddedOrRemovedEvent(GameObject gameObject, bool isRemoved, int runningTotalCount) 
+            => OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved, runningTotalCount);
+        internal void RaiseLevelCleared(Level level) 
+            => OnLevelCleared?.Invoke(level);
     }
 }

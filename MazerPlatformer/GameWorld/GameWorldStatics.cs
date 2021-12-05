@@ -29,28 +29,11 @@ namespace MazerPlatformer
 {
     public class GameWorldStatics
     {
-        public static Either<IFailure, Unit> NotifyIfLevelCleared(EventMediator events, Level level) => Ensure(() =>
-        {
-            // Remove number of known pickups...this is an indicator of level clearance
-            WhenTrue(()=> level.NumPickups == 0)
-                .Iter(unit => Ensure(()=> events.RaiseLevelCleared(level)));
-
-        });
-
-        public static Option<Unit> IsLevelCleared(Level level)
-            => level.NumPickups == 0 ? new Unit() : Option<Unit>.None;
-
         public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, EventMediator events) => Ensure(() 
             =>
         {
             // We want subscribers to inspect the object before we dispose of it below
             events.RaiseGameObjectAddedOrRemovedEvent(obj, isRemoved: true, runningTotalCount: gameObjects.Count);
-        });
-
-        public static Either<IFailure, Level> RemoveIfLevelPickup(GameObject obj, Level level) => EnsureWithReturn(() =>
-        {
-            level.NumPickups--;
-            return level;
         });
 
         public static void NotifyBothObjectsHaveCollided(GameObject go1, GameObject go2)
@@ -71,19 +54,17 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="gameObject1"></param>
         /// <param name="gameObject2"></param>
-        public static void IsCollision(GameObject gameObject1, GameObject gameObject2)        
-        => (!IsSameType(gameObject1, gameObject2)).ToOption().ToEither()
-                    .MapLeft((failure)=>ShortCircuitFailure.Create($"Game Objects are the same, skipping: {failure}"))
-            .Bind((success) => gameObject2.IsCollidingWith(gameObject1))
-            .Bind((isColliding) => isColliding.ToOption().ToEither()
-                                    .MapLeft((failure) => ShortCircuitFailure.Create($"{gameObject1} not colliding with {gameObject1}: {failure}"))).ToOption()
-            .BiIter(Some: (yes) => NotifyBothObjectsHaveCollided(gameObject1, gameObject2),
-                    None: () => SetBothObjectsNotColliding(gameObject1, gameObject2));
+        public static void IsCollisionBetween(GameObject gameObject1, GameObject gameObject2)        
+        => (!IsSameType(gameObject1, gameObject2))
+                .ToOption().ToEither().MapLeft((failure)=>ShortCircuitFailure.Create($"Game Objects are the same, skipping: {failure}"))
+            .Bind((notSameType) => gameObject2.IsCollidingWith(gameObject1))
+            .Bind((yesIsColliding) => yesIsColliding.ToOption().ToEither()
+                                        .MapLeft((failure) => ShortCircuitFailure.Create($"{gameObject1} not colliding with {gameObject1}: {failure}"))).ToOption()
+            .BiIter(Some: (yesIsColliding) => NotifyBothObjectsHaveCollided(gameObject1, gameObject2),
+                    None: (/*Not colliding*/) => SetBothObjectsNotColliding(gameObject1, gameObject2));
 
-        private static void SetBothObjectsNotColliding(GameObject obj1, GameObject obj2)
-        {
-            obj2.IsColliding = obj1.IsColliding = false;
-        }
+        private static void SetBothObjectsNotColliding(GameObject obj1, GameObject obj2) 
+            => obj2.IsColliding = obj1.IsColliding = false;
         public static bool IsSameType(GameObject gameObject1, GameObject gameObject2)
             => gameObject1.Type == gameObject2.Type;
 
@@ -102,8 +83,8 @@ namespace MazerPlatformer
 
         public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, GameObject gameObject, EventMediator events) => Ensure(() =>
         {
-            gameObjects.Add(gameObject.Id, gameObject);
-            events.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
+            //gameObjects.Add(gameObject.Id, gameObject);
+            //events.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
         });
 
         public static Either<IFailure, ISimpleGameTimer> StartRemoveWorldTimer(ISimpleGameTimer timer) => EnsureWithReturn(() =>
@@ -112,13 +93,14 @@ namespace MazerPlatformer
             return timer;
         });
 
-        public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, Level.LevelLoadInfo onLevelLoadFunc) => EnsureWithReturn(() =>
+        public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, Level.LevelLoadInfo onLevelLoadFunc, EventMediator eventMediator) => EnsureWithReturn(() =>
         {
             // Create level
-            var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random);
+            var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random, eventMediator);
 
             // Get Notifications when the level is loaded
             level.OnLoad += onLevelLoadFunc;
+
             return level;
         });
 
@@ -286,5 +268,10 @@ namespace MazerPlatformer
                     gameObject.Update(gameTime);
                     return gameObject;
                 });
+        public static int GetCol(GameObject go, int roomWidth)
+            => ToRoomColumnFast(go, roomWidth);
+
+        public static int GetRow(GameObject go, int roomHeight)
+            => ToRoomRowFast(go, roomHeight);
     }
 }

@@ -119,7 +119,7 @@ namespace MazerPlatformer.Tests
         {
             MockGameWorld.Setup(x => x.IsPathAccessibleBetween(Player1, Npc1)).Returns(true.ToEither());
             GameWorld = MockGameWorld.Object;
-            Assert.IsTrue(ChangeDirection(true, true, GameWorld, Player1, Npc1, myRow: 10, playerRow: 11, myCol: 10, playerCol: 10).ThrowIfFailed() == true);
+            Assert.IsTrue(HasLineOfSight(true, true, GameWorld, Player1, Npc1, myRow: 10, playerRow: 11, myCol: 10, playerCol: 10).ThrowIfFailed() == true);
         }
 
         [TestMethod()]
@@ -127,7 +127,7 @@ namespace MazerPlatformer.Tests
         {
             MockGameWorld.Setup(x => x.IsPathAccessibleBetween(Player1, Npc1)).Returns(false.ToEither());
             GameWorld = MockGameWorld.Object;
-            Assert.IsFalse(ChangeDirection(true, true, GameWorld, Player1, Npc1, myRow: 10, playerRow: 11, myCol: 10, playerCol: 10).ThrowIfFailed() == true);
+            Assert.IsFalse(HasLineOfSight(true, true, GameWorld, Player1, Npc1, myRow: 10, playerRow: 11, myCol: 10, playerCol: 10).ThrowIfFailed() == true);
         }
     }
 }

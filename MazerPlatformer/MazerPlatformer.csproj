@@ -65,6 +65,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AI\IExpertControl.cs" />
     <Compile Include="Character\CharacterDirection.cs" />
     <Compile Include="Character\CharacterStates.cs" />
     <Compile Include="EventMediator.cs" />
@@ -72,6 +73,11 @@
     <Compile Include="Failures\AssetLoadFailure.cs" />
     <Compile Include="Character\Character.cs" />
     <Compile Include="Character\CharacterBuilder.cs" />
+    <Compile Include="AI\GameWorldBlackBoard.cs" />
+    <Compile Include="AI\GameWorldBlackBoardController.cs" />
+    <Compile Include="AI\Expert.cs" />
+    <Compile Include="AI\LevelExpert.cs" />
+    <Compile Include="Npc\CollidingExpert.cs" />
     <Compile Include="Npc\CollidingState.cs" />
     <Compile Include="GameObject\Component.cs" />
     <Compile Include="Failures\ConditionNotSatisfiedFailure.cs" />
@@ -109,10 +115,12 @@
     <Compile Include="Level\LevelStatics.cs" />
     <Compile Include="Game\MazerStatics.cs" />
     <Compile Include="Npc\MovingState.cs" />
+    <Compile Include="Npc\MovingStateBlackBoard.cs" />
     <Compile Include="Npc\MovingStateStatics.cs" />
     <Compile Include="Infrastracture\MusicPlayer.cs" />
     <Compile Include="Failures\NotFound.cs" />
     <Compile Include="Failures\NotTypeExceptionFailure.cs" />
+    <Compile Include="Npc\MovingStateBlackboardController.cs" />
     <Compile Include="Npc\NpcState.cs" />
     <Compile Include="Npc\NpcStates.cs" />
     <Compile Include="Npc\NpcTypes.cs" />
@@ -124,6 +132,7 @@
     <Compile Include="Level\Player.cs" />
     <Compile Include="Game\PlayingGameState.cs" />
     <Compile Include="Infrastracture\Primatives2D.cs" />
+    <Compile Include="Npc\PathFindingExpert.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Infrastracture\PureFunctionAttribute.cs" />

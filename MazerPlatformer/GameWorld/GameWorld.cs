@@ -26,6 +26,7 @@ using static MazerPlatformer.Statics;
 namespace MazerPlatformer
 {
 
+
     /// <summary>
     /// Game world is contains the game elements such as characters, level objects etc that can be updated/drawn each frame
     /// </summary>
@@ -41,8 +42,10 @@ namespace MazerPlatformer
         private readonly FileSaver _fileSaver;
         private Level _level; // Current Level     
         private bool _unloading;
+        private GameWorldBlackBoardController _AI;
+        private GameWorldBlackBoard _blackBoard;
 
-        public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+        //public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
         private static readonly Random Random = new Random();
         public EventMediator EventMediator { get; set; }
@@ -69,10 +72,10 @@ namespace MazerPlatformer
         /// Load the Content of the game world ie levels and sounds etc
         /// </summary>
         public Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null)
-            => CreateLevel(_rows, _cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad)
+            => CreateLevel(_rows, _cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, OnLevelLoad, EventMediator)
                     .Bind(level => SetGameWorldLevel(level))
                     .Bind(level => level.Load(_contentManager, overridePlayerHealth, overridePlayerScore))
-                    .Bind(levelObjects => AddToGameWorld(levelObjects, GameObjects, EventMediator));
+                    .Bind(levelObjects => AddToGameWorld(levelObjects, _level.GameObjects, EventMediator));
 
         private Either<IFailure, Level> SetGameWorldLevel(Level level)
             => _level = level;
@@ -83,7 +86,7 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> UnloadContent() => Ensure(() =>
         {
             _unloading = true;
-            GameObjects.Clear();
+            //GameObjects.Clear();
             _level.Unload(_fileSaver); // TODO: I/O
             _unloading = false;
         });
@@ -103,47 +106,96 @@ namespace MazerPlatformer
         /// </summary>
         public Either<IFailure, Unit> Initialize() => Ensure(() =>
         {
-            // Hook up the Player events to the external world ie game UI
-            Level.Player.OnStateChanged += PlayerOnOnStateChanged; // want to know when the player's state changes
-            Level.Player.OnDirectionChanged += PlayerOnOnDirectionChanged; // want to know when the player's direction changes
-            Level.Player.OnCollisionDirectionChanged += PlayerOnOnCollisionDirectionChanged; // want to know when player collides
-            Level.Player.OnGameObjectComponentChanged += PlayerOnOnGameObjectComponentChanged; // want to know when the player's components change
-            Level.Player.OnCollision += PlayerOnOnCollision;
-            Level.Player.OnPlayerSpotted += PlayerOnOnPlayerSpotted;
+
+            SubscribeToPlayerEvents();
 
             // Let us know when a room registers a collision
             _level.GetRooms().Iter(rooms => rooms.ForEach(r => r.OnWallCollision += OnRoomCollision));
 
+            // Setup the game AI
+            _blackBoard = new GameWorldBlackBoard(_level, Level.Player);
+            _AI = new GameWorldBlackBoardController(_blackBoard);
+
             // Listen our for all game objects events
-            foreach (var gameObjectKvp in GameObjects)
+            foreach (var gameObjectKvp in _level.GameObjects)
             {
                 var gameObject = gameObjectKvp.Value;
 
-                gameObject.Initialize();
+                InitializeGameObject(gameObject);
                 SubscribeToObjectsEvents(gameObject);
                 AddDefaultComponents(gameObject);
             }
 
-            Either<IFailure, Unit> PlayerOnOnStateChanged(Character.CharacterStates state) => Ensure(() => EventMediator.RaiseOnPlayerStateChanged(state));
-            Either<IFailure, Unit> PlayerOnOnDirectionChanged(Character.CharacterDirection direction) => Ensure(() => EventMediator.RaiseOnPlayerDirectionChanged(direction));
-            Either<IFailure, Unit> PlayerOnOnCollisionDirectionChanged(Character.CharacterDirection direction) => Ensure(() => EventMediator.RaiseOnPlayerCollisionDirectionChanged(direction));
-            Either<IFailure, Unit> PlayerOnOnGameObjectComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) => Ensure(() => EventMediator.RaiseOnPlayerComponentChanged(thisObject, name, type, oldValue, newValue));
-            Either<IFailure, Unit> PlayerOnOnPlayerSpotted(Player player) => _level.PlayPlayerSpottedSound();
+
         });
+
+        private void SubscribeToPlayerEvents()
+        {
+            // Hook up the Player events to the external world ie game UI
+
+            // Allow game world to respond to player's state changes
+            Level.Player.OnStateChanged += OnPlayerStateChanged; 
+
+             // Allow game world to respond to player's direction changes
+            Level.Player.OnDirectionChanged += onPlayerDirectionChanged;
+
+             // Allow game world to respond to player's collision direction changes
+            Level.Player.OnCollisionDirectionChanged += OnPlayerCollisionChanged;
+
+             // Allow game world to respond to player's components changes
+            Level.Player.OnGameObjectComponentChanged += OnPlayerComponentChanged;
+
+            // Allow game world to respond to player's collisions
+            Level.Player.OnCollision += OnPlayerCollision;
+
+            // Allow game world to respond to when the player has been spotted
+            Level.Player.OnPlayerSpotted += OnPlayerSpotted;
+            
+            
+        }
+      
+        // Player state has changed
+        Either<IFailure, Unit> OnPlayerStateChanged(Character.CharacterStates state)
+            => Ensure(() => EventMediator.RaiseOnPlayerStateChanged(state));
+
+        // Player direction has changed
+        Either<IFailure, Unit> onPlayerDirectionChanged(Character.CharacterDirection direction)
+            => Ensure(() => EventMediator.RaiseOnPlayerDirectionChanged(direction));
+
+        // Player collision direction has changed
+        Either<IFailure, Unit> OnPlayerCollisionChanged(Character.CharacterDirection direction)
+            => Ensure(() => EventMediator.RaiseOnPlayerCollisionDirectionChanged(direction));
+
+        // Player component has changed
+        Either<IFailure, Unit> OnPlayerComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue)
+            => Ensure(() => EventMediator.RaiseOnPlayerComponentChanged(thisObject, name, type, oldValue, newValue));
+
+        // Player has been spotted
+        Either<IFailure, Unit> OnPlayerSpotted(Player player)
+            => _level.PlayPlayerSpottedSound();
+
+        private static void InitializeGameObject(GameObject gameObject) =>
+            gameObject.Initialize();
 
         private void SubscribeToObjectsEvents(GameObject gameObject)
         {
-            gameObject.OnCollision += new CollisionArgs(OnObjectCollision); // be informed about this objects collisions
-            gameObject.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged; // be informed about this objects component update
+            // Allow the game world to respond to game object collisions
+            gameObject.OnCollision += new CollisionArgs(OnObjectCollision);
+
+            // Allow the game world to respond to game object component changes
+            gameObject.OnGameObjectComponentChanged += ValueOfGameObjectComponentChanged;
         }
 
         private void AddDefaultComponents(GameObject gameObject)
         {
             // Every object will have access to the player
-            gameObject.Components.Add(new Component(Component.ComponentType.Player, Level.Player));
+            var playerComponent = new Component(Component.ComponentType.Player, Level.Player);
 
             // every object will have access to the game world
-            gameObject.Components.Add(new Component(Component.ComponentType.GameWorld, this));
+            var gameWorldComponent = new Component(Component.ComponentType.GameWorld, this);
+
+            gameObject.Components.Add(playerComponent);
+            gameObject.Components.Add(gameWorldComponent);
         }
 
         /// <summary>
@@ -155,19 +207,31 @@ namespace MazerPlatformer
                                 .ToEither(ShortCircuitFailure.Create("Cant update while unloading"))
                 .Map(unit => RemoveInactiveGameObjects())
                 .Map(unit => GetActiveGameObjects())
-                .Bind(gameObjects => UpdateAllGameObjects(gameTime, gameObjects)));
+                .Bind(gameObjects => UpdateAllGameObjects(gameTime, gameObjects)))
+                .Bind(unit => _AI.Update())
+                .Bind(unit => CheckForAnswers());
 
-        private Either<IFailure, Unit> UpdateAllGameObjects(GameTime gameTime, List<GameObject> gameObjects) 
+        private Either<IFailure, Unit> CheckForAnswers()
+        {
+            return WhenTrue(() =>_blackBoard.IsLevelComplete()).ToEither()
+                    .Bind(success => Ensure(()=>EventMediator.RaiseLevelCleared(_level)));
+        }
+
+        private Either<IFailure, Unit> UpdateAllGameObjects(GameTime gameTime, List<GameObject> gameObjects)
             => CheckAllForCollisions(gameTime, gameObjects: UpdateAllObjects(gameTime, gameObjects))
                 .Iter((s) => { /* Used for force evaluation */ });
 
-        private IEnumerable<Either<IFailure, Unit>> CheckAllForCollisions(GameTime gameTime, IEnumerable<GameObject> gameObjects) 
-            => gameObjects.Where(go => go.Type == GameObjectType.Player || go.Type == GameObjectType.Npc)
-                .Select((GameObject gameObject) => CheckForCollisionWithOthers(gameObject, GetActiveGameObjects(), gameTime));        
+        private IEnumerable<Either<IFailure, GameObject>> CheckAllForCollisions(GameTime gameTime, IEnumerable<GameObject> gameObjects)
+            => GetAllGameObjects(gameObjects)
+                .Select((GameObject gameObject) 
+                    => CheckForCollisionWithOthers(gameObject, allOtherGameObjects: GetActiveGameObjects(), gameTime, _roomWidth, _roomHeight));
 
-        private Either<IFailure, Unit> RemoveInactiveGameObjects() 
+        private static IEnumerable<GameObject> GetAllGameObjects(IEnumerable<GameObject> gameObjects) 
+            => gameObjects.Where(go => go.Type == GameObjectType.Player || go.Type == GameObjectType.Npc);
+
+        private Either<IFailure, Unit> RemoveInactiveGameObjects()
             => Ensure(() => GetInactiveIds().ForEach(id => RemoveGameObject(id, _level)
-                                                                .MapLeft((failure)=>UnexpectedFailure.Create("Could not remove game object"))));
+                                                                .MapLeft((failure) => UnexpectedFailure.Create("Could not remove game object"))));
 
         /// <summary>
         /// We ask each game object within the game world to draw itself
@@ -176,7 +240,7 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure)
             => WhenTrue(() => !_unloading).ToEither(ShortCircuitFailure.Create("Can't draw while unloading"))
-                .Bind(_ => GameObjects.Values.Where(obj => obj.Active)
+                .Bind(_ => _level.GameObjects.Values.Where(obj => obj.Active)
                                                 .Select(gameObject => gameObject.Draw(infrastructure)) // Draw each game object
                                                 .AggregateUnitFailures()); // Ignore failures to draw
 
@@ -186,16 +250,18 @@ namespace MazerPlatformer
         /// <param name="thePlayer"></param>
         /// <param name="otherGameObject"></param>
         /// <returns></returns>
-        private Either<IFailure, Unit> PlayerOnOnCollision(Option<GameObject> thePlayer, Option<GameObject> otherGameObject)
-            => from player in thePlayer.ToEither(NotFound.Create("Player not found"))
+        private Either<IFailure, Unit> OnPlayerCollision(Option<GameObject> thePlayer, Option<GameObject> otherGameObject)
+            => from maybePlayer in thePlayer.ToEither(NotFound.Create("Player not found"))
+               from player in TryCastToT<Player>(maybePlayer)
                from other in otherGameObject.ToEither(NotFound.Create("Other not found"))
                from isNpc in Must(other, () => other.Type == GameObjectType.Npc, "Must be NPC")
+               from npc in TryCastToT<Npc>(other)
                from npcComponent in other.FindComponentByType(Component.ComponentType.NpcType).ToEither(NotFound.Create($"Could not find component of type {Component.ComponentType.NpcType} on other object"))
-               from npcType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
-               from collisionResult in ActOnTypeCollision(npcType, player, other) // All conditions for collision met, act!
+               from otherType in TryCastToT<Npc.NpcTypes>(npcComponent.Value)
+               from collisionResult in ActOnCollisionWithPlayer(otherType, player, npc) // All conditions for collision met, act!
                select Success;
 
-        private Either<IFailure, Unit> ActOnTypeCollision(Npc.NpcTypes type, GameObject player, GameObject otherObject)
+        private Either<IFailure, Unit> ActOnCollisionWithPlayer(Npc.NpcTypes type, Player player, Npc otherObject)
             => Switcher(Cases().AddCase(when(type == Npc.NpcTypes.Enemy,
                                                         then: () => DetermineMyNewHealthOnCollision(player, otherObject)
                                                                     .Bind(newHealth => player.UpdateComponentByType(Component.ComponentType.Health, newHealth).Map(obj => newHealth))
@@ -210,14 +276,10 @@ namespace MazerPlatformer
             => _level.PlayLoseSound()
                 .Bind(_ => Ensure(() => EventMediator.RaiseOnPlayerDied()));
 
-
-
         List<string> GetInactiveIds()
-            => GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
+            => _level.GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
         List<GameObject> GetActiveGameObjects()
-            => GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
-
-
+            => _level.GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
 
         /// <summary>
         /// The game world wants to know about every component update/change that occurs in the world
@@ -233,89 +295,67 @@ namespace MazerPlatformer
         private Either<IFailure, Unit> ValueOfGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue) => Ensure(()
             => Console.WriteLine($"A component of type '{componentType}' in a game object of type '{thisObject.Type}' changed: {componentName} from '{oldValue}' to '{newValue}'"));
 
-        /// <summary>
-        /// Overwrite any defaults that are now in the level file
-        /// </summary>
-        /// <param name="details"></param>
-        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details) => Ensure(() =>
-        {
-            // Save loaded level details into GameWorld
-            _cols = _level.Cols;
-            _rows = _level.Rows;
-            _roomWidth = _level.RoomWidth;
-            _roomHeight = _level.RoomHeight;
-
-            EventMediator.RaiseOnLoadLevel(details);
-        });
-
         public Either<IFailure, Unit> StartOrResumeLevelMusic()
             => WhenTrue(() => !string.IsNullOrEmpty(_level.LevelFile.Music)).ToEither(ShortCircuitFailure.Create("Could not play music as there is none"))
                 .Bind((unit) => _level.PlaySong());
 
         private Either<IFailure, Unit> RemoveGameObject(string id, Level level)
-        => from gameObject in GetGameObjectForId(GameObjects, id)
-           from __ in IsLevelPickup(gameObject, level)
-                                   .IfSome(unit => RemoveIfLevelPickup(gameObject, level)).ToEither()
-           from ___ in RemoveIfLevelPickup(gameObject, level)
-           from ____ in IsLevelCleared(level)
-                                   .IfSome(unit => NotifyIfLevelCleared(EventMediator, level)).ToEither()
-           from _____ in DeactivateGameObject(gameObject, GameObjects)
+        => from gameObject in GetGameObjectForId(_level.GameObjects, id)
+           from deactivated in DeactivateGameObject(gameObject, _level.GameObjects)
+           from notified in NotifyObjectAddedOrRemoved(gameObject, _level.GameObjects, EventMediator)
+           select Success;
 
-           from _ in NotifyObjectAddedOrRemoved(gameObject, GameObjects, EventMediator)
-           select Nothing;
+        private int GetRoomNumber(GameObject go, int roomWidth, int roomHeight)
+                => ((GetRow(go, roomHeight) - 1) * _cols) + GetCol(go, roomWidth) - 1;
 
-        private int GetCol(GameObject go)
-            => ToRoomColumnFast(go, _roomWidth);
+        private Room GetCurrentRoomIn(GameObject go, int roomWidth, int roomHeight)
+                => GetRoom(GetRoomNumber(go, roomWidth, roomHeight)).ThrowIfNone(NotFound.Create($"Room not found at room number {GetRoomNumber(go, roomWidth, roomHeight)}"));
 
-        private int GetRow(GameObject go)
-            => ToRoomRowFast(go, _roomHeight);
-
-        private int GetRoomNumber(GameObject go)
-                => ((GetRow(go) - 1) * _cols) + GetCol(go) - 1;
-
-        private Room GetCurrentRoomIn(GameObject go)
-                => GetRoom(GetRoomNumber(go)).ThrowIfNone(NotFound.Create($"Room not found at room number {GetRoomNumber(go)}"));
-
-        private Either<IFailure, Unit> CheckForCollisionWithOthers(GameObject gameObject, IEnumerable<GameObject> activeGameObjects, GameTime gameTime) => Ensure(() =>
+        private Either<IFailure, GameObject> CheckForCollisionWithOthers(GameObject gameObject, IEnumerable<GameObject> allOtherGameObjects, GameTime gameTime, int roomWidth, int roomHeight) => EnsureWithReturn(() =>
         {
-            var gameObjectRoom = GetRoomNumber(gameObject);
+            var gameObjectRoom = GetRoomNumber(gameObject, roomWidth, roomHeight);
 
-            WhenTrue(() => DoesRoomNumberExist(gameObjectRoom, _cols, _rows))
-            .BiIter(Some: (roomExists) =>
+            WhenTrue(() => DoesRoomNumberExist(gameObjectRoom, _cols, _rows)).BiIter(Some: (roomExists) =>
             {
+                // We have a game object in a specific room, look for collisions with it.
+                
                 // Sanity Check
-                if (GetCurrentRoomIn(gameObject).RoomNumber != GetRoomNumber(gameObject))
+                if (GetCurrentRoomIn(gameObject,  roomWidth, roomHeight).RoomNumber != GetRoomNumber(gameObject,  roomWidth, roomHeight))
                     throw new ArgumentException("We didn't get the room number we expected!");
 
+                // List of sorrounding rooms, adjacent to this room which the game object could be colliding with
                 var collisionRooms = new List<Option<Room>>();
 
-                // Only check for collisions with adjacent rooms
-                collisionRooms.AddRange(_level.GetAdjacentRoomsTo(GetCurrentRoomIn(gameObject)));
+                // Check for collisions with adjacent rooms - to remove walls etc
+                collisionRooms.AddRange(_level.GetAdjacentRoomsTo(GetCurrentRoomIn(gameObject,  roomWidth, roomHeight)));
 
-                // Only check for collisions with current room
-                collisionRooms.Add(GetCurrentRoomIn(gameObject));
+                // Check for collisions with current room
+                collisionRooms.Add(GetCurrentRoomIn(gameObject,  roomWidth, roomHeight));
 
-                // Room collision detection
-                collisionRooms.IterT(adjacentRoom => IsCollision(gameObject, adjacentRoom));
+                // Is game object colliding with adjacent rooms?
+                collisionRooms.IterT(adjacentRoom 
+                                        => IsCollisionBetween(gameObject, adjacentRoom));
 
-                // Check for collision with objects in the same room     
+                // Is game object colliding with other game objects in the same room.   
 
-                activeGameObjects.Where(otherObject => IsInSameRoomAs(gameObject, otherObject))
-                                  .Iter(otherObject => IsCollision(gameObject, otherObject));
+                allOtherGameObjects.Where(otherObject 
+                                    => IsInSameRoomAs(gameObject, otherObject, _roomHeight, _roomWidth))
+                                  .Iter(candidateRoomObject 
+                                            => IsCollisionBetween(gameObject, candidateRoomObject));
             },
-            None: () =>
+            None: (/* Room does not exist */) =>
             {
                 // object has no room - must have wondered off the screen - remove it
                 RemoveGameObject(gameObject.Id, _level);
             });
+
+            return gameObject;
         });
 
-        private bool IsInSameRoomAs(GameObject gameObject, GameObject go)
-        {
-            return ToRoomColumnFast(go, _roomWidth) == GetCol(gameObject) &&
-                                                          ToRoomRowFast(go, _roomHeight) == GetRow(gameObject) &&
-                                                          gameObject.Type != GameObjectType.Room;
-        }
+        private static bool IsInSameRoomAs(GameObject gameObject, GameObject go, int roomHeight, int roomWidth) 
+            => ToRoomColumnFast(go, roomWidth) == GetCol(gameObject, roomWidth) &&
+                ToRoomRowFast(go, roomHeight) == GetRow(gameObject, roomHeight) &&
+                gameObject.Type != GameObjectType.Room;
 
         public Option<Room> GetRoomIn(GameObject gameObject)
             => from col in ToRoomColumn(gameObject, _roomWidth)
@@ -348,6 +388,21 @@ namespace MazerPlatformer
             from ___ in SetRoomToActive(gameObject1, gameObject2)
             from ____ in SoundPlayerCollision(gameObject1, gameObject2)
             select Nothing;
+
+        /// <summary>
+        /// Overwrite any defaults that are now in the level file
+        /// </summary>
+        /// <param name="details"></param>
+        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details) => Ensure(() =>
+        {
+            // Save loaded level details into GameWorld
+            _cols = _level.Cols;
+            _rows = _level.Rows;
+            _roomWidth = _level.RoomWidth;
+            _roomHeight = _level.RoomHeight;
+
+            EventMediator.RaiseOnLoadLevel(details);
+        });
 
 
         // Make a celebratory sound on getting a pickup!

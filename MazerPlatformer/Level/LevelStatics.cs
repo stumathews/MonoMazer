@@ -152,8 +152,11 @@ namespace MazerPlatformer
             return npc1;
         }
 
-        public static Either<IFailure, Unit> AddNpc(Npc npc, List<Npc> characters) => Ensure(action: ()
-            => characters.Add(npc));
+        public static Either<IFailure, Npc> AddNpc(Npc npc, List<Npc> characters) => EnsureWithReturn(()=>
+        {
+            characters.Add(npc);
+            return npc;
+        });
 
         public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
         {
@@ -168,7 +171,9 @@ namespace MazerPlatformer
                                         levelNpc.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount,
                                         levelNpc.NpcType, levelNpc.MoveStep ?? Character.DefaultMoveStep)
                         .Bind((npc) => AttachComponents(levelNpc, npc))
-                        .Bind((npc) => AddNpc(npc, levelCharacters));
+                        .Bind((npc) => AddNpc(npc, levelCharacters))
+                        .Iter(npc => {  npc.SubInfoText = i.ToString(); npc.InfoText = "_"; });
+                        
                 });
             });
             return levelCharacters;

@@ -13,107 +13,71 @@
 //-----------------------------------------------------------------------
 
 using GameLibFramework.EventDriven;
-using GameLibFramework.FSM;
 using LanguageExt;
-using System;
 
 namespace MazerPlatformer
 {
+    /// <summary>
+    /// Mediates in-direct access to the Mazer class, which is the main Game class.
+    /// </summary>
     public class GameMediator
     {
-        private Mazer game;
+        private readonly Mazer game;
 
-        public GameMediator(Mazer game)
-        {
-            this.game = game;
-        }
+        public GameMediator(Mazer game) 
+            => this.game = game;
 
-        public int GetCurrentLevel()
-        {
-            return game._currentLevel;
-        }
+        public int GetCurrentLevel() 
+            => game._currentLevel;
 
-        internal void SetCurrentLevel(int v)
-        {
-            
-            game._currentLevel = 1;
-        }
+        internal void SetCurrentLevel(int v) 
+            => game._currentLevel = v;
 
-        internal Mazer.GameStates SetGameToPlayingState()
-        {
-            return game._currentGameState = Mazer.GameStates.Playing;
-        }
+        internal Mazer.GameStates SetGameToPlayingState() 
+            => game._currentGameState = Mazer.GameStates.Playing;
 
-        internal Mazer.GameStates SetGameState(Mazer.GameStates state)
-        {
-            return game._currentGameState = state;
-        }
+        internal Mazer.GameStates SetGameState(Mazer.GameStates state) 
+            => game._currentGameState = state;
 
-        internal int ResetPlayerHealth()
-        {
-            return game._playerHealth = 100;
-        }
+        internal int ResetPlayerHealth() 
+            => game._playerHealth = 100;
 
-        internal int ResetPlayerPoints()
-        {
-            return game._playerPoints = 0;
-        }
+        internal int ResetPlayerPoints() 
+            => game._playerPoints = 0;
 
-        internal int ResetPlayerPickups()
-        {
-            return game._playerPickups = 0;
-        }
+        internal int ResetPlayerPickups() 
+            => game._playerPickups = 0;
 
-        internal bool SetPlayerDied(bool arg)
-        {
-            return game.SetPlayerDied(false);
-        }
+        internal bool SetPlayerDied(bool arg) 
+            => game.SetPlayerDied(arg);
 
-        internal int GetPlayerPoints()
-        {
-            return game._playerPoints;
-        }
+        internal int GetPlayerPoints() 
+            => game._playerPoints;
 
-        internal int GetPlayerPickups()
-        {
-            return game._playerPickups;
-        }
+        internal int GetPlayerPickups() 
+            => game._playerPickups;
 
-        internal void SetCurentGameState(Mazer.GameStates state)
-        {
-            game._currentGameState = state;
-        }
+        internal void SetCurentGameState(Mazer.GameStates state) 
+            => game._currentGameState = state;
 
-        internal void Exit()
-        {
-            game.Exit();
-        }
+        internal void Exit() 
+            => game.Exit();
 
-        internal int GetPlayerHealth()
-        {
-            return game._playerHealth;
-        }
+        internal int GetPlayerHealth() 
+            => game._playerHealth;
 
-        public Either<IFailure, IGameWorld> GetGameWorld()
-        {
-            return game._gameWorld;
-        }
+        public Either<IFailure, IGameWorld> GetGameWorld() 
+            => game._gameWorld;
 
-        internal void SetGameWorld(Either<IFailure, IGameWorld> gameWorld)
-        {
-            game._gameWorld = gameWorld;
-        }
+        internal void SetGameWorld(Either<IFailure, IGameWorld> gameWorld) 
+            => game._gameWorld = gameWorld;
 
-        internal void SetCommandManager(CommandManager gameCommands)
-        {
-            game._gameCommands = gameCommands;
-        }
+        internal void SetCommandManager(CommandManager gameCommands) 
+            => game._gameCommands = gameCommands;
 
         internal static Either<IFailure, GameMediator> Create(Option<Mazer> game) 
             => game.Map(g => new GameMediator(g)).ToEither(InvalidDataFailure.Create("Game object not valid"));
-        internal Mazer.GameStates GetCurrentGameState()
-        {
-            return game._currentGameState;
-        }
+        internal Mazer.GameStates GetCurrentGameState() 
+            => game._currentGameState;
     }
 }

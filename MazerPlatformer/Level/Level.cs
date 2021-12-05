@@ -75,7 +75,7 @@ namespace MazerPlatformer
         public delegate void GameObjectAddedOrRemoved(GameObject gameObject, bool isRemoved, int runningTotalCount);
 
         // Main collection of game objects within the level
-        private readonly Dictionary<string, GameObject> _levelGameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+        public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
 
         private Song _levelMusic;
         private SoundEffect _jingleSoundEffect;
@@ -84,8 +84,10 @@ namespace MazerPlatformer
         public int ViewPortWidth { get; }
         public int ViewPortHeight { get; }
         private readonly Random _random; // we use this for putting NPCs and the player in random rooms
+        private readonly EventMediator eventMediator;
 
-        public int NumPickups { get; set; }
+        private object _lock = new object();
+
         // The player is special...
         public static Player Player { get; private set; }
         public static List<Npc> Npcs { get; private set; }
@@ -99,9 +101,10 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(()=> _playerSpottedSound.CreateInstance().Play());
         public Either<IFailure, Unit> PlayLoseSound() => Ensure(() => _loseSound.CreateInstance().Play());
 
-        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random) 
+        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) 
         {
             _random = random;
+            this.eventMediator = eventMediator;
             ViewPortWidth = viewPortWidth;
             ViewPortHeight = viewPortHeight;
             RoomWidth = viewPortWidth / cols;
@@ -203,8 +206,6 @@ namespace MazerPlatformer
                 .Map(inner => new List<Room>(inner));            
         }
 
-
-
         /// <summary>
         /// Collate animation details about the player
         /// Create the player at an initial position within room
@@ -232,13 +233,11 @@ namespace MazerPlatformer
         /// <param name="level"></param>
         /// <returns></returns>
         public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
-        {
+        { 
            return WhenTrue(()=>Npcs != null && levelFile.Npcs.Count > 0)
             .Match(Some: (unit) => GenerateNPCsFromLevelFile(levelCharacters: new List<Npc>(), levelFile, npcBuilder, rooms, level), 
                    None: ()=> npcBuilder.CreateDefaultNpcSet(rooms, new List<Npc>(), level));            
         });
-
-        
 
         /// <summary>
         /// Load the level
@@ -260,7 +259,6 @@ namespace MazerPlatformer
                 from npcs in MakeNpCs(_rooms, levelFile, new CharacterBuilder(contentManager, Rows, Cols), this)
                 from setNPCs in SetNPCs(npcs)
                 from gameObjectsWithNpcs in AddNpcsToGameObjects(npcs)
-                from setNumPickups in SetNumPickups(npcs.Count(o => o.IsNpcType(Npc.NpcTypes.Pickup)))
                 from raise in RaiseOnLoad(levelFile)
                 select gameObjectsWithNpcs;
 
@@ -270,7 +268,6 @@ namespace MazerPlatformer
             Either<IFailure, Unit> SetRooms(List<Room> rooms) => Ensure(() => { _rooms = rooms; });
             Either<IFailure, Unit> SetPlayer(Player player) => Ensure(() => { Player = player; });
             Either<IFailure, Unit> SetNPCs(List<Npc> npcs) => Ensure(() => { Npcs = npcs; });
-            Either<IFailure, Unit> SetNumPickups(int numPickups) => Ensure(() => { NumPickups = numPickups; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
             Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => OnLoad?.Invoke(file));
 
@@ -295,20 +292,20 @@ namespace MazerPlatformer
             {
                 foreach (var room in _rooms)
                     AddToLevelGameObjects(room.Id, room);
-                return _levelGameObjects;
+                return GameObjects;
             });
 
             Either<IFailure, Dictionary<string, GameObject>> AddNpcsToGameObjects(List<Npc> npcs) => EnsureWithReturn(() =>
             {
                 foreach (var npc in npcs)
                     AddToLevelGameObjects(npc.Id, npc);
-                return _levelGameObjects;
+                return GameObjects;
             });
 
             Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
             {
-                _levelGameObjects.Add(id, gameObject);
-                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: _levelGameObjects.Count());
+                GameObjects.Add(id, gameObject);
+                OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved: false, runningTotalCount: GameObjects.Count());
             });
         }
 
