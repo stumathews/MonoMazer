@@ -42,7 +42,7 @@ namespace MazerPlatformer
         private readonly FileSaver _fileSaver;
         private Level _level; // Current Level     
         private bool _unloading;
-        private GameWorldBlackBoardController _AI;
+        private GameWorldBlackBoardController _blackboardController;
 
         internal Level GetLevel()
         {
@@ -123,7 +123,7 @@ namespace MazerPlatformer
 
             // Setup the game AI
             _blackBoard = new GameWorldBlackBoard(_level, Level.Player);
-            _AI = new GameWorldBlackBoardController(_blackBoard);
+            _blackboardController = new GameWorldBlackBoardController(_blackBoard);
 
             // Listen our for all game objects events
             foreach (var gameObjectKvp in _level.GameObjects)
@@ -134,8 +134,6 @@ namespace MazerPlatformer
                 SubscribeToObjectsEvents(gameObject);
                 AddDefaultComponents(gameObject);
             }
-
-
         });
 
         private void SubscribeToPlayerEvents()
@@ -218,9 +216,13 @@ namespace MazerPlatformer
                 .Map(unit => RemoveInactiveGameObjects())
                 .Map(unit => GetActiveGameObjects())
                 .Bind(gameObjects => UpdateAllGameObjects(gameTime, gameObjects)))
-                .Bind(unit => _AI.Update())
+                .Bind(unit => _blackboardController.Update())
                 .Bind(unit => CheckForAnswers());
 
+        /// <summary>
+        /// Check if we've reached key points in the game
+        /// </summary>
+        /// <returns></returns>
         private Either<IFailure, Unit> CheckForAnswers()
         {
             return WhenTrue(() =>_blackBoard.IsLevelComplete()).ToEither()
