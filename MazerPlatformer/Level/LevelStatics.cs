@@ -12,19 +12,20 @@
 
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLibFramework.Animation;
 using LanguageExt;
 using Microsoft.Xna.Framework.Graphics;
 using static MazerPlatformer.Component;
-using static MazerPlatformer.Level;
 using static MazerPlatformer.Statics;
 
 namespace MazerPlatformer
 {
     public static class LevelStatics
     {
+        public static readonly Random RandomGenerator = new Random();
         public static Option<string> CreateAssetFile(LevelDetails l) => string.IsNullOrEmpty(LevelDetailsMediator.GetPlayersSpriteFile(l))
                 ? @"Sprites\dark_soldier-sword"
                 : LevelDetailsMediator.GetPlayersSpriteFile(l);
@@ -158,7 +159,7 @@ namespace MazerPlatformer
             return npc;
         });
 
-        public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, Level level)
+        public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, ILevel level)
         {
             file.Npcs.Iter((levelNpc) =>
             {
@@ -179,7 +180,7 @@ namespace MazerPlatformer
             return levelCharacters;
         }
 
-        public static Room GetRandomRoom(List<Room> rooms, Level level) => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)];
+        public static Room GetRandomRoom(List<Room> rooms, ILevel level) => rooms[RandomGenerator.Next(0, level.Rows * level.Cols)];
 
     }
 

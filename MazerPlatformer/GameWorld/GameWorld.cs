@@ -40,11 +40,11 @@ namespace MazerPlatformer
         private int _cols;
         private readonly IGameContentManager _contentManager;
         private readonly FileSaver _fileSaver;
-        private Level _level; // Current Level     
+        private ILevel _level; // Current Level     
         private bool _unloading;
         private GameWorldBlackBoardController _blackboardController;
 
-        internal Level GetLevel()
+        internal ILevel GetLevel()
         {
             return _level;
         }
@@ -79,10 +79,13 @@ namespace MazerPlatformer
             => CreateLevel(_rows, _cols, _viewPortWidth, _viewPortHeight, levelNumber, Random, EventMediator)
                     .Bind(level => SetGameWorldLevel(level))
                     .Bind(level => level.Load(_contentManager, overridePlayerHealth, overridePlayerScore))
-                    .Bind(levelObjects => AddToGameWorld(levelObjects, _level.GameObjects, EventMediator));
+                    .Bind(levelObjects => AddToGameWorld(levelObjects, _level.GetGameObjects(), EventMediator));
 
-        private Either<IFailure, Level> SetGameWorldLevel(Level level)
-            => _level = level;
+        private Either<IFailure, ILevel> SetGameWorldLevel(ILevel level)
+        {
+            _level = level;
+            return _level.ToEither();
+        }
 
         /// <summary>
         /// Unload the game world, and save it
@@ -100,7 +103,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <returns></returns>
         public Either<IFailure, Unit> SaveLevel()
-            => Level.Save(shouldSave: true, _level.LevelFile, Level.Player, _level.LevelFileName, _fileSaver, Level.Npcs);
+            => _level.Save(shouldSave: true, _level.LevelFile, _level.GetPlayer(), _level.LevelFileName, _fileSaver, _level.GetNpcs());
 
         /// <summary>
         /// The game world will listen events raised by game objects
@@ -122,11 +125,11 @@ namespace MazerPlatformer
             EventMediator.OnWallCollision += OnRoomCollision;
 
             // Setup the game AI
-            _blackBoard = new GameWorldBlackBoard(_level, Level.Player);
+            _blackBoard = new GameWorldBlackBoard(_level, _level.GetPlayer());
             _blackboardController = new GameWorldBlackBoardController(_blackBoard);
 
             // Listen our for all game objects events
-            foreach (var gameObjectKvp in _level.GameObjects)
+            foreach (var gameObjectKvp in _level.GetGameObjects())
             {
                 var gameObject = gameObjectKvp.Value;
 
@@ -139,21 +142,21 @@ namespace MazerPlatformer
         private void SubscribeToPlayerEvents()
         {
             // Hook up the Player events to the external world ie game UI
-
+            
             // Allow game world to respond to player's state changes
-            Level.Player.OnStateChanged += OnPlayerStateChanged; 
+            _level.GetPlayer().OnStateChanged += OnPlayerStateChanged; 
 
              // Allow game world to respond to player's direction changes
-            Level.Player.OnDirectionChanged += onPlayerDirectionChanged;
+            _level.GetPlayer().OnDirectionChanged += onPlayerDirectionChanged;
 
              // Allow game world to respond to player's collision direction changes
-            Level.Player.OnCollisionDirectionChanged += OnPlayerCollisionChanged;
+            _level.GetPlayer().OnCollisionDirectionChanged += OnPlayerCollisionChanged;
 
              // Allow game world to respond to player's components changes
-            Level.Player.OnGameObjectComponentChanged += OnPlayerComponentChanged;
+            _level.GetPlayer().OnGameObjectComponentChanged += OnPlayerComponentChanged;
 
             // Allow game world to respond to player's collisions
-            Level.Player.OnCollision += OnPlayerCollision;
+            _level.GetPlayer().OnCollision += OnPlayerCollision;
 
             // Allow game world to respond to when the player has been spotted
             EventMediator.OnPlayerSpotted += OnPlayerSpotted;          
@@ -197,7 +200,7 @@ namespace MazerPlatformer
         private void AddDefaultComponents(GameObject gameObject)
         {
             // Every object will have access to the player
-            var playerComponent = new Component(Component.ComponentType.Player, Level.Player);
+            var playerComponent = new Component(Component.ComponentType.Player, _level.GetPlayer());
 
             // every object will have access to the game world
             var gameWorldComponent = new Component(Component.ComponentType.GameWorld, this);
@@ -252,7 +255,7 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure)
             => WhenTrue(() => !_unloading).ToEither(ShortCircuitFailure.Create("Can't draw while unloading"))
-                .Bind(_ => _level.GameObjects.Values.Where(obj => obj.Active)
+                .Bind(_ => _level.GetGameObjects().Values.Where(obj => obj.Active)
                                                 .Select(gameObject => gameObject.Draw(infrastructure)) // Draw each game object
                                                 .AggregateUnitFailures()); // Ignore failures to draw
 
@@ -289,9 +292,9 @@ namespace MazerPlatformer
                 .Bind(_ => Ensure(() => EventMediator.RaiseOnPlayerDied()));
 
         List<string> GetInactiveIds()
-            => _level.GameObjects.Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
+            => _level.GetGameObjects().Values.Where(obj => !obj.Active).Select(x => x.Id).ToList();
         List<GameObject> GetActiveGameObjects()
-            => _level.GameObjects.Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
+            => _level.GetGameObjects().Values.Where(obj => obj.Active).ToList(); // ToList() Prevent lazy-loading
 
         /// <summary>
         /// The game world wants to know about every component update/change that occurs in the world
@@ -311,10 +314,10 @@ namespace MazerPlatformer
             => WhenTrue(() => !string.IsNullOrEmpty(_level.LevelFile.Music)).ToEither(ShortCircuitFailure.Create("Could not play music as there is none"))
                 .Bind((unit) => _level.PlaySong());
 
-        private Either<IFailure, Unit> RemoveGameObject(string id, Level level)
-        => from gameObject in GetGameObjectForId(_level.GameObjects, id)
-           from deactivated in DeactivateGameObject(gameObject, _level.GameObjects)
-           from notified in NotifyObjectAddedOrRemoved(gameObject, _level.GameObjects, EventMediator)
+        private Either<IFailure, Unit> RemoveGameObject(string id, ILevel level)
+        => from gameObject in GetGameObjectForId(_level.GetGameObjects(), id)
+           from deactivated in DeactivateGameObject(gameObject, _level.GetGameObjects())
+           from notified in NotifyObjectAddedOrRemoved(gameObject, _level.GetGameObjects(), EventMediator)
            select Success;
 
         private int GetRoomNumber(GameObject go, int roomWidth, int roomHeight)
@@ -407,7 +410,7 @@ namespace MazerPlatformer
         /// Overwrite any defaults that are now in the level file
         /// </summary>
         /// <param name="details"></param>
-        private Either<IFailure, Unit> OnLevelLoad(Level.LevelDetails details) => Ensure(() =>
+        private Either<IFailure, Unit> OnLevelLoad(LevelDetails details) => Ensure(() =>
         {
             // Save loaded level details into GameWorld
             _cols = _level.Cols;
@@ -445,9 +448,9 @@ namespace MazerPlatformer
         public int GetRoomWidth() => _roomWidth;
 
         public Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt)
-            => GameWorldStatics.MovePlayer(direction, dt);
+            => GameWorldStatics.MovePlayer(direction, dt, _level.GetPlayer());
 
         public Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs)
-            => GameWorldStatics.OnKeyUp(sender, keyboardEventArgs);
+            => GameWorldStatics.OnKeyUp(sender, keyboardEventArgs, _level.GetPlayer());
     }
 }

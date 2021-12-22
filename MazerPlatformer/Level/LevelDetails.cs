@@ -15,27 +15,19 @@
 using System.Collections.Generic;
 
 namespace MazerPlatformer
-{
-
-
-
-
-    public partial class Level
+{   
+    /* These classes represent the Level File contents that is used to define each level */
+    public class LevelDetails : LevelCharacterDetails
     {
-        /* These classes represent the Level File contents that is used to define each level */
-        public class LevelDetails : LevelCharacterDetails
-        {
-            public int? Rows { get; set; }
-            public int? Cols { get; set; }
-            public string Sound1 { get; set; }
-            public string Sound2 { get; set; }
-            public string Sound3 { get; set; }
-            public string Music { get; set; }
-            public LevelPlayerDetails Player { get; set; }
-            public List<LevelNpcDetails> Npcs { get; private set; } = new List<LevelNpcDetails>();
+        public int? Rows { get; set; }
+        public int? Cols { get; set; }
+        public string Sound1 { get; set; }
+        public string Sound2 { get; set; }
+        public string Sound3 { get; set; }
+        public string Music { get; set; }
+        public LevelPlayerDetails Player { get; set; }
+        public List<LevelNpcDetails> Npcs { get; private set; } = new List<LevelNpcDetails>();
 
-            public LevelDetails() { /* Needed for serialization */ }
-
-        }
-    }
+        public LevelDetails() { /* Needed for serialization */ }
+    }    
 }

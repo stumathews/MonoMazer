@@ -33,7 +33,7 @@ namespace MazerPlatformer
                 => gameObject.IsNpcType(Npc.NpcTypes.Pickup) && gameObject.Active;
 
             // Set the number of level pickups
-            bb.LevelPickupsLeft = bb.Level.GameObjects.Values.Count(IsActivePickup);
+            bb.LevelPickupsLeft = bb.Level.GetGameObjects().Values.Count(IsActivePickup);
             return Success;
                            
         }

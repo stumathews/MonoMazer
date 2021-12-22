@@ -36,8 +36,8 @@ namespace MazerPlatformer.Tests
 
         public void ResetObjectStates()
         {
-            Player1 = new Player(1, 1, 1, 1, new GameLibFramework.Animation.AnimationInfo(null, "player1"));
-            Npc1 = Npc.Create(1, 1, "", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "")).ThrowIfFailed();
+            Player1 = new Player(1, 1, 1, 1, new GameLibFramework.Animation.AnimationInfo(null, "player1"), new EventMediator());
+            Npc1 = Npc.Create(1, 1, "", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, ""), new EventMediator()).ThrowIfFailed();
             MockGameWorld = new Mock<IGameWorld>();
         }
 

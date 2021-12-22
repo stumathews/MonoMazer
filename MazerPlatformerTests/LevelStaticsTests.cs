@@ -80,7 +80,7 @@ namespace MazerPlatformer.Tests
         public void CreatePlayerTest()
         {
             var playerAnimation = CreatePlayerAnimation(GameWorldStaticTests.AssetFile, GameWorldStaticTests.DummyTexture, GameWorldStaticTests.LevelDetails).ThrowIfNone();
-            var player = CreatePlayer(GameWorldStaticTests.Rooms[0], playerAnimation, GameWorldStaticTests.LevelDetails ).ThrowIfNone();
+            var player = CreatePlayer(GameWorldStaticTests.Rooms[0], playerAnimation, GameWorldStaticTests.LevelDetails, new EventMediator() ).ThrowIfNone();
             Assert.IsTrue(player.Height.Equals(playerAnimation.FrameHeight));
             Assert.IsTrue(player.Width.Equals(playerAnimation.FrameWidth));
             // ...
@@ -140,7 +140,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void CopyOrUpdateComponentsTest()
         {
-            Level.LevelCharacterDetails to = new Level.LevelCharacterDetails
+            LevelCharacterDetails to = new LevelCharacterDetails
             {
                 Components = new List<Component>()
             };
@@ -152,7 +152,7 @@ namespace MazerPlatformer.Tests
         [TestMethod()]
         public void CopyAnimationInfoTest()
         {
-            var to = new Level.LevelCharacterDetails
+            var to = new LevelCharacterDetails
             {
                 Components = new List<Component>(),                
             };

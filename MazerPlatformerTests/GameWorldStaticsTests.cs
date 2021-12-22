@@ -1,18 +1,13 @@
-﻿using MazerPlatformer;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using LanguageExt;
 using static MazerPlatformer.GameWorldStatics;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using System.ComponentModel.Design;
-using System.Windows.Forms;
 using static MazerPlatformer.Statics;
 using Moq;
 using Microsoft.Xna.Framework.Media;
-using System.Reflection;
-using static MazerPlatformer.Level;
+
 
 namespace MazerPlatformer.Tests
 {
@@ -82,7 +77,7 @@ namespace MazerPlatformer.Tests
     {
 
 
-        public Level BasicLevelObject { get; set; }
+        public ILevel BasicLevelObject { get; set; }
         public Player Player1 { get; set; }
         public Npc Npc1 { get; set; }
         public Npc Npc2 { get; set; }
@@ -94,13 +89,13 @@ namespace MazerPlatformer.Tests
         public List<Room> Rooms { get; set; }
         public Song DummySong { get; set; } = (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song));
         public Texture2D DummyTexture { get; set; } = SneakyTexture2D.CreateNamed("");
-        public Level.LevelDetails LevelDetails { get; set; }
-        public Level.LevelNpcDetails LevelNpcDetails { get; set; }
+        public LevelDetails LevelDetails { get; set; }
+        public LevelNpcDetails LevelNpcDetails { get; set; }
         public string AssetFile { get; set; }
         public void ResetObjectStates()
         {
             AssetFile = "DummyAssetFile";
-            LevelDetails = new Level.LevelDetails
+            LevelDetails = new LevelDetails
             {
                 Cols = 10,
                 Rows = 10,
@@ -108,7 +103,7 @@ namespace MazerPlatformer.Tests
                 Count = 10,
                 MoveStep = 1,
                 Music = "DummyMusicFile1",
-                Player = new Level.LevelPlayerDetails(),
+                Player = new LevelPlayerDetails(),
                 Sound1 = "DummySoundFile1",
                 Sound2 = "DummySoundFile2",
                 Sound3 = "DummySoundFile3",
@@ -119,7 +114,7 @@ namespace MazerPlatformer.Tests
                 SpriteWidth = 40
             };
 
-            LevelNpcDetails = new Level.LevelNpcDetails
+            LevelNpcDetails = new LevelNpcDetails
             {
                 Components = new List<Component>(),
                 Count = 2,
@@ -137,10 +132,11 @@ namespace MazerPlatformer.Tests
             mockGameContentManager.Setup(x => x.Load<Texture2D>(It.IsAny<string>())).Returns(() => SneakyTexture2D.CreateNamed(""));
             mockGameContentManager.Setup(x => x.Load<Song>(It.IsAny<string>())).Returns(() => (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song)));
             GameContentManager = mockGameContentManager.Object;
-            BasicLevelObject = new Level(10, 10, 10, 10, 1, new Random(), new EventMediator());
+            LevelFactory levelFactory = new LevelFactory(new EventMediator());
+            BasicLevelObject = levelFactory.Create(10, 10, 10, 10, 1);
             BasicLevelObject.Load(GameContentManager);
             Rooms = RoomStatics.CreateNewMazeGrid(10, 10, 10, 10, new EventMediator());
-            Player1 = Level.MakePlayer(Rooms[0], LevelDetails, GameContentManager, new EventMediator()).ThrowIfFailed();
+            Player1 = BasicLevelObject.MakePlayer(Rooms[0], LevelDetails, GameContentManager, new EventMediator()).ThrowIfFailed();
             Npc1 = Npc.Create(1, 1, "Npc1", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc1AssetFile"), new EventMediator()).ThrowIfFailed();
             Npc1.Components.Add(new Component(Component.ComponentType.NpcType, Npc.NpcTypes.Enemy));
             Npc2 = Npc.Create(1, 1, "Npc2", 1, 1, GameObject.GameObjectType.Npc, new GameLibFramework.Animation.AnimationInfo(null, "Npc2AssetFile"), new EventMediator()).ThrowIfFailed();

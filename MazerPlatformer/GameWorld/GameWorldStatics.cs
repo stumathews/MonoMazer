@@ -43,8 +43,8 @@ namespace MazerPlatformer
             go1.RaiseCollisionOccured(go2);
         }
 
-        public static Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2) =>
-                WhenTrue(() => go1.Id == Level.Player.Id)
+        public static Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2 ) =>
+                WhenTrue(() => go1.Id == Player.PlayerId)
                 .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
 
@@ -68,7 +68,7 @@ namespace MazerPlatformer
         public static bool IsSameType(GameObject gameObject1, GameObject gameObject2)
             => gameObject1.Type == gameObject2.Type;
 
-        public static Option<Unit> IsLevelPickup(GameObject obj, Level level) =>
+        public static Option<Unit> IsLevelPickup(GameObject obj, ILevel level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
         public static Either<IFailure, GameObject> GetGameObjectForId(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(()
@@ -93,10 +93,11 @@ namespace MazerPlatformer
             return timer;
         });
 
-        public static Either<IFailure, Level> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) => EnsureWithReturn(() =>
+        public static Either<IFailure, ILevel> CreateLevel(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) => EnsureWithReturn(() =>
         {
+            LevelFactory levelFactory = new LevelFactory(eventMediator);
             // Create level
-            var level = new Level(rows, cols, viewPortWidth, viewPortHeight, levelNumber, random, eventMediator);
+            ILevel level = levelFactory.Create(rows, cols, viewPortWidth, viewPortHeight, levelNumber);
 
             return level;
         });
@@ -196,7 +197,7 @@ namespace MazerPlatformer
         public static int ToRoomRowFast(GameObject o1, int roomHeight)
             => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)o1.Y / roomHeight);
 
-        public static bool IsLineOfSightInRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
+        public static bool IsLineOfSightInRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, ILevel level)
         {
             (int greater, int smaller) = GetMaxMinRange(GetObjCol(go2, roomWidth), GetObjCol(go1, roomWidth)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -214,7 +215,7 @@ namespace MazerPlatformer
         }
 
 
-        public static bool IsLineOfSightInCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, Level level)
+        public static bool IsLineOfSightInCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, ILevel level)
         {
             var minMax = GetMaxMinRange(GetObjRow(go2, roomHeight), GetObjRow(go1, roomHeight)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -254,8 +255,8 @@ namespace MazerPlatformer
         /// <param name="sender"></param>
         /// <param name="keyboardEventArgs"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs) 
-            => Level.Player.SetAsIdle();
+        public static Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs, Player player) 
+            => player.SetAsIdle();
 
         /// <summary>
         /// Change the players position based on current facing direction
@@ -263,8 +264,8 @@ namespace MazerPlatformer
         /// <param name="direction"></param>
         /// <param name="dt"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt) 
-            => Level.Player.MoveInDirection(direction, dt);
+        public static Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt, Player player) 
+            => player.MoveInDirection(direction, dt);
 
         public static IEnumerable<GameObject> UpdateAllObjects(GameTime gameTime, List<GameObject> gameObjects) 
             => gameObjects.Select((GameObject gameObject) =>

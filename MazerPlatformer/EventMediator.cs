@@ -52,7 +52,7 @@ namespace MazerPlatformer
 
 
         public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
-        public delegate void LevelClearedInfo(Level level);
+        public delegate void LevelClearedInfo(ILevel level);
         public delegate void SongChanged(string filename);
         public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount);
         public delegate Either<IFailure, Unit> DirectionChanged(CharacterDirection direction);
@@ -60,7 +60,7 @@ namespace MazerPlatformer
         public delegate Either<IFailure, Unit> StateChanged(CharacterStates state);
         public delegate Either<IFailure, Unit> GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
         public delegate Either<IFailure, Unit> CollisionArgs(Option<GameObject> thisObject, Option<GameObject> otherObject);
-        public delegate Either<IFailure, Unit> LevelLoadInfo(Level.LevelDetails details);
+        public delegate Either<IFailure, Unit> LevelLoadInfo(LevelDetails details);
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
         public delegate void DisposingInfo(GameObject theObject);
@@ -94,7 +94,7 @@ namespace MazerPlatformer
         internal void RaiseOnPlayerDied() 
             => OnPlayerDied?.Invoke();
 
-        internal void RaiseOnLoadLevel(Level.LevelDetails details) 
+        internal void RaiseOnLoadLevel(LevelDetails details) 
             => OnLoadLevel?.Invoke(details);
 
         internal void RaiseOnGameWorldCollision(Option<GameObject> obj1, Option<GameObject> obj2) 
@@ -102,7 +102,7 @@ namespace MazerPlatformer
 
         internal void RaiseGameObjectAddedOrRemovedEvent(GameObject gameObject, bool isRemoved, int runningTotalCount) 
             => OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved, runningTotalCount);
-        internal void RaiseLevelCleared(Level level) 
+        internal void RaiseLevelCleared(ILevel level) 
             => OnLevelCleared?.Invoke(level);
 
         internal void RaiseOnPlayerSpotted(Player player)

@@ -19,10 +19,8 @@ using System.Linq;
 using GameLibFramework.Animation;
 using LanguageExt;
 using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
-using static MazerPlatformer.Component;
 using static MazerPlatformer.RoomStatics;
 using static MazerPlatformer.Statics;
 using static MazerPlatformer.LevelStatics;
@@ -30,20 +28,13 @@ using static MazerPlatformer.LevelStatics;
 namespace MazerPlatformer
 {
 
-
-
     // Consider serializing the specification of each type of NPC ie hit values, points etc..
 
-    public partial class Level
+    public partial class Level : ILevel
     {
 
-
-        //public SpriteBatch SpriteBatch { get; }
-        //public ContentManager ContentManager { get; }
-
         // Level number 1,2,4 etc...
-        public int LevelNumber { get; }
-        public static readonly Random RandomGenerator = new Random();
+        public int LevelNumber { get; }        
 
         // Each level has a file
         public string LevelFileName { get; set; }
@@ -58,11 +49,11 @@ namespace MazerPlatformer
         // List of rooms in the game world
         private List<Room> _rooms = new List<Room>();
 
-        public Option<Room> GetRoom(int index) 
-            => index >= 0 && index <= ((Cols * Rows)-1)
-                ? _rooms[index] 
+        public Option<Room> GetRoom(int index)
+            => index >= 0 && index <= ((Cols * Rows) - 1)
+                ? _rooms[index]
                 : Option<Room>.None;
-        public List<Option<Room>> GetAdjacentRoomsTo(Room room) 
+        public List<Option<Room>> GetAdjacentRoomsTo(Room room)
             => new Option<Room>[] {
                     GetRoom(room.RoomAbove),
                     GetRoom(room.RoomBelow),
@@ -70,7 +61,9 @@ namespace MazerPlatformer
                     GetRoom(room.RoomRight)}.ToList();
 
         // Main collection of game objects within the level
-        public readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+        private readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+
+        public Dictionary<string, GameObject> GetGameObjects() => GameObjects;
 
         private Song _levelMusic;
         private SoundEffect _jingleSoundEffect;
@@ -84,19 +77,22 @@ namespace MazerPlatformer
         private object _lock = new object();
 
         // The player is special...
-        public static Player Player { get; private set; }
-        public static List<Npc> Npcs { get; private set; }
-        
+        private static Player Player { get; set; }
+        private static List<Npc> Npcs { get; set; }
+
+        public Player GetPlayer() => Player;
+        public List<Npc> GetNpcs() => Npcs;
+
         public Either<IFailure, Unit> PlaySong() => Ensure(() =>
         {
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Play(_levelMusic);
         });
-        public Either<IFailure, Unit> PlaySound1() => Ensure(()=> _jingleSoundEffect.CreateInstance().Play());
-        public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(()=> _playerSpottedSound.CreateInstance().Play());
+        public Either<IFailure, Unit> PlaySound1() => Ensure(() => _jingleSoundEffect.CreateInstance().Play());
+        public Either<IFailure, Unit> PlayPlayerSpottedSound() => Ensure(() => _playerSpottedSound.CreateInstance().Play());
         public Either<IFailure, Unit> PlayLoseSound() => Ensure(() => _loseSound.CreateInstance().Play());
 
-        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator) 
+        public Level(int rows, int cols, int viewPortWidth, int viewPortHeight, int levelNumber, Random random, EventMediator eventMediator)
         {
             _random = random;
             _eventMediator = eventMediator;
@@ -108,7 +104,7 @@ namespace MazerPlatformer
             Cols = cols;
             LevelNumber = levelNumber;
             LevelFileName = $"Level{LevelNumber}.xml";
-        }        
+        }
 
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
         public Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false)
@@ -126,8 +122,8 @@ namespace MazerPlatformer
             Option<Unit> CanRemoveLeft(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 >= 1);
             Option<Unit> CanRemoveRight(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 <= Cols);
 
-            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms) 
-                ? rooms[index].ToOption() 
+            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms)
+                ? rooms[index].ToOption()
                 : Prelude.None;
 
             Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms)
@@ -168,7 +164,7 @@ namespace MazerPlatformer
                 return allRemovableSides;
             }
 
-            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0 
+            Option<Room.Side> GetRandomSide(List<Room.Side> sides) => sides.Count > 0
                 ? sides[RandomGenerator.Next(0, sides.Count)].ToOption()
                 : Prelude.None;
 
@@ -187,10 +183,10 @@ namespace MazerPlatformer
                 currentRoom.RoomRight = GetRoomRightIndex(idx);
             }
 
-            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides) 
+            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides)
                 => GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
 
-            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms) 
+            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms)
                 => WhenTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides))
                                     .Map(unit => RemoveRndSide(idx, room, allRooms));
 
@@ -198,7 +194,7 @@ namespace MazerPlatformer
                 .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
                 .ToEither()
                 .BindT(room => room)
-                .Map(inner => new List<Room>(inner));            
+                .Map(inner => new List<Room>(inner));
         }
 
         /// <summary>
@@ -207,18 +203,18 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public static Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator) => EnsureWithReturn(()
-        =>     (from assetFile in CreateAssetFile(levelFile)
-                from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
-                from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
-                from player in CreatePlayer(playerRoom, playerAnimation, levelFile, eventMediator)
-                from InitializedPlayer in InitializePlayer(levelFile, player)
-                from playerHealth in GetPlayerHealth(player)
-                    .Match(Some: (comp)=>comp, None: ()=> AddPlayerHealthComponent(player))
-                from playerPoints in GetPlayerPoints(player)
-                    .Match(Some: (comp)=>comp, None: ()=> AddPlayerPointsComponent(player))
-                select player).ThrowIfNone());
-        
+        public Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator) => EnsureWithReturn(()
+        => (from assetFile in CreateAssetFile(levelFile)
+            from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
+            from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
+            from player in CreatePlayer(playerRoom, playerAnimation, levelFile, eventMediator)
+            from InitializedPlayer in InitializePlayer(levelFile, player)
+            from playerHealth in GetPlayerHealth(player)
+                .Match(Some: (comp) => comp, None: () => AddPlayerHealthComponent(player))
+            from playerPoints in GetPlayerPoints(player)
+                .Match(Some: (comp) => comp, None: () => AddPlayerPointsComponent(player))
+            select player).ThrowIfNone());
+
         /// <summary>
         /// loading the definition of the enemies into a file.
         /// </summary>
@@ -227,11 +223,11 @@ namespace MazerPlatformer
         /// <param name="npcBuilder"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, Level level) => EnsuringBind(() =>
-        { 
-           return WhenTrue(()=>Npcs != null && levelFile.Npcs.Count > 0)
-            .Match(Some: (unit) => GenerateNPCsFromLevelFile(levelCharacters: new List<Npc>(), levelFile, npcBuilder, rooms, level), 
-                   None: ()=> npcBuilder.CreateDefaultNpcSet(rooms, new List<Npc>(), level));            
+        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, ILevel level) => EnsuringBind(() =>
+        {
+            return WhenTrue(() => Npcs != null && levelFile.Npcs.Count > 0)
+             .Match(Some: (unit) => GenerateNPCsFromLevelFile(levelCharacters: new List<Npc>(), levelFile, npcBuilder, rooms, level),
+                    None: () => npcBuilder.CreateDefaultNpcSet(rooms, new List<Npc>(), level));
         });
 
         /// <summary>
@@ -276,8 +272,8 @@ namespace MazerPlatformer
             });
 
             Either<IFailure, Song> LoadLevelMusic() => EnsuringBind(()
-                => WhenTrue(()=>!string.IsNullOrEmpty(LevelFile.Music)).ToEither()
-                    .Bind<Song>((unit)=>
+                => WhenTrue(() => !string.IsNullOrEmpty(LevelFile.Music)).ToEither()
+                    .Bind<Song>((unit) =>
                     {
                         _levelMusic = contentManager.Load<Song>(LevelFile.Music);
                         return _levelMusic;
@@ -306,8 +302,8 @@ namespace MazerPlatformer
 
         private Either<IFailure, LevelDetails> LoadLevelFile(int? i, int? playerScore) => EnsuringBind(() =>
         {
-            return WhenTrue(()=> File.Exists(LevelFileName)).ToEither().BiBind(
-                Right: (levelFileExists)=>
+            return WhenTrue(() => File.Exists(LevelFileName)).ToEither().BiBind(
+                Right: (levelFileExists) =>
                 {
                     LevelFile = GameLib.Files.Xml.DeserializeFile<LevelDetails>(LevelFileName);
 
@@ -317,16 +313,16 @@ namespace MazerPlatformer
                     RoomWidth = ViewPortWidth / Cols;
                     RoomHeight = ViewPortHeight / Rows;
 
-                    Maybe(()=> i.HasValue && playerScore.HasValue)
-                        .Bind((success)=>
+                    Maybe(() => i.HasValue && playerScore.HasValue)
+                        .Bind((success) =>
                         {
                             // If we're continuing on, then dont load the players vitals from file - use provided:
                             return SetPlayerVitalComponents(LevelFile.Player.Components, i.Value, playerScore.Value);
                         });
 
                     return LevelFile;
-                }, 
-                Left:(levelFileDoesNotExist)=>MakeNewLevelDetails());
+                },
+                Left: (levelFileDoesNotExist) => MakeNewLevelDetails());
         });
 
         /// <summary>
@@ -363,8 +359,8 @@ namespace MazerPlatformer
 
         public Either<IFailure, Unit> Unload(FileSaver filesaver) => Ensure(() =>
         {
-            Maybe(()=>!File.Exists(LevelFileName))
-            .Bind((success)=> Save(shouldSave: true, LevelFile, Player, LevelFileName, filesaver, Npcs))
+            Maybe(() => !File.Exists(LevelFileName))
+            .Bind((success) => Save(shouldSave: true, LevelFile, Player, LevelFileName, filesaver, Npcs))
             .ToEither()
             .ThrowIfFailed();
 
@@ -378,7 +374,7 @@ namespace MazerPlatformer
         });
 
         // Save the level information including NPcs and Player info
-        public static Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, IFileSaver fileSaver, List<Npc> npcs) 
+        public Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, IFileSaver fileSaver, List<Npc> npcs)
             => WhenTrue(() => shouldSave)
                     .Match(Some: (unit) => unit.ToEither(),
                            None: () => ShortCircuitFailure.Create("Saving is prevented").ToEitherFailure<Unit>())
@@ -387,7 +383,7 @@ namespace MazerPlatformer
                         None: () => Nothing.ToEither())
                     .Bind((unit) => SaveLevelFile(player, levelFile, fileSaver, levelFileName)));
 
-        public Either<IFailure,Unit> ResetPlayer(int health = 100, int points = 0) 
+        public Either<IFailure, Unit> ResetPlayer(int health = 100, int points = 0)
             => Player.SetPlayerVitals(health, points);
     }
 }

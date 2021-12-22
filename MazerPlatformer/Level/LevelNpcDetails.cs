@@ -14,17 +14,10 @@
 
 namespace MazerPlatformer
 {
-
-
-
-
-    public partial class Level
+    public class LevelNpcDetails : LevelCharacterDetails
     {
-        public class LevelNpcDetails : LevelCharacterDetails
-        {
-            public Npc.NpcTypes NpcType { get; set; }
+        public Npc.NpcTypes NpcType { get; set; }
 
-            public LevelNpcDetails() { /* Needed for serialization */ }
-        }
-    }
+        public LevelNpcDetails() { /* Needed for serialization */ }
+    }    
 }

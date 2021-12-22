@@ -20,13 +20,13 @@ namespace MazerPlatformer
     }
     public class GameWorldBlackBoard : IBlackBoard
     {
-        public GameWorldBlackBoard(Level level, Player player)
+        public GameWorldBlackBoard(ILevel level, Player player)
         {
             Level = level;
             Player = player;
         }
         public int LevelPickupsLeft {get;set;}
-        public Level Level { get; }
+        public ILevel Level { get; }
         public Player Player { get; }
 
         public bool PlayerSighted = false;

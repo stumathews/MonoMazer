@@ -61,7 +61,7 @@ namespace MazerPlatformer
         public static Either<IFailure, T> GetRandomEnumValue<T>() => EnsureWithReturn(() =>
         {
             Array GetValues() => Enum.GetValues(typeof(T));
-            return (T) GetValues().GetValue(Level.RandomGenerator.Next(GetValues().Length));
+            return (T) GetValues().GetValue(LevelStatics.RandomGenerator.Next(GetValues().Length));
         });
 
         public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc) =>

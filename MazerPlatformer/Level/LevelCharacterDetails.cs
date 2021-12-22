@@ -16,25 +16,18 @@ using System.Collections.Generic;
 
 namespace MazerPlatformer
 {
-
-
-
-
-    public partial class Level
+    public class LevelCharacterDetails
     {
-        public class LevelCharacterDetails
-        {
-            public int? SpriteWidth { get; set; }
-            public int? SpriteHeight { get; set; }
-            public int? SpriteFrameTime { get; set; }
-            public int? SpriteFrameCount { get; set; }
-            public int? MoveStep { get; set; }
-            public string SpriteFile { get; set; }
-            public List<Component> Components { get; set; }
-            public int? Count { get; set; }
+        public int? SpriteWidth { get; set; }
+        public int? SpriteHeight { get; set; }
+        public int? SpriteFrameTime { get; set; }
+        public int? SpriteFrameCount { get; set; }
+        public int? MoveStep { get; set; }
+        public string SpriteFile { get; set; }
+        public List<Component> Components { get; set; }
+        public int? Count { get; set; }
 
-            public LevelCharacterDetails() {/* Needed for serialization */  }
+        public LevelCharacterDetails() {/* Needed for serialization */  }
 
-        }
-    }
+    }    
 }

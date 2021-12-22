@@ -90,7 +90,7 @@ namespace MazerPlatformer
 
 
 
-        public Either<IFailure, List<Npc>> CreateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, Level level) => EnsuringBind(() =>
+        public Either<IFailure, List<Npc>> CreateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, ILevel level) => EnsuringBind(() =>
         {
             return
                 from pirates in CreateWith(DefaultNumPirates, creator: () => Create($@"Sprites\pirate{_random.Next(1, 4)}", 40, Npc.NpcTypes.Enemy, level, rooms))
@@ -117,15 +117,15 @@ namespace MazerPlatformer
         private static IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator) 
             => Enumerable.Range(0, num).Select(index => creator());
 
-        private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, Level level, List<Room> rooms) 
+        private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, ILevel level, List<Room> rooms) 
             => GetRandomLevelRoom(level)
                 .Bind(randomRoom => CreateNpc(randomRoom, assetName))
                 .Bind(npc => npc.AddComponent(Component.ComponentType.HitPoints, hitPoints).Map(component => npc))
                 .Bind(npc => npc.AddComponent(Component.ComponentType.NpcType, npcType).Map(component => npc));
 
-        private Either<IFailure,Room> GetRandomLevelRoom(Level level) 
+        private Either<IFailure,Room> GetRandomLevelRoom(ILevel level) 
             => level.GetRooms()
-                .EnsuringMap( rooms => rooms[Level.RandomGenerator.Next(0, level.Rows * level.Cols)])
+                .EnsuringMap( rooms => rooms[LevelStatics.RandomGenerator.Next(0, level.Rows * level.Cols)])
                         .MapLeft((failure)=> NotFound.Create($"Random Room could not be found: {failure}"));
     }
 }

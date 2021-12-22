@@ -77,6 +77,8 @@
     <Compile Include="AI\GameWorldBlackBoardController.cs" />
     <Compile Include="AI\Expert.cs" />
     <Compile Include="AI\LevelExpert.cs" />
+    <Compile Include="Level\ILevel.cs" />
+    <Compile Include="Level\LevelFactory.cs" />
     <Compile Include="Npc\CollidingExpert.cs" />
     <Compile Include="Npc\CollidingState.cs" />
     <Compile Include="GameObject\Component.cs" />

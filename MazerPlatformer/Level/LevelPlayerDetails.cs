@@ -14,15 +14,9 @@
 
 namespace MazerPlatformer
 {
-
-
-
-
-    public partial class Level
+    public class LevelPlayerDetails : LevelCharacterDetails
     {
-        public class LevelPlayerDetails : LevelCharacterDetails
-        {
-            public LevelPlayerDetails() { /* Needed for serialization */ }
-        }
+        public LevelPlayerDetails() { /* Needed for serialization */ }
     }
+    
 }

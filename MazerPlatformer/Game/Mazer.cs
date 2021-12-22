@@ -544,7 +544,7 @@ namespace MazerPlatformer
             TryCastToT<int>(newValue)
             .Bind(value => SetPlayerDetails(componentType, value, SetPlayerHealthScalar, SetPlayerPointsScalar));
 
-        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(Level.LevelDetails levelDetails) =>
+        private Either<IFailure, Unit> OnGameWorldOnOnLoadLevel(LevelDetails levelDetails) =>
             levelDetails.Player.Components
                 .SingleOrFailure(component => component.Type == Component.ComponentType.Points, "Could not find points component on player")
             .Map(ReadPlayerPoints)

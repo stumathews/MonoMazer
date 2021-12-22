@@ -35,7 +35,7 @@ namespace MazerPlatformer.Tests
     public class MazerStaticsTests
     {
         public IGameContentManager GameContentManager { get; private set; }
-        public Level BasicLevelObject { get; private set; }
+        public ILevel BasicLevelObject { get; private set; }
         public ICommandManager CommandManager { get; set; }
         public Mock<ICommandManager> MockCommandManager { get; set; }
         public Mock<ISpriteBatcher> MockSpriteBatcher { get; set; }
@@ -57,7 +57,8 @@ namespace MazerPlatformer.Tests
             mockGameContentManager.Setup(x => x.Load<Texture2D>(It.IsAny<string>())).Returns(() => null);
             mockGameContentManager.Setup(x => x.Load<Song>(It.IsAny<string>())).Returns(() => (Song)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Song)));
             GameContentManager = mockGameContentManager.Object;
-            BasicLevelObject = new Level(10, 10, 10, 10, 1, new Random());
+            LevelFactory levelFactory = new LevelFactory(new EventMediator());
+            BasicLevelObject = levelFactory.Create(10, 10, 10, 10, 1);
             BasicLevelObject.Load(GameContentManager);
             MockCommandManager = new Mock<ICommandManager>();
             MockCommandManager.Setup(x => x.Update(It.IsAny<GameTime>())).Verifiable();
