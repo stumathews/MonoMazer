@@ -29,7 +29,7 @@ namespace MazerPlatformer
         {
             var bb = blackboard as GameWorldBlackBoard;
             // Check to see how many Level pickups there are
-            System.Func<GameObject, bool> IsActivePickup = gameObject 
+            System.Func<IGameObject, bool> IsActivePickup = gameObject 
                 => gameObject.IsNpcType(Npc.NpcTypes.Pickup) && gameObject.Active;
 
             // Set the number of level pickups

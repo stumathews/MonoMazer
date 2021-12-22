@@ -42,7 +42,7 @@ namespace MazerPlatformer
             => GetRoomNumber(bb.Player, bb.GameWorld.GetRoomWidth(), bb.GameWorld.GetRoomHeight(), bb.GameWorld.GetLevel().Cols) 
             == GetRoomNumber(bb.Npc, bb.GameWorld.GetRoomWidth(), bb.GameWorld.GetRoomHeight(), bb.GameWorld.GetLevel().Cols);
 
-        private int GetRoomNumber(GameObject go, int roomWidth, int roomHeight, int totalCols)
+        private int GetRoomNumber(IGameObject go, int roomWidth, int roomHeight, int totalCols)
                 => ((GetRow(go, roomHeight) - 1) * totalCols) + GetCol(go, roomWidth) - 1;
 
         private static bool IsInSameColAsPlayer(MovingStateBlackBoard bb) 

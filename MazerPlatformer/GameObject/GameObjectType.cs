@@ -14,27 +14,24 @@
 
 namespace MazerPlatformer
 {
-    public abstract partial class GameObject
+    /// <summary>
+    /// Every Game Object can be one of these know types
+    /// </summary>
+    public enum GameObjectType 
     {
         /// <summary>
-        /// Every Game Object can be one of these know types
+        /// A Room with four walls
         /// </summary>
-        public enum GameObjectType 
-        {
-            /// <summary>
-            /// A Room with four walls
-            /// </summary>
-            Room, 
+        Room, 
 
-            /// <summary>
-            /// A player
-            /// </summary>
-            Player,
+        /// <summary>
+        /// A player
+        /// </summary>
+        Player,
 
-            /// <summary>
-            /// A NPC
-            /// </summary>
-            Npc 
-        }
-    }
+        /// <summary>
+        /// A NPC
+        /// </summary>
+        Npc 
+    }    
 }

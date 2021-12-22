@@ -51,32 +51,32 @@ namespace MazerPlatformer
         public event DisposingInfo OnGameObjectDisposing;
 
 
-        public delegate Either<IFailure, Unit> WallInfo(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
+        public delegate Either<IFailure, Unit> WallInfo(Room room, IGameObject collidedWith, Side side, SideCharacteristic sideCharacteristics);
         public delegate void LevelClearedInfo(ILevel level);
         public delegate void SongChanged(string filename);
-        public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<GameObject> gameObject, bool isRemoved, int runningTotalCount);
+        public delegate Either<IFailure, Unit> GameObjectAddedOrRemoved(Option<IGameObject> gameObject, bool isRemoved, int runningTotalCount);
         public delegate Either<IFailure, Unit> DirectionChanged(CharacterDirection direction);
         public delegate Either<IFailure, Unit> CollisionDirectionChanged(CharacterDirection direction);
         public delegate Either<IFailure, Unit> StateChanged(CharacterStates state);
-        public delegate Either<IFailure, Unit> GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
-        public delegate Either<IFailure, Unit> CollisionArgs(Option<GameObject> thisObject, Option<GameObject> otherObject);
+        public delegate Either<IFailure, Unit> GameObjectComponentChanged(IGameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
+        public delegate Either<IFailure, Unit> CollisionArgs(Option<IGameObject> thisObject, Option<IGameObject> otherObject);
         public delegate Either<IFailure, Unit> LevelLoadInfo(LevelDetails details);
         public delegate Either<IFailure, Unit> DeathInfo();
         public delegate Either<IFailure, Unit> PlayerSpottedInfo(Player player);
-        public delegate void DisposingInfo(GameObject theObject);
+        public delegate void DisposingInfo(IGameObject theObject);
 
-        internal void RaiseOnGameObjectDisposing(GameObject theObject)
+        internal void RaiseOnGameObjectDisposing(IGameObject theObject)
             => OnGameObjectDisposing?.Invoke(theObject);
 
-        internal void RaiseOnGameObjectCollision(Option<GameObject> thisObject, Option<GameObject> otherObject)
+        internal void RaiseOnGameObjectCollision(Option<IGameObject> thisObject, Option<IGameObject> otherObject)
             => OnGameObjectCollision?.Invoke(thisObject, otherObject);
-        internal void RaiseOnGameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
+        internal void RaiseOnGameObjectComponentChanged(IGameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue)
             => OnGameObjectComponentChanged?.Invoke(thisObject, componentName, componentType, oldValue, newValue);
 
         internal void RaiseOnUiClick(GeonBit.UI.Entities.Entity entity) 
             => OnUiClick?.Invoke(entity);
 
-        internal void RaiseOnWallCollision(Room room, GameObject collidedWith, Side side, SideCharacteristic sideCharacteristics) 
+        internal void RaiseOnWallCollision(Room room, IGameObject collidedWith, Side side, SideCharacteristic sideCharacteristics) 
             => OnWallCollision?.Invoke(room, collidedWith, side, sideCharacteristics);
 
         internal void RaiseOnPlayerStateChanged(CharacterStates state) 
@@ -88,7 +88,7 @@ namespace MazerPlatformer
         internal void RaiseOnPlayerCollisionDirectionChanged(CharacterDirection direction) 
             => OnPlayerCollisionDirectionChanged?.Invoke(direction);
 
-        internal void RaiseOnPlayerComponentChanged(GameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) 
+        internal void RaiseOnPlayerComponentChanged(IGameObject thisObject, string name, Component.ComponentType type, object oldValue, object newValue) 
             => OnPlayerComponentChanged?.Invoke(thisObject, name, type, oldValue, newValue);
 
         internal void RaiseOnPlayerDied() 
@@ -97,11 +97,11 @@ namespace MazerPlatformer
         internal void RaiseOnLoadLevel(LevelDetails details) 
             => OnLoadLevel?.Invoke(details);
 
-        internal void RaiseOnGameWorldCollision(Option<GameObject> obj1, Option<GameObject> obj2) 
+        internal void RaiseOnGameWorldCollision(Option<IGameObject> obj1, Option<IGameObject> obj2) 
             => OnGameWorldCollision?.Invoke(obj1, obj2);
 
-        internal void RaiseGameObjectAddedOrRemovedEvent(GameObject gameObject, bool isRemoved, int runningTotalCount) 
-            => OnGameObjectAddedOrRemoved?.Invoke(gameObject, isRemoved, runningTotalCount);
+        internal void RaiseGameObjectAddedOrRemovedEvent(IGameObject gameObject, bool isRemoved, int runningTotalCount) 
+            => OnGameObjectAddedOrRemoved?.Invoke(gameObject.ToOption(), isRemoved, runningTotalCount);
         internal void RaiseLevelCleared(ILevel level) 
             => OnLevelCleared?.Invoke(level);
 

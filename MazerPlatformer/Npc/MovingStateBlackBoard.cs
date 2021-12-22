@@ -24,7 +24,7 @@ namespace MazerPlatformer
         public Npc Npc {get;set;}
         public GameWorld GameWorld { get; set; }
         public Player Player { get; set; }
-        public Room Room { get; set; }
+        public IRoom Room { get; set; }
         public int Row { get; set; }
         public int Col { get; set; }
         public int PlayerRow { get; set; }
@@ -45,7 +45,7 @@ namespace MazerPlatformer
 
         #endregion
 
-        public Either<IFailure, Unit> Update(GameWorld gameWorld, Player player, Room npcRoom, int myRow, int myCol, int playerRow, int playerCol, GameTime gameTime, Npc npc)
+        public Either<IFailure, Unit> Update(GameWorld gameWorld, Player player, IRoom npcRoom, int myRow, int myCol, int playerRow, int playerCol, GameTime gameTime, Npc npc)
         {
             GameWorld = gameWorld;
             Player = player;

@@ -532,7 +532,7 @@ namespace MazerPlatformer
 
 
 
-        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<GameObject> gameObject, bool removed, int runningTotalCount)
+        private Either<IFailure, Unit> OnGameObjectAddedOrRemoved(Option<IGameObject> gameObject, bool removed, int runningTotalCount)
             => gameObject.Match(Some: (validGameObject) =>
                                                 WhenTrue(() => validGameObject.IsNpcType(Npc.NpcTypes.Pickup) && removed)
                                                 .Iter(unit => _playerPickups++)
@@ -540,7 +540,7 @@ namespace MazerPlatformer
                                 None: () => NotFound.Create("Game Object was invalid")
                                             .ToEitherFailure<Unit>()
                                             .Iter((unit) => Ensure(() => _numGameObjects = runningTotalCount))); // We'll keep track of how many pickups the player picks up over time
-        private Either<IFailure, Unit> OnPlayerComponentChanged(GameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
+        private Either<IFailure, Unit> OnPlayerComponentChanged(IGameObject player, string componentName, Component.ComponentType componentType, object oldValue, object newValue) =>
             TryCastToT<int>(newValue)
             .Bind(value => SetPlayerDetails(componentType, value, SetPlayerHealthScalar, SetPlayerPointsScalar));
 
@@ -553,7 +553,7 @@ namespace MazerPlatformer
                                 .Map(ReadPlayerHealth))
             .Map(health => Nothing);
 
-        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<GameObject> object1, Option<GameObject> object2 /*Unused*/)
+        private Either<IFailure, Unit> GameWorld_OnGameWorldCollision(Option<IGameObject> object1, Option<IGameObject> object2 /*Unused*/)
             => object1.ToEither(NotFound.Create("Game Object was invalid or not found"))
                 .Bind(gameObject => IncrementCollisionStats(gameObject, () => _numCollisionsWithPlayerAndNpCs++, () => _numGameCollisionsEvents++));
 

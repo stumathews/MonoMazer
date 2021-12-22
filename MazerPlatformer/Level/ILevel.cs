@@ -17,13 +17,13 @@ namespace MazerPlatformer
         int ViewPortHeight { get; }
         int ViewPortWidth { get; }
 
-        Dictionary<string, GameObject> GetGameObjects();
+        Dictionary<string, IGameObject> GetGameObjects();
 
-        List<Option<Room>> GetAdjacentRoomsTo(Room room);
-        Option<Room> GetRoom(int index);
-        Either<IFailure, List<Room>> GetRooms();
-        Either<IFailure, Dictionary<string, GameObject>> Load(IGameContentManager contentManager, int? playerHealth = null, int? playerScore = null);
-        Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false);
+        List<Option<IRoom>> GetAdjacentRoomsTo(IRoom room);
+        Option<IRoom> GetRoom(int index);
+        Either<IFailure, List<IRoom>> GetRooms();
+        Either<IFailure, Dictionary<string, IGameObject>> Load(IGameContentManager contentManager, int? playerHealth = null, int? playerScore = null);
+        Either<IFailure, List<IRoom>> MakeRooms(bool removeRandSides = false);
         Either<IFailure, Unit> PlayLoseSound();
         Either<IFailure, Unit> PlayPlayerSpottedSound();
         Either<IFailure, Unit> PlaySong();
@@ -33,7 +33,7 @@ namespace MazerPlatformer
 
         Player GetPlayer();
         List<Npc> GetNpcs();
-        Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator);
+        Either<IFailure, Player> MakePlayer(IRoom playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator);
         Either<IFailure, Unit> Save(bool shouldSave, LevelDetails levelFile, Player player, string levelFileName, IFileSaver fileSaver, List<Npc> npcs);
     }
 }

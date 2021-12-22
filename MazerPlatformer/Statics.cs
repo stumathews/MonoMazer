@@ -41,15 +41,15 @@ namespace MazerPlatformer
             => (T) Enum.Parse(typeof(T), value, true));
 
         //TODO: Ensure that GameObjects is not NULL - use Option<T>
-        public static bool IsPlayer(this GameObject gameObject) => gameObject.Id == Player.PlayerId;
+        public static bool IsPlayer(this IGameObject gameObject) => gameObject.Id == Player.PlayerId;
 
-        public static bool IsNpc(GameObject obj) => obj.Type == GameObject.GameObjectType.Npc;
+        public static bool IsNpc(IGameObject obj) => obj.Type == GameObjectType.Npc;
 
         //TODO: Ensure that GameObjects is not NULL - use Option<T>
-        public static bool IsNpcType(this GameObject gameObject, Npc.NpcTypes type)
+        public static bool IsNpcType(this IGameObject gameObject, Npc.NpcTypes type)
         {
             
-            bool IsComponentFound(GameObject go) => go.FindComponentByType(Component.ComponentType.NpcType)
+            bool IsComponentFound(IGameObject go) => go.FindComponentByType(Component.ComponentType.NpcType)
                     .Map(found => (Npc.NpcTypes)found.Value == type)                     
                     .Match(Some: (o)=>o, None:()=>false);
 
@@ -64,7 +64,7 @@ namespace MazerPlatformer
             return (T) GetValues().GetValue(LevelStatics.RandomGenerator.Next(GetValues().Length));
         });
 
-        public static Option<Npc.NpcTypes> GetNpcType(this GameObject npc) =>
+        public static Option<Npc.NpcTypes> GetNpcType(this IGameObject npc) =>
                  Maybe(() => !IsNpc(npc))
                 .Bind((b) => npc.FindComponentByType(Component.ComponentType.NpcType)
                 .Bind(component => string.IsNullOrEmpty(component.Value.ToString()) ? Option<string>.None : component.Value.ToString())
@@ -553,7 +553,7 @@ namespace MazerPlatformer
             return found;
         }
 
-        public static Either<IFailure, Vector2> GetCentreImpure(this GameObject gameObject) => EnsureWithReturn(() =>
+        public static Either<IFailure, Vector2> GetCentreImpure(this IGameObject gameObject) => EnsureWithReturn(() =>
         {
             // This function is a pure function
             Vector2 centre;
@@ -563,7 +563,7 @@ namespace MazerPlatformer
         });
 
         // Not pure as it throws but close
-        public static Vector2 GetCentre(this GameObject gameObject) 
+        public static Vector2 GetCentre(this IGameObject gameObject) 
             => GetCentreImpure(gameObject).ThrowIfFailed();
 
         public static bool DictValueEquals<K, V>(IDictionary<K, V> dic1, IDictionary<K, V> dic2) 

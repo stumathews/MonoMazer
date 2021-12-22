@@ -77,6 +77,8 @@
     <Compile Include="AI\GameWorldBlackBoardController.cs" />
     <Compile Include="AI\Expert.cs" />
     <Compile Include="AI\LevelExpert.cs" />
+    <Compile Include="GameObject\GameObject.cs" />
+    <Compile Include="GameObject\IGameObject.cs" />
     <Compile Include="Level\ILevel.cs" />
     <Compile Include="Level\LevelFactory.cs" />
     <Compile Include="Npc\CollidingExpert.cs" />
@@ -92,7 +94,6 @@
     <Compile Include="Infrastracture\GameContentManager.cs" />
     <Compile Include="Infrastracture\GameGraphicsDevice.cs" />
     <Compile Include="Game\GameMediator.cs" />
-    <Compile Include="GameObject\GameObject.cs" />
     <Compile Include="GameObject\GameObjectType.cs" />
     <Compile Include="Game\GameSpriteFont.cs" />
     <Compile Include="Game\GameStates.cs" />
@@ -104,7 +105,6 @@
     <Compile Include="Failures\IFailure.cs" />
     <Compile Include="Failures\InvalidCastFailure.cs" />
     <Compile Include="Infrastracture\IGameGraphicsDevice.cs" />
-    <Compile Include="GameObject\IGameObject.cs" />
     <Compile Include="Infrastracture\Ui\IGameUserInterface.cs" />
     <Compile Include="GameWorld\IGameWorld.cs" />
     <Compile Include="Infrastracture\IMusicPlayer.cs" />
@@ -138,6 +138,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Infrastracture\PureFunctionAttribute.cs" />
+    <Compile Include="Room\IRoom.cs" />
     <Compile Include="Room\RectDetails.cs" />
     <Compile Include="Room\Room.cs" />
     <Compile Include="Failures\ShortCircuitFailure.cs" />

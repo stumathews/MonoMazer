@@ -82,9 +82,9 @@ namespace MazerPlatformer
         public static bool AnyNegative(int x, int y, int width, int height) 
             => new[] {x, y, width, height}.Any(o => o < 0);
 
-        public static List<Room> CreateNewMazeGrid(int rows, int cols, int RoomWidth, int RoomHeight, EventMediator eventMediator)
+        public static List<IRoom> CreateNewMazeGrid(int rows, int cols, int RoomWidth, int RoomHeight, EventMediator eventMediator)
         {
-            var mazeGrid = new List<Room>();
+            var mazeGrid = new List<IRoom>();
 
             for (var row = 0; row < rows; row++)
             {

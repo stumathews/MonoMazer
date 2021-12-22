@@ -33,7 +33,7 @@ namespace MazerPlatformer
         /// <summary>
         /// Tracks if the game object is currently colliding
         /// </summary>
-        public bool IsColliding;
+        public bool IsColliding {get;set; }
 
         /// <summary>
         /// Every game object has possible states
@@ -53,7 +53,7 @@ namespace MazerPlatformer
         /// <summary>
         /// Every game object has a known type, eg. Room, NPC, Player
         /// </summary>
-        public readonly GameObjectType Type;
+        public GameObjectType Type {get;set;}
 
         /// <summary>
         /// Location on X-axis of game object
@@ -93,7 +93,7 @@ namespace MazerPlatformer
         private BoundingBox _boundingBox;
 
         // This is currently not being used?
-        public BoundingSphere BoundingSphere;
+        public BoundingSphere BoundingSphere {get;set;}
 
         /// <summary>
         /// The maximum point of the bounding box around the player (bottom right)
@@ -103,7 +103,8 @@ namespace MazerPlatformer
         /// <summary>
         /// Every game object has a Customizable inventory of components
         /// </summary>
-        public List<Component> Components = new List<Component>();
+        
+        public List<Component> Components {get;set;} = new List<Component>();
 
         /// <summary>
         /// Raised when a component in in the game object changes
@@ -122,9 +123,9 @@ namespace MazerPlatformer
 
         /* Event information */
 
-        public delegate Either<IFailure, Unit> GameObjectComponentChanged(GameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
-        public delegate Either<IFailure, Unit> CollisionArgs(Option<GameObject> thisObject, Option<GameObject> otherObject);
-        public delegate void DisposingInfo(GameObject theObject);
+        public delegate Either<IFailure, Unit> GameObjectComponentChanged(IGameObject thisObject, string componentName, Component.ComponentType componentType, object oldValue, object newValue);
+        public delegate Either<IFailure, Unit> CollisionArgs(Option<IGameObject> thisObject, Option<IGameObject> otherObject);
+        public delegate void DisposingInfo(IGameObject theObject);
 
         // Ctor
         protected GameObject(int x, int y, string id, int width, int height, GameObjectType type, EventMediator eventMediator)
@@ -224,14 +225,14 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="otherObject">The other object that potentially is colliding with this object</param>
         /// <returns>true if coliding, false if not, failure otherwise</returns>
-        public virtual Either<IFailure, bool> IsCollidingWith(GameObject otherObject)
+        public virtual Either<IFailure, bool> IsCollidingWith(IGameObject otherObject)
             => WhenTrue(() => otherObject == null || otherObject.Id == Id)
                     .ToEither(ShortCircuitFailure.Create("Cant collide with null or myself"))
                 .BiBind(Right: (unit) => false.ToEither(), 
                         Left: (failure) => SetObjectsAreColliding(otherObject).
                                                 MapLeft((failed)=>UnexpectedFailure.Create($"Failure while setting object collision status: {failed}")));
 
-        private Either<IFailure, bool> SetObjectsAreColliding(GameObject otherObject)
+        private Either<IFailure, bool> SetObjectsAreColliding(IGameObject otherObject)
         {
             // We're colliding if our bounding boxes intersect
             IsColliding = otherObject.BoundingSphere.Intersects(BoundingSphere);
@@ -245,14 +246,14 @@ namespace MazerPlatformer
 
         // Not sure this is a good as it could be because the Game world is what calls this 
         // as its the game world is what checks for collisions
-        public virtual Either<IFailure, Unit> RaiseCollisionOccured(GameObject otherObject) => Ensure(() =>
+        public virtual Either<IFailure, Unit> RaiseCollisionOccured(IGameObject otherObject) => Ensure(() =>
         {
             // We are collidig now
             IsColliding = true;
 
             // Tell our subscribers that we collided
             CollisionArgs GetCollisionHandler() => OnCollision; // Microsoft recommends assigning to temp object to avoid race condition
-            GetCollisionHandler()?.Invoke(this, otherObject);
+            GetCollisionHandler()?.Invoke(this, otherObject.ToOption());
         });
 
         /// <summary>

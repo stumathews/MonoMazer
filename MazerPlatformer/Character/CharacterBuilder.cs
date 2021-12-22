@@ -45,7 +45,7 @@ namespace MazerPlatformer
             _eventMediator = eventMediator;
         }
 
-        public Either<IFailure, Npc> CreateNpc(Room randomRoom, string assetName, int frameWidth = AnimationInfo.DefaultFrameWidth,
+        public Either<IFailure, Npc> CreateNpc(IRoom randomRoom, string assetName, int frameWidth = AnimationInfo.DefaultFrameWidth,
             int frameHeight = AnimationInfo.DefaultFrameHeight, int frameCount = AnimationInfo.DefaultFrameCount,
             Npc.NpcTypes type = Npc.NpcTypes.Enemy, int moveStep = 3) 
             => WhenTrue(() => type == Npc.NpcTypes.Pickup)
@@ -73,24 +73,24 @@ namespace MazerPlatformer
             return npc;
         });
 
-        private Either<IFailure, Npc> MakeMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, Npc.NpcTypes type, int moveStep, EventMediator eventMediator)
+        private Either<IFailure, Npc> MakeMovingNpc(IRoom randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, Npc.NpcTypes type, int moveStep, EventMediator eventMediator)
             => from npc in MakeNonMovingNpc(randomRoom, assetName, frameWidth, frameHeight, frameCount, moveStep, eventMediator )
                from isNotPickup in WhenTrue(() => type != Npc.NpcTypes.Pickup).ToEither()
                         .MapLeft((failure)=>ShortCircuitFailure.Create("Cant make Mocing NPC from pickup"))
                from initializedNpc in InitializeNpcStates(npc)
                select initializedNpc;
 
-        private Either<IFailure, Npc> MakeNonMovingNpc(Room randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, int moveStep, EventMediator eventMediator) 
+        private Either<IFailure, Npc> MakeNonMovingNpc(IRoom randomRoom, string assetName, int frameWidth, int frameHeight, int frameCount, int moveStep, EventMediator eventMediator) 
             => Npc.Create((int)randomRoom.GetCentre().X, (int)randomRoom.GetCentre().Y, Guid.NewGuid().ToString(),
                           AnimationInfo.DefaultFrameWidth, AnimationInfo.DefaultFrameHeight,
-                          GameObject.GameObjectType.Npc,
+                          GameObjectType.Npc,
                           new AnimationInfo(texture: ContentManager.Load<Texture2D>(assetName), assetFile: assetName,
                                             frameWidth: frameWidth, frameHeight: frameHeight, frameCount: frameCount), eventMediator,
                           moveStep);
 
 
 
-        public Either<IFailure, List<Npc>> CreateDefaultNpcSet(List<Room> rooms, List<Npc> npcs, ILevel level) => EnsuringBind(() =>
+        public Either<IFailure, List<Npc>> CreateDefaultNpcSet(List<IRoom> rooms, List<Npc> npcs, ILevel level) => EnsuringBind(() =>
         {
             return
                 from pirates in CreateWith(DefaultNumPirates, creator: () => Create($@"Sprites\pirate{_random.Next(1, 4)}", 40, Npc.NpcTypes.Enemy, level, rooms))
@@ -117,13 +117,13 @@ namespace MazerPlatformer
         private static IEnumerable<Either<IFailure, Npc>> CreateWith(int num, Func<Either<IFailure, Npc>> creator) 
             => Enumerable.Range(0, num).Select(index => creator());
 
-        private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, ILevel level, List<Room> rooms) 
+        private Either<IFailure, Npc> Create(string assetName, int hitPoints, Npc.NpcTypes npcType, ILevel level, List<IRoom> rooms) 
             => GetRandomLevelRoom(level)
                 .Bind(randomRoom => CreateNpc(randomRoom, assetName))
                 .Bind(npc => npc.AddComponent(Component.ComponentType.HitPoints, hitPoints).Map(component => npc))
                 .Bind(npc => npc.AddComponent(Component.ComponentType.NpcType, npcType).Map(component => npc));
 
-        private Either<IFailure,Room> GetRandomLevelRoom(ILevel level) 
+        private Either<IFailure,IRoom> GetRandomLevelRoom(ILevel level) 
             => level.GetRooms()
                 .EnsuringMap( rooms => rooms[LevelStatics.RandomGenerator.Next(0, level.Rows * level.Cols)])
                         .MapLeft((failure)=> NotFound.Create($"Random Room could not be found: {failure}"));

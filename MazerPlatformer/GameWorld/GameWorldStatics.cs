@@ -29,21 +29,21 @@ namespace MazerPlatformer
 {
     public class GameWorldStatics
     {
-        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(GameObject obj, Dictionary<string, GameObject> gameObjects, EventMediator events) => Ensure(() 
+        public static Either<IFailure, Unit> NotifyObjectAddedOrRemoved(IGameObject obj, Dictionary<string, IGameObject> gameObjects, EventMediator events) => Ensure(() 
             =>
         {
             // We want subscribers to inspect the object before we dispose of it below
             events.RaiseGameObjectAddedOrRemovedEvent(obj, isRemoved: true, runningTotalCount: gameObjects.Count);
         });
 
-        public static void NotifyBothObjectsHaveCollided(GameObject go1, GameObject go2)
+        public static void NotifyBothObjectsHaveCollided(IGameObject go1, IGameObject go2)
         {
             // Inform everyone who want to know when game object collison detected
             go2.RaiseCollisionOccured(go1);
             go1.RaiseCollisionOccured(go2);
         }
 
-        public static Either<IFailure, Unit> SetRoomToActive(GameObject go1, GameObject go2 ) =>
+        public static Either<IFailure, Unit> SetRoomToActive(IGameObject go1, IGameObject go2 ) =>
                 WhenTrue(() => go1.Id == Player.PlayerId)
                 .Iter((unit) => go2.Active = go2.Type == GameObjectType.Room)
                 .ToEither();
@@ -54,7 +54,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="gameObject1"></param>
         /// <param name="gameObject2"></param>
-        public static void IsCollisionBetween(GameObject gameObject1, GameObject gameObject2)        
+        public static void IsCollisionBetween(IGameObject gameObject1, IGameObject gameObject2)        
         => (!IsSameType(gameObject1, gameObject2))
                 .ToOption().ToEither().MapLeft((failure)=>ShortCircuitFailure.Create($"Game Objects are the same, skipping: {failure}"))
             .Bind((notSameType) => gameObject2.IsCollidingWith(gameObject1))
@@ -63,25 +63,25 @@ namespace MazerPlatformer
             .BiIter(Some: (yesIsColliding) => NotifyBothObjectsHaveCollided(gameObject1, gameObject2),
                     None: (/*Not colliding*/) => SetBothObjectsNotColliding(gameObject1, gameObject2));
 
-        private static void SetBothObjectsNotColliding(GameObject obj1, GameObject obj2) 
+        private static void SetBothObjectsNotColliding(IGameObject obj1, IGameObject obj2) 
             => obj2.IsColliding = obj1.IsColliding = false;
-        public static bool IsSameType(GameObject gameObject1, GameObject gameObject2)
+        public static bool IsSameType(IGameObject gameObject1, IGameObject gameObject2)
             => gameObject1.Type == gameObject2.Type;
 
-        public static Option<Unit> IsLevelPickup(GameObject obj, ILevel level) =>
+        public static Option<Unit> IsLevelPickup(IGameObject obj, ILevel level) =>
             obj.IsNpcType(Npc.NpcTypes.Pickup) ? new Unit() : Option<Unit>.None;
 
-        public static Either<IFailure, GameObject> GetGameObjectForId(Dictionary<string, GameObject> gameObjects, string id) => EnsureWithReturn(()
-            => gameObjects[id]).ThrowIfFailed();
+        public static Either<IFailure, IGameObject> GetGameObjectForId(Dictionary<string, IGameObject> gameObjects, string id) => EnsureWithReturn(()
+            => gameObjects[id]);
 
-        public static Either<IFailure, Unit> DeactivateGameObject(GameObject obj, Dictionary<string, GameObject> gameObjects) => Ensure(() =>
+        public static Either<IFailure, Unit> DeactivateGameObject(IGameObject obj, Dictionary<string, IGameObject> gameObjects) => Ensure(() =>
         {
             obj.Active = false;
             gameObjects.Remove(obj.Id);
             obj.Dispose();
         });
 
-        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, GameObject> gameObjects, GameObject gameObject, EventMediator events) => Ensure(() =>
+        public static Either<IFailure, Unit> AddToGameObjects(IDictionary<string, IGameObject> gameObjects, IGameObject gameObject, EventMediator events) => Ensure(() =>
         {
             //gameObjects.Add(gameObject.Id, gameObject);
             //events.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: gameObjects.Count());
@@ -102,7 +102,7 @@ namespace MazerPlatformer
             return level;
         });
 
-        public static Either<IFailure, Unit> AddToGameWorld(Dictionary<string, GameObject> levelGameObjects, Dictionary<string, GameObject> gameWorldObjects, EventMediator events)
+        public static Either<IFailure, Unit> AddToGameWorld(Dictionary<string, IGameObject> levelGameObjects, Dictionary<string, IGameObject> gameWorldObjects, EventMediator events)
             => levelGameObjects
                 .Map(levelGameObject => AddToGameObjects(gameWorldObjects, levelGameObject.Value, events))
                 .AggregateUnitFailures();
@@ -157,35 +157,35 @@ namespace MazerPlatformer
         /// <param name="side"></param>
         /// <param name="sideCharacteristics"></param>
         /// <returns></returns>
-        public static Either<IFailure, Unit> OnRoomCollision(Room room, GameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(()
-            => WhenTrue(() => otherObject.Type == GameObject.GameObjectType.Player)
+        public static Either<IFailure, Unit> OnRoomCollision(IRoom room, IGameObject otherObject, Room.Side side, SideCharacteristic sideCharacteristics) => Ensure(()
+            => WhenTrue(() => otherObject.Type == GameObjectType.Player)
                 .Iter((success) => room.RemoveSide(side)));
 
-        public static bool IsSameRow(GameObject go1, GameObject go2, int roomHeight)
+        public static bool IsSameRow(IGameObject go1, IGameObject go2, int roomHeight)
             => GetObjRow(go1, roomHeight) == GetObjRow(go2, roomHeight);
-        public static bool IsSameCol(GameObject go1, GameObject go2, int roomWidth)
+        public static bool IsSameCol(IGameObject go1, IGameObject go2, int roomWidth)
             => GetObjCol(go1, roomWidth) == GetObjCol(go2, roomWidth);
 
-        public static int GetObjRow(GameObject go, int roomHeight)
+        public static int GetObjRow(IGameObject go, int roomHeight)
             => ToRoomRow(go, roomHeight).ThrowIfNone(NotFound.Create($"Could not convert game object {go} to row number"));
-        public static int GetObjCol(GameObject go, int roomWidth)
+        public static int GetObjCol(IGameObject go, int roomWidth)
             => ToRoomColumn(go, roomWidth).ThrowIfNone(NotFound.Create($"Could not convert game object {go} to column number"));
 
-        public static IEnumerable<Room> GetRoomsInThisRow(List<Room> rooms, GameObject go1, int roomHeight)
+        public static IEnumerable<IRoom> GetRoomsInThisRow(List<IRoom> rooms, IGameObject go1, int roomHeight)
             => rooms.Where(room => room.Row + 1 == GetObjRow(go1, roomHeight));
-        public static List<Room> GetRooomsBetween(List<Room> rooms, int max, int min, GameObject go1, int roomHeight)
+        public static List<IRoom> GetRooomsBetween(List<IRoom> rooms, int max, int min, IGameObject go1, int roomHeight)
             => GetRoomsInThisRow(rooms, go1, roomHeight).Where(room => room.Col >= min - 1 && room.Col <= max - 1).OrderBy(o => o.X).ToList();
-        public static IEnumerable<Room> GetRoomsInThisCol(List<Room> rooms, GameObject go1, int roomWidth)
+        public static IEnumerable<IRoom> GetRoomsInThisCol(List<IRoom> rooms, IGameObject go1, int roomWidth)
             => rooms.Where(room => room.Col + 1 == GetObjCol(go1, roomWidth));
-        public static List<Room> GetRoomsBetween(List<Room> rooms, int min, int max, GameObject go1, int roomWidth)
+        public static List<IRoom> GetRoomsBetween(List<IRoom> rooms, int min, int max, IGameObject go1, int roomWidth)
             => GetRoomsInThisCol(rooms, go1, roomWidth).Where(room => room.Row >= min - 1 && room.Row <= max - 1).OrderBy(o => o.Y).ToList();
-        public static Option<int> ToRoomColumn(GameObject gameObject1, int roomWidth) => EnsureWithReturn(()
+        public static Option<int> ToRoomColumn(IGameObject gameObject1, int roomWidth) => EnsureWithReturn(()
             => ToRoomColumnFast(gameObject1, roomWidth)).ToOption();
 
-        public static Option<int> ToRoomRow(GameObject o1, int roomHeight) => EnsureWithReturn(()
+        public static Option<int> ToRoomRow(IGameObject o1, int roomHeight) => EnsureWithReturn(()
             => ToRoomRowFast(o1, roomHeight)).ToOption();
 
-        public static int ToRoomColumnFast(GameObject gameObject1, int roomWidth)
+        public static int ToRoomColumnFast(IGameObject gameObject1, int roomWidth)
             => roomWidth == 0 ? 0 : (int)Math.Ceiling((float)gameObject1.X / roomWidth);
 
         public static int ToRoomColumnFast(float x, int roomWidth)
@@ -194,10 +194,10 @@ namespace MazerPlatformer
         public static int ToRoomRowFast(float y, int roomHeight)
             => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)y / roomHeight);
 
-        public static int ToRoomRowFast(GameObject o1, int roomHeight)
+        public static int ToRoomRowFast(IGameObject o1, int roomHeight)
             => roomHeight == 0 ? 0 : (int)Math.Ceiling((float)o1.Y / roomHeight);
 
-        public static bool IsLineOfSightInRow(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, ILevel level)
+        public static bool IsLineOfSightInRow(IGameObject go1, IGameObject go2, int roomWidth, int roomHeight, List<IRoom> rooms, ILevel level)
         {
             (int greater, int smaller) = GetMaxMinRange(GetObjCol(go2, roomWidth), GetObjCol(go1, roomWidth)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -215,7 +215,7 @@ namespace MazerPlatformer
         }
 
 
-        public static bool IsLineOfSightInCol(GameObject go1, GameObject go2, int roomWidth, int roomHeight, List<Room> rooms, ILevel level)
+        public static bool IsLineOfSightInCol(IGameObject go1, IGameObject go2, int roomWidth, int roomHeight, List<IRoom> rooms, ILevel level)
         {
             var minMax = GetMaxMinRange(GetObjRow(go2, roomHeight), GetObjRow(go1, roomHeight)).ThrowIfNone(NotFound.Create("Missing MinMax arguments"));
 
@@ -233,14 +233,14 @@ namespace MazerPlatformer
             return true;
         }
 
-        public static Either<IFailure, int> DetermineMyNewHealthOnCollision(GameObject me, GameObject opponent)
+        public static Either<IFailure, int> DetermineMyNewHealthOnCollision(IGameObject me, IGameObject opponent)
             =>  from opponentHitPointsComponent in opponent.FindComponentByType(Component.ComponentType.HitPoints).ToEither(NotFound.Create("Could not find hit-point component"))
                 from healthComponent in me.FindComponentByType(Component.ComponentType.Health).ToEither(NotFound.Create("Could not find health component"))
                 from myHealth in TryCastToT<int>(healthComponent.Value)
                 from opponentHitPoints in TryCastToT<int>(opponentHitPointsComponent.Value)
                 select myHealth - opponentHitPoints;
 
-        public static Either<IFailure, int> DetermineNewLevelPointsOnCollision(GameObject me, GameObject pickup)
+        public static Either<IFailure, int> DetermineNewLevelPointsOnCollision(IGameObject me, IGameObject pickup)
             => from pickupsPointsComponent in pickup.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
                 from myPointsComponent in me.FindComponentByType(Component.ComponentType.Points).ToEither(NotFound.Create("Could not find hit-point component"))
                 from myPoints in TryCastToT<int>(myPointsComponent.Value)
@@ -267,16 +267,16 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt, Player player) 
             => player.MoveInDirection(direction, dt);
 
-        public static IEnumerable<GameObject> UpdateAllObjects(GameTime gameTime, List<GameObject> gameObjects) 
-            => gameObjects.Select((GameObject gameObject) =>
+        public static IEnumerable<IGameObject> UpdateAllObjects(GameTime gameTime, List<IGameObject> gameObjects) 
+            => gameObjects.Select((IGameObject gameObject) =>
                 {
                     gameObject.Update(gameTime);
                     return gameObject;
                 });
-        public static int GetCol(GameObject go, int roomWidth)
+        public static int GetCol(IGameObject go, int roomWidth)
             => ToRoomColumnFast(go, roomWidth);
 
-        public static int GetRow(GameObject go, int roomHeight)
+        public static int GetRow(IGameObject go, int roomHeight)
             => ToRoomRowFast(go, roomHeight);
     }
 }

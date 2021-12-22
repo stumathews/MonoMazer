@@ -151,7 +151,7 @@ namespace MazerPlatformer
         public Either<IFailure, Unit> SetAsIdle()
             => SetCharacterState(CharacterStates.Idle);
 
-        private Either<IFailure, Unit> CollisionOccurred(Option<GameObject> object1, Option<GameObject> object2)
+        private Either<IFailure, Unit> CollisionOccurred(Option<IGameObject> object1, Option<IGameObject> object2)
             => SetCollisionDirection(CurrentDirection);
 
         /// <summary>

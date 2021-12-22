@@ -89,9 +89,9 @@ namespace MazerPlatformer
         public static Either<IFailure, Unit> HideMenu(Action setMenuPanelNotVisible) => Statics.Ensure(setMenuPanelNotVisible);
 
 
-        public static Either<IFailure, Unit> IncrementCollisionStats(GameObject gameObject, Action increamentNumCollisionsWithPlayer, Action incrementGameCollisionEvents) => Statics.Ensure(() =>
+        public static Either<IFailure, Unit> IncrementCollisionStats(IGameObject gameObject, Action increamentNumCollisionsWithPlayer, Action incrementGameCollisionEvents) => Statics.Ensure(() =>
         {
-            Statics.WhenTrue(()=>gameObject.Type == GameObject.GameObjectType.Npc)
+            Statics.WhenTrue(()=>gameObject.Type == GameObjectType.Npc)
             .Iter((success)=>increamentNumCollisionsWithPlayer());
 
             incrementGameCollisionEvents();

@@ -23,10 +23,10 @@ namespace MazerPlatformer
         EventMediator EventMediator {get;set;}
         Either<IFailure, Unit> Draw(Option<InfrastructureMediator> infrastructure);
         int GetRoomHeight();
-        Option<Room> GetRoomIn(GameObject gameObject);
+        Option<IRoom> GetRoomIn(IGameObject gameObject);
         int GetRoomWidth();
         Either<IFailure, Unit> Initialize();
-        Either<IFailure, bool> IsPathAccessibleBetween(GameObject obj1, GameObject obj2);
+        Either<IFailure, bool> IsPathAccessibleBetween(IGameObject obj1, IGameObject obj2);
         Either<IFailure, Unit> LoadContent(int levelNumber, int? overridePlayerHealth = null, int? overridePlayerScore = null);
         Either<IFailure, Unit> MovePlayer(Character.CharacterDirection direction, GameTime dt);
         Either<IFailure, Unit> OnKeyUp(object sender, KeyboardEventArgs keyboardEventArgs);

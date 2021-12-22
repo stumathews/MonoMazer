@@ -38,7 +38,7 @@ namespace MazerPlatformer
             frameHeight: l?.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
             frameCount: l?.SpriteFrameCount ?? AnimationInfo.DefaultFrameCount);
 
-        public static Option<Player> CreatePlayer(Room player_room, AnimationInfo animation, LevelDetails level, EventMediator eventMediator) => new Player(x: (int)player_room.GetCentre().X,
+        public static Option<Player> CreatePlayer(IRoom player_room, AnimationInfo animation, LevelDetails level, EventMediator eventMediator) => new Player(x: (int)player_room.GetCentre().X,
             y: (int)player_room.GetCentre().Y,
             width: level.SpriteWidth ?? AnimationInfo.DefaultFrameWidth,
             height: level.SpriteHeight ?? AnimationInfo.DefaultFrameHeight,
@@ -159,7 +159,7 @@ namespace MazerPlatformer
             return npc;
         });
 
-        public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<Room> rooms, ILevel level)
+        public static Either<IFailure, List<Npc>> GenerateNPCsFromLevelFile(List<Npc> levelCharacters, LevelDetails file, CharacterBuilder npcBuilder, List<IRoom> rooms, ILevel level)
         {
             file.Npcs.Iter((levelNpc) =>
             {
@@ -180,7 +180,7 @@ namespace MazerPlatformer
             return levelCharacters;
         }
 
-        public static Room GetRandomRoom(List<Room> rooms, ILevel level) => rooms[RandomGenerator.Next(0, level.Rows * level.Cols)];
+        public static IRoom GetRandomRoom(List<IRoom> rooms, ILevel level) => rooms[RandomGenerator.Next(0, level.Rows * level.Cols)];
 
     }
 

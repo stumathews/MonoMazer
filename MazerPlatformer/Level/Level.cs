@@ -47,23 +47,23 @@ namespace MazerPlatformer
         public int RoomHeight { get; private set; }
 
         // List of rooms in the game world
-        private List<Room> _rooms = new List<Room>();
+        private List<IRoom> _rooms = new List<IRoom>();
 
-        public Option<Room> GetRoom(int index)
+        public Option<IRoom> GetRoom(int index)
             => index >= 0 && index <= ((Cols * Rows) - 1)
-                ? _rooms[index]
-                : Option<Room>.None;
-        public List<Option<Room>> GetAdjacentRoomsTo(Room room)
-            => new Option<Room>[] {
+                ? _rooms[index].ToOption()
+                : Option<IRoom>.None;
+        public List<Option<IRoom>> GetAdjacentRoomsTo(IRoom room)
+            => new Option<IRoom>[] {
                     GetRoom(room.RoomAbove),
                     GetRoom(room.RoomBelow),
                     GetRoom(room.RoomLeft),
                     GetRoom(room.RoomRight)}.ToList();
 
         // Main collection of game objects within the level
-        private readonly Dictionary<string, GameObject> GameObjects = new Dictionary<string, GameObject>(); // Quick lookup by Id
+        private readonly Dictionary<string, IGameObject> GameObjects = new Dictionary<string, IGameObject>(); // Quick lookup by Id
 
-        public Dictionary<string, GameObject> GetGameObjects() => GameObjects;
+        public Dictionary<string, IGameObject> GetGameObjects() => GameObjects;
 
         private Song _levelMusic;
         private SoundEffect _jingleSoundEffect;
@@ -107,40 +107,40 @@ namespace MazerPlatformer
         }
 
         // Could turn this into Option<List<Room>> or Either<IFailure, List<Room>> ??
-        public Either<IFailure, List<Room>> MakeRooms(bool removeRandSides = false)
+        public Either<IFailure, List<IRoom>> MakeRooms(bool removeRandSides = false)
         {
             var mazeGrid = CreateNewMazeGrid(Rows, Cols, RoomWidth, RoomHeight, _eventMediator);
-            int GetTotalRooms(List<Room> allRooms) => allRooms.Count;
+            int GetTotalRooms(List<IRoom> allRooms) => allRooms.Count;
             int GetNextIndex(int index) => index + 1;
-            int GetThisColumn(Room r) => r.Col;
+            int GetThisColumn(IRoom r) => r.Col;
             int GetRoomAboveIndex(int index) => index - Cols;
             int GetRoomBelowIndex(int index) => index + Cols;
             int GetRoomLeftIndex(int index) => index - 1;
             int GetRoomRightIndex(int index) => index + 1;
             Option<Unit> CanRemoveAbove(int index) => WhenTrue(() => GetRoomAboveIndex(index) > 0);
-            Option<Unit> CanRemoveBelow(int index, List<Room> allRooms) => WhenTrue(() => GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
-            Option<Unit> CanRemoveLeft(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 >= 1);
-            Option<Unit> CanRemoveRight(int index, Room room) => WhenTrue(() => GetThisColumn(room) - 1 <= Cols);
+            Option<Unit> CanRemoveBelow(int index, List<IRoom> allRooms) => WhenTrue(() => GetRoomBelowIndex(index) < GetTotalRooms(allRooms));
+            Option<Unit> CanRemoveLeft(int index, IRoom room) => WhenTrue(() => GetThisColumn(room) - 1 >= 1);
+            Option<Unit> CanRemoveRight(int index, IRoom room) => WhenTrue(() => GetThisColumn(room) - 1 <= Cols);
 
-            Option<Room> GetRoom(int index, List<Room> rooms) => index >= 0 && index < GetTotalRooms(rooms)
+            Option<IRoom> GetRoom(int index, List<IRoom> rooms) => index >= 0 && index < GetTotalRooms(rooms)
                 ? rooms[index].ToOption()
                 : Prelude.None;
 
-            Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<Room> allRooms)
+            Option<Room.Side> SetSideRemovable(Option<Unit> canRemove, Room.Side side1, Room.Side side2, int index, List<IRoom> allRooms)
                             => from side in canRemove
                                from room in GetRoom(index, allRooms)
                                from hasSide1 in WhenTrue(() => HasSide(side1, room.HasSides))
                                from hasSide2 in WhenTrue(() => HasSide(side2, room.HasSides))
                                select side1;
 
-            void RemoveRandomSide(Room.Side side, int idx, Room currentRoom, List<Room> allRooms)
+            void RemoveRandomSide(Room.Side side, int idx, IRoom currentRoom, List<IRoom> allRooms)
             {
-                Option<Room> GetRoomBelow(int index, List<Room> rooms) => GetRoom(GetRoomBelowIndex(idx), allRooms);
-                Option<Room> GetRoomAbove(int index, List<Room> rooms) => GetRoom(GetRoomAboveIndex(idx), allRooms);
-                Option<Room> GetRoomLeft(int index, List<Room> rooms) => GetRoom(GetRoomLeftIndex(idx), allRooms);
-                Option<Room> GetRoomRight(int index, List<Room> rooms) => GetRoom(GetRoomRightIndex(idx), allRooms);
+                Option<IRoom> GetRoomBelow(int index, List<IRoom> rooms) => GetRoom(GetRoomBelowIndex(idx), allRooms);
+                Option<IRoom> GetRoomAbove(int index, List<IRoom> rooms) => GetRoom(GetRoomAboveIndex(idx), allRooms);
+                Option<IRoom> GetRoomLeft(int index, List<IRoom> rooms) => GetRoom(GetRoomLeftIndex(idx), allRooms);
+                Option<IRoom> GetRoomRight(int index, List<IRoom> rooms) => GetRoom(GetRoomRightIndex(idx), allRooms);
 
-                Option<Room.Side> RemovedSide(int index, Room.Side sideToRemove, Room room, Room.Side whenSide, Action<int, Room, Room.Side> then)
+                Option<Room.Side> RemovedSide(int index, Room.Side sideToRemove, IRoom room, Room.Side whenSide, Action<int, IRoom, Room.Side> then)
                 => WhenTrue(() => sideToRemove == whenSide)
                     .Map((unit) =>
                     {
@@ -155,7 +155,7 @@ namespace MazerPlatformer
                 RemovedSide(idx, side, currentRoom, Room.Side.Right, (indx, r, s) => GetRoomRight(idx, allRooms).Iter(room => room.RemoveSide(Room.Side.Left)));
             }
 
-            List<Room.Side> GetRoomRemovableSides(int index, Room currentRoom, List<Room.Side> allRemovableSides, List<Room> allRooms)
+            List<Room.Side> GetRoomRemovableSides(int index, IRoom currentRoom, List<Room.Side> allRemovableSides, List<IRoom> allRooms)
             {
                 SetSideRemovable(CanRemoveAbove(index), Room.Side.Top, Room.Side.Bottom, GetRoomAboveIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
                 SetSideRemovable(CanRemoveBelow(index, allRooms), Room.Side.Bottom, Room.Side.Top, GetRoomBelowIndex(index), allRooms).Iter((side) => allRemovableSides.Add(side)).ToSome();
@@ -168,14 +168,14 @@ namespace MazerPlatformer
                 ? sides[RandomGenerator.Next(0, sides.Count)].ToOption()
                 : Prelude.None;
 
-            Room RemoveRndSide(int idx, Room currentRoom, List<Room> allRooms)
+            IRoom RemoveRndSide(int idx, IRoom currentRoom, List<IRoom> allRooms)
             {
                 UpdateRoomAdjacents(idx, currentRoom);
                 GetRandomSide(GetRoomRemovableSides(idx, currentRoom, new List<Room.Side>(), allRooms)).Iter(side => RemoveRandomSide(side, idx, currentRoom, allRooms));
                 return currentRoom;
             }
 
-            void UpdateRoomAdjacents(int idx, Room currentRoom)
+            void UpdateRoomAdjacents(int idx, IRoom currentRoom)
             {
                 currentRoom.RoomAbove = GetRoomAboveIndex(idx);
                 currentRoom.RoomBelow = GetRoomBelowIndex(idx);
@@ -183,10 +183,10 @@ namespace MazerPlatformer
                 currentRoom.RoomRight = GetRoomRightIndex(idx);
             }
 
-            bool CanChangeRoom(int idx, List<Room> allRooms, bool removeRandomSides)
+            bool CanChangeRoom(int idx, List<IRoom> allRooms, bool removeRandomSides)
                 => GetNextIndex(idx) <= GetTotalRooms(allRooms) & removeRandomSides;
 
-            Option<Room> ModifyRoom(bool shouldRemoveRandomSides, int idx, Room room, List<Room> allRooms)
+            Option<IRoom> ModifyRoom(bool shouldRemoveRandomSides, int idx, IRoom room, List<IRoom> allRooms)
                 => WhenTrue(() => CanChangeRoom(idx, mazeGrid, shouldRemoveRandomSides))
                                     .Map(unit => RemoveRndSide(idx, room, allRooms));
 
@@ -194,7 +194,7 @@ namespace MazerPlatformer
                 .Map((idx, room) => ModifyRoom(removeRandSides, idx, room, mazeGrid))
                 .ToEither()
                 .BindT(room => room)
-                .Map(inner => new List<Room>(inner));
+                .Map(inner => new List<IRoom>(inner));
         }
 
         /// <summary>
@@ -203,7 +203,7 @@ namespace MazerPlatformer
         /// </summary>
         /// <param name="playerRoom"></param>
         /// <returns></returns>
-        public Either<IFailure, Player> MakePlayer(Room playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator) => EnsureWithReturn(()
+        public Either<IFailure, Player> MakePlayer(IRoom playerRoom, LevelDetails levelFile, IGameContentManager contentManager, EventMediator eventMediator) => EnsureWithReturn(()
         => (from assetFile in CreateAssetFile(levelFile)
             from texture in contentManager.TryLoad<Texture2D>(assetFile).ToOption()
             from playerAnimation in CreatePlayerAnimation(assetFile, texture, levelFile)
@@ -223,7 +223,7 @@ namespace MazerPlatformer
         /// <param name="npcBuilder"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static Either<IFailure, List<Npc>> MakeNpCs(List<Room> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, ILevel level) => EnsuringBind(() =>
+        public static Either<IFailure, List<Npc>> MakeNpCs(List<IRoom> rooms, LevelDetails levelFile, CharacterBuilder npcBuilder, ILevel level) => EnsuringBind(() =>
         {
             return WhenTrue(() => Npcs != null && levelFile.Npcs.Count > 0)
              .Match(Some: (unit) => GenerateNPCsFromLevelFile(levelCharacters: new List<Npc>(), levelFile, npcBuilder, rooms, level),
@@ -234,7 +234,7 @@ namespace MazerPlatformer
         /// Load the level
         /// </summary>
         /// <returns></returns>
-        public Either<IFailure, Dictionary<string, GameObject>> Load(IGameContentManager contentManager, int? playerHealth = null, int? playerScore = null)
+        public Either<IFailure, Dictionary<string, IGameObject>> Load(IGameContentManager contentManager, int? playerHealth = null, int? playerScore = null)
         {
             var loadPipeline =
                 from levelFile in LoadLevelFile(playerHealth, playerScore)
@@ -256,13 +256,13 @@ namespace MazerPlatformer
             return loadPipeline;
 
 
-            Either<IFailure, Unit> SetRooms(List<Room> rooms) => Ensure(() => { _rooms = rooms; });
+            Either<IFailure, Unit> SetRooms(List<IRoom> rooms) => Ensure(() => { _rooms = rooms; });
             Either<IFailure, Unit> SetPlayer(Player player) => Ensure(() => { Player = player; });
             Either<IFailure, Unit> SetNPCs(List<Npc> npcs) => Ensure(() => { Npcs = npcs; });
             Either<IFailure, Unit> SetLevelFile(LevelDetails file) => Ensure(() => { LevelFile = file; });
             Either<IFailure, Unit> RaiseOnLoad(LevelDetails file) => Ensure(() => _eventMediator.RaiseOnLoadLevel(file));
 
-            List<Room> MakeLevelRooms() => MakeRooms(removeRandSides: Diagnostics.RandomSides).ThrowIfFailed();
+            List<IRoom> MakeLevelRooms() => MakeRooms(removeRandSides: Diagnostics.RandomSides).ThrowIfFailed();
 
             Either<IFailure, Unit> LoadSoundEffects() => Ensure(() =>
             {
@@ -279,21 +279,21 @@ namespace MazerPlatformer
                         return _levelMusic;
                     }));
 
-            Either<IFailure, Dictionary<string, GameObject>> AddRoomsToGameObjects() => EnsureWithReturn(() =>
+            Either<IFailure, Dictionary<string, IGameObject>> AddRoomsToGameObjects() => EnsureWithReturn(() =>
             {
                 foreach (var room in _rooms)
-                    AddToLevelGameObjects(room.Id, room);
+                    AddToLevelGameObjects(room.GetId(), room);
                 return GameObjects;
             });
 
-            Either<IFailure, Dictionary<string, GameObject>> AddNpcsToGameObjects(List<Npc> npcs) => EnsureWithReturn(() =>
+            Either<IFailure, Dictionary<string, IGameObject>> AddNpcsToGameObjects(List<Npc> npcs) => EnsureWithReturn(() =>
             {
                 foreach (var npc in npcs)
                     AddToLevelGameObjects(npc.Id, npc);
                 return GameObjects;
             });
 
-            Either<IFailure, Unit> AddToLevelGameObjects(string id, GameObject gameObject) => Ensure(() =>
+            Either<IFailure, Unit> AddToLevelGameObjects(string id, IGameObject gameObject) => Ensure(() =>
             {
                 GameObjects.Add(id, gameObject);
                 _eventMediator.RaiseGameObjectAddedOrRemovedEvent(gameObject, isRemoved: false, runningTotalCount: GameObjects.Count());
@@ -355,7 +355,7 @@ namespace MazerPlatformer
         /// Get the room objects in the level
         /// </summary>
         /// <returns>list of rooms created in the level</returns>
-        public Either<IFailure, List<Room>> GetRooms() => EnsureWithReturn(() => _rooms);
+        public Either<IFailure, List<IRoom>> GetRooms() => EnsureWithReturn(() => _rooms);
 
         public Either<IFailure, Unit> Unload(FileSaver filesaver) => Ensure(() =>
         {
